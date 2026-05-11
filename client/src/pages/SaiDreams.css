@@ -1,0 +1,108 @@
+.dreams-container {
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #0d0d1a 100%);
+  padding: 40px 20px;
+  color: white;
+  position: relative;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.6);
+  padding: 9px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: all 0.2s;
+  margin-bottom: 20px;
+  text-decoration: none;
+}
+.back-btn:hover { background: rgba(255,255,255,0.12); color: white; }
+
+.dreams-header {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto 40px;
+}
+
+.dreams-header h1 {
+  font-size: 2.5rem;
+  color: #00d4ff;
+  margin-bottom: 10px;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+.dreams-header p {
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 20px;
+}
+
+.generate-dream-btn {
+  background: linear-gradient(135deg, #7c5cfc, #00d4ff);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 25px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.generate-dream-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(124, 92, 252, 0.4);
+}
+
+.generate-dream-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dreams-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.dream-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+  transition: transform 0.3s;
+}
+
+.dream-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(0, 212, 255, 0.4);
+}
+
+.dream-date {
+  font-size: 0.8rem;
+  color: #7c5cfc;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.dream-text {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.9);
+  font-style: italic;
+}
+
+.empty-state {
+  text-align: center;
+  color: rgba(255,255,255,0.4);
+  grid-column: 1 / -1;
+  padding: 40px;
+}

@@ -1,0 +1,351 @@
+/* ── Memory Vault Page ──────────────────────────────────────────────── */
+.sai-memories-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0a0e1a 0%, #0f1225 50%, #0a0e1a 100%);
+  color: white;
+  font-family: 'Inter', system-ui, sans-serif;
+  padding-bottom: 60px;
+}
+
+/* Header */
+.mem-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 28px 20px;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.mem-back {
+  color: rgba(255,255,255,0.5);
+  text-decoration: none;
+  font-size: 1.4rem;
+  padding: 8px 14px;
+  border-radius: 12px;
+  transition: all 0.2s;
+  border: 1px solid rgba(255,255,255,0.08);
+  line-height: 1;
+}
+.mem-back:hover { background: rgba(255,255,255,0.07); color: white; }
+
+.mem-title-block { flex: 1; }
+.mem-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 0 2px;
+  background: linear-gradient(135deg, #7c5cfc, #00d4ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.mem-subtitle {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.4);
+  margin: 0;
+}
+
+.mem-count-badge {
+  background: rgba(124,92,252,0.15);
+  border: 1px solid rgba(124,92,252,0.3);
+  color: #7c5cfc;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Search */
+.mem-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 28px 0;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 12px 18px;
+  transition: border-color 0.2s;
+}
+.mem-search-bar:focus-within {
+  border-color: rgba(124,92,252,0.4);
+  box-shadow: 0 0 20px rgba(124,92,252,0.1);
+}
+.search-icon { font-size: 1rem; opacity: 0.5; }
+.mem-search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: white;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+.mem-search-input::placeholder { color: rgba(255,255,255,0.25); }
+
+/* Category filters */
+.mem-filters {
+  display: flex;
+  gap: 8px;
+  padding: 16px 28px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mem-filters::-webkit-scrollbar { display: none; }
+
+.mem-filter-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.5);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.mem-filter-pill:hover { background: rgba(255,255,255,0.08); color: white; }
+.mem-filter-pill.active {
+  background: rgba(124,92,252,0.12);
+  border-color: rgba(124,92,252,0.4);
+  color: #7c5cfc;
+}
+
+.pill-count {
+  background: rgba(255,255,255,0.12);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+}
+
+/* Memory grid */
+.mem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 0 28px 28px;
+}
+
+/* Memory card */
+.mem-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 18px;
+  padding: 20px;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.mem-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  right: 0; height: 2px;
+  background: var(--cat-color, #7c5cfc);
+  opacity: 0.6;
+}
+.mem-card:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+}
+
+.mem-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.mem-cat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.mem-delete-btn {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.3);
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+}
+.mem-delete-btn:hover {
+  background: rgba(239,68,68,0.15);
+  border-color: rgba(239,68,68,0.3);
+  color: #ef4444;
+}
+.mem-delete-btn.deleting {
+  opacity: 0.5;
+  cursor: not-allowed;
+  font-size: 0.7rem;
+}
+
+.mem-fact {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.88);
+  font-style: italic;
+  margin: 0 0 12px;
+}
+
+.mem-time {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.3);
+}
+
+/* Empty state */
+.mem-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(255,255,255,0.4);
+}
+.mem-empty-icon { font-size: 3rem; margin-bottom: 16px; }
+.mem-empty-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; color: rgba(255,255,255,0.6); }
+.mem-empty-hint { font-size: 0.88rem; max-width: 320px; margin: 0 auto 20px; line-height: 1.6; }
+
+.mem-chat-btn {
+  display: inline-block;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #7c5cfc, #5a3fd6);
+  color: white;
+  text-decoration: none;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  box-shadow: 0 4px 15px rgba(124,92,252,0.3);
+}
+.mem-chat-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(124,92,252,0.5); }
+
+/* Spinner */
+.mem-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid rgba(124,92,252,0.2);
+  border-top-color: #7c5cfc;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Insight banner */
+.mem-insight-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 28px;
+  padding: 16px 20px;
+  background: rgba(124,92,252,0.08);
+  border: 1px solid rgba(124,92,252,0.2);
+  border-radius: 16px;
+  font-size: 0.88rem;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.5;
+}
+.mem-insight-icon { font-size: 1.3rem; flex-shrink: 0; }
+.mem-insight-banner strong { color: #7c5cfc; }
+
+/* Search clear button */
+.mem-search-clear {
+  background: none; border: none; color: rgba(255,255,255,0.3);
+  font-size: 1.1rem; cursor: pointer; padding: 0 4px; line-height: 1;
+  font-family: inherit; transition: color 0.2s;
+}
+.mem-search-clear:hover { color: rgba(255,255,255,0.7); }
+
+/* Custom Tag filter row */
+.mem-tag-row {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 8px; padding: 0 28px 14px;
+}
+.tag-row-label { font-size: 0.75rem; color: rgba(255,255,255,0.35); margin-right: 4px; }
+.mem-custom-tag {
+  padding: 4px 12px; border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  font-size: 0.78rem; font-weight: 500; cursor: pointer;
+  font-family: inherit; transition: all 0.2s;
+}
+.mem-custom-tag:hover { filter: brightness(1.3); }
+.mem-custom-tag.active { font-weight: 700; }
+
+/* Tags inside memory card */
+.mem-tags-row {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 10px; align-items: center;
+}
+.mem-tag-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 12px;
+  border: 1px solid; font-size: 0.75rem; font-weight: 500;
+}
+.mem-tag-remove {
+  background: none; border: none; cursor: pointer;
+  color: inherit; opacity: 0.6; font-size: 0.85rem;
+  padding: 0; line-height: 1; font-family: inherit;
+  transition: opacity 0.2s;
+}
+.mem-tag-remove:hover { opacity: 1; }
+
+.mem-add-tag-btn {
+  padding: 3px 10px; border-radius: 12px;
+  border: 1px dashed rgba(255,255,255,0.2);
+  background: none; color: rgba(255,255,255,0.35);
+  font-size: 0.75rem; cursor: pointer; font-family: inherit;
+  transition: all 0.2s;
+}
+.mem-add-tag-btn:hover {
+  border-color: rgba(124,92,252,0.5); color: #7c5cfc;
+}
+
+.mem-tag-form {
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.mem-tag-input {
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(124,92,252,0.4);
+  border-radius: 10px; color: white; font-family: inherit;
+  font-size: 0.78rem; padding: 3px 8px; outline: none; width: 90px;
+}
+.mem-tag-input::placeholder { color: rgba(255,255,255,0.25); }
+.mem-tag-save, .mem-tag-cancel {
+  background: none; border: none; cursor: pointer;
+  font-size: 0.85rem; padding: 0 3px; font-family: inherit;
+  line-height: 1; transition: opacity 0.2s;
+}
+.mem-tag-save { color: #10b981; }
+.mem-tag-cancel { color: rgba(255,255,255,0.4); }
+.mem-tag-save:hover { opacity: 0.7; }
+.mem-tag-cancel:hover { opacity: 0.7; }
+
+@media (max-width: 600px) {
+  .mem-header { padding: 18px 20px; }
+  .mem-search-bar { margin: 16px 20px 0; }
+  .mem-filters { padding: 12px 20px; }
+  .mem-tag-row { padding: 0 20px 12px; }
+  .mem-grid { grid-template-columns: 1fr; padding: 0 20px 24px; }
+  .mem-insight-banner { margin: 0 20px; }
+}
