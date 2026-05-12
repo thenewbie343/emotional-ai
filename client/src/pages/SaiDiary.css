@@ -1,10 +1,14 @@
 .diary-container {
   min-height: 100vh;
+  min-height: 100dvh;
   background: #11111a;
-  padding: 40px 20px;
+  padding: 40px 20px 80px;
   color: white;
   position: relative;
   font-family: 'Inter', system-ui, sans-serif;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
 }
 
 .back-btn {

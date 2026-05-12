@@ -5,11 +5,14 @@
 }
 
 html, body, #root {
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden; /* No scrollbars */
-  background-color: #0b0f19; /* Dark moody background before sky loads */
+  width: 100%;
+  min-height: 100vh;
+  background-color: #0b0f19;
   font-family: 'Outfit', sans-serif;
+  overflow-x: hidden;
+  /* overflow-y is managed per-page:
+     HomeScene uses position:fixed canvas (no scroll needed),
+     all hub pages have their own overflow-y: auto */
 }
 
 /* Optional: Add a smooth fade-in for the canvas */

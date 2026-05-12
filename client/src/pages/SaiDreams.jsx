@@ -82,10 +82,10 @@ function DreamParticles({ analysis }) {
   const { positions, colors } = useMemo(() => {
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
-    const primary = new THREE.Color(analysis.palette?.primary || "#7c3aed");
-    const secondary = new THREE.Color(analysis.palette?.secondary || "#1e1b4b");
-    const accent = new THREE.Color(analysis.palette?.accent || "#a78bfa");
-    const style = analysis.particleStyle || "drift";
+    const primary = new THREE.Color(analysis?.palette?.primary || "#7c3aed");
+    const secondary = new THREE.Color(analysis?.palette?.secondary || "#1e1b4b");
+    const accent = new THREE.Color(analysis?.palette?.accent || "#a78bfa");
+    const style = analysis?.particleStyle || "drift";
 
     for (let i = 0; i < count; i++) {
       let x, y, z;
@@ -119,10 +119,10 @@ function DreamParticles({ analysis }) {
   }, [analysis]);
 
   useFrame(({ clock }) => {
-    if (!mesh.current) return;
+    if (!mesh.current || !analysis) return;
     const t = clock.elapsedTime;
-    const style = analysis.particleStyle;
-    const intensity = analysis.intensity || 0.5;
+    const style = analysis?.particleStyle;
+    const intensity = analysis?.intensity || 0.5;
     const pos = mesh.current.geometry.attributes.position.array;
 
     for (let i = 0; i < count; i++) {
@@ -214,7 +214,7 @@ export default function SaiDreams({ session }) {
     }
 
     setAnalyzing(true);
-    const dreamText = dream.dream_content || dream.dream_text || "";
+    const dreamText = dream.dream_text || dream.dream_content || "";
     
     // Use local analysis (instant, no API needed)
     const result = localAnalyzeDream(dreamText);
@@ -240,7 +240,7 @@ export default function SaiDreams({ session }) {
     const result = localAnalyzeDream(dreamContent);
 
     const { data, error: saveError } = await supabase.from("sai_dreams")
-      .insert({ user_id: userId, dream_content: dreamContent, dream_analysis: result })
+      .insert({ user_id: userId, dream_text: dreamContent, dream_analysis: result })
       .select()
       .single();
 
@@ -333,7 +333,7 @@ export default function SaiDreams({ session }) {
                   )}
                 </div>
                 <div style={styles.dreamPreview}>
-                  {(dream.dream_content || dream.dream_text || "").substring(0, 70)}...
+                  {(dream.dream_text || dream.dream_content || "").substring(0, 70)}...
                 </div>
               </div>
             ))}

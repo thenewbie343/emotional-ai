@@ -54,6 +54,7 @@ export default function HomeScene() {
 
   return (
     <>
+      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
       <Canvas dpr={[1, 1.5]}>
         <Suspense fallback={null}>
           {/* Default camera with the exact distance and FOV you requested */}
@@ -287,7 +288,7 @@ export default function HomeScene() {
             </button>
           </div>
         </div>
-      )}
+      )}</div>
     </>
   )
 }

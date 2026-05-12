@@ -1,10 +1,14 @@
 /* ── Memory Vault Page ──────────────────────────────────────────────── */
 .sai-memories-page {
   min-height: 100vh;
+  min-height: 100dvh;
   background: linear-gradient(180deg, #0a0e1a 0%, #0f1225 50%, #0a0e1a 100%);
   color: white;
   font-family: 'Inter', system-ui, sans-serif;
   padding-bottom: 60px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
 }
 
 /* Header */
