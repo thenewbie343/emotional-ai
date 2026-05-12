@@ -174,13 +174,36 @@ export default function CompanionChat({ session }) {
     setTimeout(async () => {
       const emotionKey = detectSiyaEmotion(capturedInput)
       const personalityKey = MODE_TO_PERSONALITY[activeMode]
-      const currentPersona = SIYA_PERSONALITIES[personalityKey]?.responses || SIYA_PERSONALITIES.romantic.responses
-      const responsePool = currentPersona[emotionKey] || currentPersona.default
-      const selectedResponse = responsePool[Math.floor(Math.random() * responsePool.length)]
+      
+      let generatedText = "Processing error. Rebooting language modules.";
+      try {
+        // Send full chat history to the backend AI Router
+        const apiRes = await fetch('/api/ai/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [...messages, newUserMsg].map(m => ({ 
+              role: m.sender === 'user' ? 'user' : 'ai', 
+              content: m.text 
+            })),
+            emotion: emotionKey,
+            mode: activeMode
+          })
+        });
+        
+        if (apiRes.ok) {
+          const aiData = await apiRes.json();
+          generatedText = aiData.text;
+        } else {
+          console.error("AI API Error:", await apiRes.text());
+        }
+      } catch (err) {
+        console.error("Failed to connect to AI Router:", err);
+      }
 
       // Record engagement + apply tier-based modifications / deflection
       await recordEngagement(capturedInput)
-      const { response: tieredText } = applyTierBehavior(capturedInput, selectedResponse.text)
+      const { response: tieredText } = applyTierBehavior(capturedInput, generatedText)
 
       const aiReply = { id: Date.now() + 1, text: tieredText, sender: 'ai' }
       setMessages(prev => [...prev, aiReply])
@@ -195,7 +218,11 @@ export default function CompanionChat({ session }) {
       speakText(tieredText)
 
       if (capturedInput.toLowerCase().includes('dance')) setCharacterAnim('dance')
-      else setCharacterAnim(selectedResponse.emotion)
+      else if (emotionKey === 'happy') setCharacterAnim('yes')
+      else if (emotionKey === 'angry') setCharacterAnim('arguing')
+      else if (emotionKey === 'sad') setCharacterAnim('look away')
+      else if (emotionKey === 'love') setCharacterAnim('thoughtful')
+      else setCharacterAnim('talk')
 
       const readingTime = Math.max(3000, tieredText.length * 100)
       setTimeout(() => setCharacterAnim('idle'), readingTime)
