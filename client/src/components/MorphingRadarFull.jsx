@@ -7,6 +7,7 @@ import { motion, useMotionValue } from 'framer-motion';
 const radius = 120;
 
 function interpolateDimensions(a, b, t) {
+  if (!a || !b) return a || b || {};
   const keys = Object.keys(a);
   const out = {};
   keys.forEach(k => {
@@ -16,6 +17,7 @@ function interpolateDimensions(a, b, t) {
 }
 
 function dimsToPath(dims, keys) {
+  if (!dims || !keys || keys.length === 0) return '';
   const scale = scaleLinear().domain([0, 100]).range([0, radius]);
   const angleStep = (2 * Math.PI) / keys.length;
   const points = keys.map((k, i) => [scale(dims[k] ?? 0), i * angleStep]);
@@ -24,108 +26,121 @@ function dimsToPath(dims, keys) {
 }
 
 export default function MorphingRadarFull({ snapshots }) {
-  if (!snapshots || snapshots.length === 0) return <div>No snapshots</div>;
+  // Guard: no snapshots or first snapshot has no dimensions
+  if (!snapshots || snapshots.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '24px', color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
+        Complete more check-ins to unlock the Emotional Time Machine 🌱
+      </div>
+    );
+  }
+
+  const validSnapshots = snapshots.filter(s => s && s.dimensions && typeof s.dimensions === 'object');
+  if (validSnapshots.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '24px', color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
+        Processing your wellness data... ✨
+      </div>
+    );
+  }
+
+  return <RadarInner snapshots={validSnapshots} />;
+}
+
+// Inner component — only renders when snapshots are confirmed valid
+function RadarInner({ snapshots }) {
   const keys = useMemo(() => Object.keys(snapshots[0].dimensions), [snapshots]);
   const n = snapshots.length;
 
-  // slider position as motion value for smooth animation
   const pos = useMotionValue(0);
   const [posState, setPosState] = useState(0);
   useEffect(() => {
-    const unsub = pos.onChange(v => setPosState(Number(v)));
+    const unsub = pos.on('change', v => setPosState(Number(v)));
     return unsub;
   }, [pos]);
 
-  // compute interpolated dims
   const floatIndex = Math.max(0, Math.min(n - 1, posState));
   const i0 = Math.floor(floatIndex);
   const i1 = Math.min(i0 + 1, n - 1);
   const t = floatIndex - i0;
-  const dims = interpolateDimensions(snapshots[i0].dimensions, snapshots[i1].dimensions, t);
+  const dims = interpolateDimensions(
+    snapshots[i0]?.dimensions,
+    snapshots[i1]?.dimensions,
+    t
+  );
   const pathD = dimsToPath(dims, keys);
 
-  // Past self comparison (30 days ago)
-  const nowSnap = snapshots[n - 1];
-  const pastIndex = snapshots.findIndex(s => {
-    const dNow = new Date(nowSnap.snapshot_date).getTime();
-    const d = new Date(s.snapshot_date).getTime();
-    return d >= dNow - 30 * 24 * 3600 * 1000;
-  });
-  const pastSnap = pastIndex >= 0 ? snapshots[pastIndex] : snapshots[0];
+  const nowSnap  = snapshots[n - 1];
+  const pastSnap = snapshots[0];
 
-  // insight generator
   function generateInsight(a, b) {
-    const deltas = Object.keys(a).map(k => ({ k, delta: Math.round((a[k] - b[k]) * 100) / 100 }));
+    if (!a || !b) return 'Not enough data yet.';
+    const aKeys = Object.keys(a);
+    const deltas = aKeys.map(k => ({ k, delta: Math.round((a[k] - (b[k] ?? 0)) * 100) / 100 }));
     deltas.sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta));
-    const top = deltas.slice(0, 2).filter(d => Math.abs(d.delta) >= 8);
-    if (top.length === 0) return 'No major changes in the last 30 days.';
-    return top.map(t => `${t.k} ${t.delta > 0 ? 'up' : 'down'} ${Math.abs(t.delta)} points`).join('; ');
+    const top = deltas.slice(0, 2).filter(d => Math.abs(d.delta) >= 3);
+    if (top.length === 0) return 'Steady as ever — no major changes.';
+    return top.map(d => `${d.k} ${d.delta > 0 ? '↑' : '↓'} ${Math.abs(d.delta)}pts`).join(' · ');
   }
 
-  const insight = generateInsight(nowSnap.dimensions, pastSnap.dimensions);
+  const insight = generateInsight(nowSnap?.dimensions, pastSnap?.dimensions);
+  const currentDateStr = snapshots[Math.round(posState)]?.snapshot_date?.split?.('T')?.[0] ?? '';
 
-  // keyboard support for slider
   const onKey = (e) => {
-    if (e.key === 'ArrowLeft') pos.set(Math.max(0, pos.get() - 0.1));
+    if (e.key === 'ArrowLeft')  pos.set(Math.max(0, pos.get() - 0.1));
     if (e.key === 'ArrowRight') pos.set(Math.min(n - 1, pos.get() + 0.1));
   };
 
   return (
-    <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-      <svg width={320} height={320} viewBox="-160 -160 320 320" aria-label="Personality radar">
-        <g>
-          <motion.path 
-            d={pathD} 
-            fill="rgba(34,150,243,0.18)" 
-            stroke="#2296f3" 
-            strokeWidth={2}
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            transition={{ duration: 0.3 }} 
-          />
-          {/* axis labels */}
-          {keys.map((k, i) => {
-            const angle = i * (2 * Math.PI / keys.length) - Math.PI / 2;
-            const x = Math.cos(angle) * (radius + 18);
-            const y = Math.sin(angle) * (radius + 18);
-            return <text key={k} x={x} y={y} fontSize={10} textAnchor="middle" fill="#fff">{k}</text>;
-          })}
-        </g>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
+      <svg width={280} height={280} viewBox="-140 -140 280 280" aria-label="Wellness radar">
+        {/* Grid rings */}
+        {[25, 50, 75, 100].map(pct => (
+          <circle key={pct} r={(pct / 100) * radius} fill="none"
+            stroke="rgba(255,255,255,0.07)" strokeWidth={1} />
+        ))}
+        <motion.path
+          d={pathD}
+          fill="rgba(16,185,129,0.18)"
+          stroke="#10b981"
+          strokeWidth={2}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+        />
+        {keys.map((k, i) => {
+          const angle = i * (2 * Math.PI / keys.length) - Math.PI / 2;
+          const x = Math.cos(angle) * (radius + 20);
+          const y = Math.sin(angle) * (radius + 20);
+          return (
+            <text key={k} x={x} y={y} fontSize={9} textAnchor="middle"
+              dominantBaseline="middle" fill="rgba(255,255,255,0.6)">
+              {k}
+            </text>
+          );
+        })}
       </svg>
 
-      <div style={{ width: 320, color: '#fff' }}>
-        <label htmlFor="radar-slider"><strong>Timeline</strong></label>
-        <input 
-          id="radar-slider" 
-          type="range" 
-          min={0} 
-          max={n - 1} 
-          step={0.01}
-          onChange={e => pos.set(Number(e.target.value))}
-          onKeyDown={onKey}
-          aria-valuemin={0} 
-          aria-valuemax={n - 1} 
-          aria-valuenow={posState}
-          style={{ width: '100%' }} 
-        />
-        <div style={{ marginTop: 8 }}>
-          <strong>Snapshot date:</strong> {snapshots[Math.round(posState)].snapshot_date.split('T')[0]}
+      {n > 1 && (
+        <div style={{ width: '100%' }}>
+          <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: 6 }}>
+            Timeline — {currentDateStr}
+          </label>
+          <input
+            type="range" min={0} max={n - 1} step={0.01}
+            onChange={e => pos.set(Number(e.target.value))}
+            onKeyDown={onKey}
+            style={{ width: '100%', accentColor: '#10b981' }}
+          />
         </div>
+      )}
 
-        <div style={{ marginTop: 12 }}>
-          <strong>Past Self Comparison</strong>
-          <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: '#aaa' }}>30 days ago</div>
-              <div style={{ fontWeight: 600 }}>{pastSnap.snapshot_date.split('T')[0]}</div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: '#aaa' }}>Now</div>
-              <div style={{ fontWeight: 600 }}>{nowSnap.snapshot_date.split('T')[0]}</div>
-            </div>
-          </div>
-          <div style={{ marginTop: 8, color: '#eee' }}><strong>Insight</strong>: {insight}</div>
-        </div>
+      <div style={{
+        background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)',
+        borderRadius: 12, padding: '12px 16px', fontSize: 13,
+        color: 'rgba(255,255,255,0.8)', width: '100%', lineHeight: 1.5,
+      }}>
+        <span style={{ color: '#10b981', fontWeight: 700 }}>✨ Insight: </span>{insight}
       </div>
     </div>
   );

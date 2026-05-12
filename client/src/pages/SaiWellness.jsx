@@ -290,12 +290,14 @@ export default function SaiWellness({ session }) {
               <div style={{ marginBottom: '24px', background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <h3 style={{ marginTop: 0, marginBottom: '16px', color: '#fff', fontSize: '1.1rem' }}>Emotional Time Machine</h3>
                 <MorphingRadarFull snapshots={history.map(entry => ({
-                  label: formatDate(entry.date_key || entry.created_at),
-                  sleep: (entry.sleep ?? 2) / 4,
-                  energy: (entry.energy ?? 2) / 4,
-                  stress: 1 - (entry.stress ?? 2) / 4,
-                  connect: (entry.connect ?? 2) / 4,
-                  purpose: (entry.purpose ?? 2) / 4,
+                  snapshot_date: entry.date_key || entry.created_at || new Date().toISOString(),
+                  dimensions: {
+                    Sleep:   Math.round(((entry.sleep   ?? 2) / 4) * 100),
+                    Energy:  Math.round(((entry.energy  ?? 2) / 4) * 100),
+                    Calm:    Math.round((1 - (entry.stress  ?? 2) / 4) * 100),
+                    Connect: Math.round(((entry.connect ?? 2) / 4) * 100),
+                    Purpose: Math.round(((entry.purpose ?? 2) / 4) * 100),
+                  },
                 }))} />
               </div>
 
