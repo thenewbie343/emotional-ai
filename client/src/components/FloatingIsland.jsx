@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { useGLTF, useCursor, Bvh } from '@react-three/drei'
+import { useGLTF, useCursor } from '@react-three/drei'
 
 // Pure 3D component — no HTML inside here
 export default function FloatingIsland({ position = [0, -2, 0], scale = [8, 6, 11], rotation = [0, 0, 0] }) {
   const groupRef = useRef()
+  const floatRef = useRef(0)
   const [hovered, setHovered] = useState(false)
 
   useCursor(hovered)
@@ -12,11 +13,13 @@ export default function FloatingIsland({ position = [0, -2, 0], scale = [8, 6, 1
   // Original main island art model
   const { scene } = useGLTF('/1st art work.glb')
 
+  // Base Y stored once — no array allocation every frame
+  const baseY = position[1]
+
   useFrame((state) => {
-    const time = state.clock.getElapsedTime()
-    if (groupRef.current) {
-      groupRef.current.position.y = position[1] + Math.sin(time) * 0.2
-    }
+    if (!groupRef.current) return
+    // Simple sine float — no new arrays, minimal CPU cost
+    groupRef.current.position.y = baseY + Math.sin(state.clock.elapsedTime * 0.6) * 0.18
   })
 
   const isBlueBuilding = (e) => {
@@ -39,18 +42,16 @@ export default function FloatingIsland({ position = [0, -2, 0], scale = [8, 6, 1
   }
 
   return (
-    <group ref={groupRef}>
-      <Bvh firstHitOnly>
-        <primitive
-          object={scene}
-          position={position}
-          scale={scale}
-          rotation={rotation}
-          onPointerOver={handlePointerOver}
-          onPointerOut={handlePointerOut}
-          onClick={handleClick}
-        />
-      </Bvh>
+    <group ref={groupRef} position={[position[0], baseY, position[2]]}>
+      <primitive
+        object={scene}
+        position={[0, 0, 0]}
+        scale={scale}
+        rotation={rotation}
+        onPointerOver={handlePointerOver}
+        onPointerOut={handlePointerOut}
+        onClick={handleClick}
+      />
     </group>
   )
 }

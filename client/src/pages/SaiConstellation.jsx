@@ -238,9 +238,12 @@ export default function SaiConstellation({ session }) {
 
   return (
     <div style={styles.container}>
+      {/* Back link */}
+      <a href="/sai" style={styles.backBtn}>← SAI</a>
+
       {/* HUD */}
       <div style={styles.hud}>
-        <div style={styles.hudTitle}>⭐ Memory Constellation</div>
+        <div style={styles.hudTitle}>⭐ Memory Stars</div>
         <div style={styles.hudSub}>{memories.length} memories · {categories.length - 1} clusters</div>
         <div style={styles.filters}>
           {categories.map(cat => (
@@ -256,6 +259,19 @@ export default function SaiConstellation({ session }) {
           ))}
         </div>
       </div>
+
+      {/* Empty state */}
+      {memories.length === 0 && (
+        <div style={styles.emptyState}>
+          <div style={{ fontSize: 52, marginBottom: 16 }}>🌌</div>
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>No Memory Stars Yet</div>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', maxWidth: 280, textAlign: 'center', lineHeight: 1.7, marginBottom: 20 }}>
+            Chat with SAI and share things about yourself.<br />
+            Tell SAI your name, what you love, where you're from — she'll remember and create stars for each memory.
+          </div>
+          <a href="/sai/chat" style={styles.chatBtn}>💬 Chat with SAI</a>
+        </div>
+      )}
 
       {/* Selected panel */}
       {selected && (
@@ -280,7 +296,7 @@ export default function SaiConstellation({ session }) {
         </div>
       )}
 
-      {!selected && (
+      {!selected && memories.length > 0 && (
         <div style={styles.hint}>🖱 Drag to orbit · Scroll to zoom · Click a star to explore</div>
       )}
 
@@ -330,11 +346,31 @@ export default function SaiConstellation({ session }) {
 }
 
 const styles = {
-  container: { width: "100%", height: "100vh", position: "relative", background: "#020208", overflow: "hidden", fontFamily: "'Inter', system-ui, sans-serif" },
+  container: { width: "100%", height: "100vh", height: "100dvh", position: "relative", background: "#020208", overflow: "hidden", fontFamily: "'Inter', system-ui, sans-serif" },
   loading: {
     height: "100vh", display: "flex", flexDirection: "column",
     alignItems: "center", justifyContent: "center",
     gap: 12, color: "#fff", background: "#020208", fontSize: 16,
+  },
+  backBtn: {
+    position: "absolute", top: 16, right: 16, zIndex: 20,
+    color: "rgba(255,255,255,0.5)", textDecoration: "none",
+    fontSize: 13, padding: "7px 14px", borderRadius: 10,
+    border: "1px solid rgba(255,255,255,0.1)",
+    background: "rgba(0,0,0,0.4)", backdropFilter: "blur(10px)",
+    transition: "all 0.2s",
+  },
+  emptyState: {
+    position: "absolute", inset: 0, zIndex: 15,
+    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+    color: "#fff", pointerEvents: "none",
+  },
+  chatBtn: {
+    pointerEvents: "all",
+    padding: "12px 28px", background: "linear-gradient(135deg, #60a5fa, #3b82f6)",
+    border: "none", borderRadius: 25, color: "#fff",
+    fontWeight: 700, fontSize: 14, textDecoration: "none",
+    display: "inline-block", transition: "all 0.2s",
   },
   hud: {
     position: "absolute", top: 20, left: 20, zIndex: 10,

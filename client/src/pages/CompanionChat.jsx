@@ -231,7 +231,7 @@ export default function CompanionChat({ session }) {
         <div className="magic-menu-panel">
           <div className="menu-label">SIYA ABILITIES</div>
 
-          {/* Draw mode (rune casting) */}
+          {/* Rune Cast — the only active ability */}
           <button
             className={`magic-toggle ${isDrawModeActive ? 'active' : ''}`}
             onClick={() => { setIsDrawModeActive(!isDrawModeActive); if (!isDrawModeActive) setIsMenuOpen(false) }}
@@ -240,56 +240,6 @@ export default function CompanionChat({ session }) {
             <div className="toggle-text">
               <span className="toggle-name">{isDrawModeActive ? 'CANCEL DRAW' : 'RUNE CAST'}</span>
               <span className="toggle-desc">Draw symbols to command Siya</span>
-            </div>
-          </button>
-
-          {/* Spirit Familiar */}
-          <button
-            className={`magic-toggle ${features.spiritFamiliar ? 'active' : ''}`}
-            onClick={() => toggleFeature('spiritFamiliar')}
-          >
-            <span className="toggle-icon">🔮</span>
-            <div className="toggle-text">
-              <span className="toggle-name">SPIRIT FAMILIAR</span>
-              <span className="toggle-desc">Siya's ethereal companion orb</span>
-            </div>
-          </button>
-
-          <div className="menu-divider" />
-
-          {/* Neural Pulse */}
-          <button
-            className={`magic-toggle ${features.neuralPulse ? 'active highlight' : ''}`}
-            onClick={() => toggleFeature('neuralPulse')}
-          >
-            <span className="toggle-icon">⚡</span>
-            <div className="toggle-text">
-              <span className="toggle-name">NEURAL PULSE</span>
-              <span className="toggle-desc">Energy rings — deep focus mode</span>
-            </div>
-          </button>
-
-          {/* Phase Shift */}
-          <button
-            className={`magic-toggle ${features.phaseShift ? 'active highlight' : ''}`}
-            onClick={() => toggleFeature('phaseShift')}
-          >
-            <span className="toggle-icon">💎</span>
-            <div className="toggle-text">
-              <span className="toggle-name">PHASE SHIFT</span>
-              <span className="toggle-desc">Siya splits between dimensions</span>
-            </div>
-          </button>
-
-          {/* Time Echo */}
-          <button
-            className={`magic-toggle ${features.timeEcho ? 'active highlight' : ''}`}
-            onClick={() => toggleFeature('timeEcho')}
-          >
-            <span className="toggle-icon">👁️</span>
-            <div className="toggle-text">
-              <span className="toggle-name">TIME ECHO</span>
-              <span className="toggle-desc">Ghost trails — her memory made visible</span>
             </div>
           </button>
         </div>

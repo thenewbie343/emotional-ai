@@ -6,21 +6,6 @@ export function useStreak(userId) {
   const [loading, setLoading] = useState(true);
   const [justCheckedIn, setJustCheckedIn] = useState(false);
 
-  const fetchStreak = useCallback(async () => {
-    if (!userId) return;
-    const { data, error } = await supabase
-      .from("sai_streaks")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (error) console.error("Streak fetch error:", error);
-    else setStreak(data || null);
-    setLoading(false);
-  }, [userId]);
-
-  useEffect(() => { fetchStreak(); }, [fetchStreak]);
-
   const checkIn = useCallback(async () => {
     if (!userId) return;
 
@@ -66,6 +51,28 @@ export function useStreak(userId) {
     console.error("Check-in error:", error);
     return null;
   }, [userId]);
+
+  const fetchStreak = useCallback(async () => {
+    if (!userId) return;
+    const { data, error } = await supabase
+      .from("sai_streaks")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) console.error("Streak fetch error:", error);
+    else setStreak(data || null);
+    setLoading(false);
+  }, [userId]);
+
+  // Load streak data, then auto-record today's visit
+  useEffect(() => {
+    if (!userId) return;
+    fetchStreak().then(() => {
+      // Auto check-in: opening the app counts as a daily visit
+      checkIn();
+    });
+  }, [fetchStreak, checkIn, userId]);
 
   return { streak, loading, checkIn, justCheckedIn };
 }

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import MorphingRadarFull from '../components/MorphingRadarFull'
-import { generateSyntheticSnapshots } from '../utils/generateSnapshots'
 import './SaiWellness.css'
 
 const QUESTIONS = [
@@ -274,36 +273,49 @@ export default function SaiWellness({ session }) {
         <div className="wellness-body">
           <h2 className="history-title">📊 Your Wellness Trends</h2>
 
-          {/* Morphing Radar Container */}
-          <div style={{ marginBottom: '24px', background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '16px', color: '#fff', fontSize: '1.2rem' }}>Emotional Time Machine</h3>
-            <MorphingRadarFull snapshots={generateSyntheticSnapshots()} />
-          </div>
-
           {history.length === 0 ? (
             <div className="wellness-empty">
-              <p>No history yet. Complete your first check-in!</p>
+              <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🌱</div>
+              <p>No history yet.</p>
+              <p style={{ fontSize: '0.85rem', opacity: 0.6, marginBottom: '20px' }}>
+                Complete your first check-in to start seeing your wellness trends here.
+              </p>
               <button className="wellness-start-btn" onClick={() => setStep('check')}>
-                Start Now
+                Start First Check-in
               </button>
             </div>
           ) : (
-            <div className="history-list">
-              {history.map(entry => {
-                const avg = calcAvg(entry)
-                const pct = Math.round((avg / 4) * 100)
-                const color = pct > 66 ? '#10b981' : pct > 33 ? '#f59e0b' : '#ef4444'
-                return (
-                  <div key={entry.id} className="history-row">
-                    <span className="history-date">{formatDate(entry.date_key || entry.created_at)}</span>
-                    <div className="history-bar-wrap">
-                      <div className="history-bar" style={{ width: `${pct}%`, background: color }} />
+            <>
+              {/* Morphing Radar — only shown with real data */}
+              <div style={{ marginBottom: '24px', background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '16px', color: '#fff', fontSize: '1.1rem' }}>Emotional Time Machine</h3>
+                <MorphingRadarFull snapshots={history.map(entry => ({
+                  label: formatDate(entry.date_key || entry.created_at),
+                  sleep: (entry.sleep ?? 2) / 4,
+                  energy: (entry.energy ?? 2) / 4,
+                  stress: 1 - (entry.stress ?? 2) / 4,
+                  connect: (entry.connect ?? 2) / 4,
+                  purpose: (entry.purpose ?? 2) / 4,
+                }))} />
+              </div>
+
+              <div className="history-list">
+                {history.map(entry => {
+                  const avg = calcAvg(entry)
+                  const pct = Math.round((avg / 4) * 100)
+                  const color = pct > 66 ? '#10b981' : pct > 33 ? '#f59e0b' : '#ef4444'
+                  return (
+                    <div key={entry.id} className="history-row">
+                      <span className="history-date">{formatDate(entry.date_key || entry.created_at)}</span>
+                      <div className="history-bar-wrap">
+                        <div className="history-bar" style={{ width: `${pct}%`, background: color }} />
+                      </div>
+                      <span className="history-pct" style={{ color }}>{pct}</span>
                     </div>
-                    <span className="history-pct" style={{ color }}>{pct}</span>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            </>
           )}
           <button className="redo-btn" onClick={() => setStep(todayEntry ? 'result' : 'check')}>
             ← Back

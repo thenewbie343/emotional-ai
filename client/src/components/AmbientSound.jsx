@@ -1,77 +1,91 @@
 import { useEffect, useRef, useState } from 'react'
 
-export default function AmbientSound({ emotion = 'calm', enabled = false }) {
+// Ambient hum is ON by default; user can toggle it off
+export default function AmbientSound({ emotion = 'calm', enabled = true }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const audioCtxRef = useRef(null)
   const oscillatorsRef = useRef([])
   const gainNodeRef = useRef(null)
+  const startedRef = useRef(false)
+
+  const startSound = async () => {
+    if (startedRef.current) return
+    startedRef.current = true
+
+    const AudioContext = window.AudioContext || window.webkitAudioContext
+    const ctx = new AudioContext()
+
+    // Resume if suspended (browser autoplay policy)
+    if (ctx.state === 'suspended') {
+      await ctx.resume().catch(() => {})
+    }
+
+    audioCtxRef.current = ctx
+
+    const masterGain = ctx.createGain()
+    masterGain.gain.value = 0.04
+    masterGain.connect(ctx.destination)
+    gainNodeRef.current = masterGain
+
+    const freqs = emotion === 'sad'    ? [110.00, 130.81, 164.81]
+               : emotion === 'excited' ? [164.81, 246.94, 329.63]
+               : emotion === 'angry'   ? [123.47, 185.00, 246.94]
+               :                        [130.81, 196.00, 261.63] // calm / default: C3 G3 C4
+
+    freqs.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      osc.type = 'sine'
+      osc.frequency.value = freq
+      osc.detune.value = i * 5
+
+      const lfo = ctx.createOscillator()
+      lfo.type = 'sine'
+      lfo.frequency.value = 0.1 + i * 0.05
+
+      const lfoGain = ctx.createGain()
+      lfoGain.gain.value = 0.4
+
+      lfo.connect(lfoGain.gain)
+      osc.connect(lfoGain)
+      lfoGain.connect(masterGain)
+
+      osc.start()
+      lfo.start()
+      oscillatorsRef.current.push({ osc, lfo })
+    })
+
+    setIsPlaying(true)
+  }
+
+  const stopSound = () => {
+    oscillatorsRef.current.forEach(({ osc, lfo }) => {
+      try { osc.stop(); lfo.stop() } catch {}
+    })
+    oscillatorsRef.current = []
+    if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+      audioCtxRef.current.close().catch(() => {})
+    }
+    audioCtxRef.current = null
+    startedRef.current = false
+    setIsPlaying(false)
+  }
 
   const toggleSound = () => {
-    if (!isPlaying) {
-      // Initialize Web Audio API
-      const AudioContext = window.AudioContext || window.webkitAudioContext
-      const ctx = new AudioContext()
-      audioCtxRef.current = ctx
-
-      const masterGain = ctx.createGain()
-      masterGain.gain.value = 0.05 // Very quiet background hum
-      masterGain.connect(ctx.destination)
-      gainNodeRef.current = masterGain
-
-      // Create a drone using multiple oscillators
-      const freqs = emotion === 'calm' ? [130.81, 196.00, 261.63] // C3, G3, C4
-                 : emotion === 'sad' ? [110.00, 130.81, 164.81] // A2, C3, E3
-                 : [146.83, 220.00, 293.66] // D3, A3, D4
-
-      freqs.forEach((freq, i) => {
-        const osc = ctx.createOscillator()
-        osc.type = 'sine'
-        osc.frequency.value = freq
-        
-        // Detune slightly for warmth
-        osc.detune.value = i * 5
-
-        // Individual LFO for slow volume pulsing
-        const lfo = ctx.createOscillator()
-        lfo.type = 'sine'
-        lfo.frequency.value = 0.1 + (i * 0.05) // Very slow
-
-        const lfoGain = ctx.createGain()
-        lfoGain.gain.value = 0.5
-        
-        lfo.connect(lfoGain.gain)
-        osc.connect(lfoGain)
-        lfoGain.connect(masterGain)
-
-        osc.start()
-        lfo.start()
-        
-        oscillatorsRef.current.push({ osc, lfo, lfoGain })
-      })
-
-      setIsPlaying(true)
+    if (isPlaying) {
+      stopSound()
     } else {
-      // Stop and cleanup
-      if (audioCtxRef.current) {
-        oscillatorsRef.current.forEach(({ osc, lfo }) => {
-          osc.stop()
-          lfo.stop()
-          osc.disconnect()
-          lfo.disconnect()
-        })
-        oscillatorsRef.current = []
-        if (audioCtxRef.current.state !== 'closed') {
-          audioCtxRef.current.close().catch(e => console.error("Audio cleanup error:", e))
-        }
-      }
-      setIsPlaying(false)
+      startSound()
     }
   }
 
-  // Sync play state with the `enabled` prop from parent
+  // Respect the `enabled` prop — start when enabled, stop when disabled
   useEffect(() => {
-    if (enabled && !isPlaying) toggleSound()
-    else if (!enabled && isPlaying) toggleSound()
+    if (enabled && !isPlaying) {
+      startSound()
+    } else if (!enabled && isPlaying) {
+      stopSound()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled])
 
   // Cleanup on unmount
@@ -84,23 +98,31 @@ export default function AmbientSound({ emotion = 'calm', enabled = false }) {
   }, [])
 
   return (
-    <button 
+    <button
       onClick={toggleSound}
+      title={isPlaying ? 'Ambient hum is ON — tap to turn off' : 'Ambient hum is OFF — tap to turn on'}
       style={{
-        padding: '8px 16px',
-        background: isPlaying ? 'rgba(0, 255, 128, 0.2)' : 'rgba(255,255,255,0.05)',
-        border: `1px solid ${isPlaying ? 'rgba(0, 255, 128, 0.5)' : 'rgba(255,255,255,0.1)'}`,
-        color: isPlaying ? '#00ff80' : 'white',
+        padding: '8px 14px',
+        background: isPlaying
+          ? 'rgba(0, 255, 128, 0.18)'
+          : 'rgba(255,255,255,0.05)',
+        border: `1px solid ${isPlaying ? 'rgba(0, 255, 128, 0.45)' : 'rgba(255,255,255,0.1)'}`,
+        color: isPlaying ? '#00ff80' : 'rgba(255,255,255,0.5)',
         borderRadius: '20px',
         cursor: 'pointer',
-        fontSize: '0.8rem',
+        fontSize: '0.78rem',
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
-        transition: 'all 0.3s'
+        transition: 'all 0.3s',
+        whiteSpace: 'nowrap',
+        userSelect: 'none',
       }}
     >
-      {isPlaying ? '🔊 Ambient Hum ON' : '🔈 Ambient Hum OFF'}
+      {isPlaying ? '🔊' : '🔈'}
+      <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>
+        {isPlaying ? 'Hum ON' : 'Hum OFF'}
+      </span>
     </button>
   )
 }

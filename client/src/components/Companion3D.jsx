@@ -16,12 +16,11 @@ import { NeuralPulse, PhaseShift, TimeEcho } from './siya/SiyaEffects'
 function FloatingCharacter({ animation, companion }) {
   const groupRef = useRef()
 
-  const baseY = -2.8
-
   useFrame((state) => {
     if (!groupRef.current) return
-    const t = state.clock.getElapsedTime()
-    groupRef.current.position.y = baseY + Math.sin(t * 0.5) * 0.06
+    const t = state.clock.elapsedTime
+    // Gentle float around Y=0
+    groupRef.current.position.y = Math.sin(t * 0.5) * 0.08
   })
 
   return (
@@ -57,7 +56,7 @@ function SceneEffects({ messages, features }) {
 export default function Companion3D({ characterAnim, messages, features, companion = 'sai' }) {
   return (
     <Canvas
-      camera={{ position: [0, 0.8, 5], fov: 55 }}
+      camera={{ position: [0, 0, 5.5], fov: 52 }}
       gl={{
         antialias: true,
         toneMapping: THREE.ACESFilmicToneMapping,

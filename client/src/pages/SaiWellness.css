@@ -1,10 +1,13 @@
 /* ── Wellness Center Page ─────────────────────────────────────────────── */
 .wellness-page {
   min-height: 100vh;
+  min-height: 100dvh;
   background: linear-gradient(180deg, #050d14 0%, #0a1520 50%, #050d14 100%);
   color: white;
   font-family: 'Inter', system-ui, sans-serif;
   overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .wellness-header {
@@ -69,7 +72,9 @@
 .wellness-body {
   max-width: 600px;
   margin: 0 auto;
-  padding: 32px 24px 60px;
+  padding: 32px 24px 80px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Intro */
@@ -278,8 +283,9 @@
 }
 
 @media (max-width: 600px) {
-  .wellness-body { padding: 24px 16px 50px; }
+  .wellness-body { padding: 24px 16px 80px; }
   .wellness-header { padding: 18px 20px; }
-  .q-options { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
-  .q-option { flex-shrink: 0; min-width: 70px; }
+  .q-options { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; overflow-x: visible; }
+  .q-option { min-width: unset; padding: 10px 4px; }
+  .q-opt-label { font-size: 0.6rem; }
 }

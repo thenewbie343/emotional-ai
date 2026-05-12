@@ -12,37 +12,30 @@ export default function CompanionCharacter({ animation = 'idle', companion = 'sa
   const color = companion === 'siya' ? '#ff66b2' : '#00bfff'
   const emissiveColor = companion === 'siya' ? '#ff1a8c' : '#0073e6'
   
-  // Animate if it's not idle
   const isResponding = animation !== 'idle'
 
   useFrame((state) => {
-    const t = state.clock.getElapsedTime()
+    const t = state.clock.elapsedTime
     
-    // Stable slow rotation
+    // Gentle slow rotation only (no z-wobble that can look odd)
     if (group.current) {
       group.current.rotation.y = t * 0.3
-      group.current.rotation.z = Math.sin(t * 0.2) * 0.1
     }
 
-    // Effect when responding
     const targetScale = isResponding ? 1.3 : 1.0
     const targetIntensity = isResponding ? 3.0 : 1.0
     const pulseSpeed = isResponding ? 8 : 2
 
-    // Smoothly interpolate scale
     if (group.current) {
       group.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1)
     }
 
-    // Smoothly animate materials
     if (mesh.current) {
-      // Mesh pulsing effect
       const currentScale = 1 + Math.sin(t * pulseSpeed) * (isResponding ? 0.05 : 0.02)
       mesh.current.scale.set(currentScale, currentScale, currentScale)
     }
     
     if (aura.current) {
-      // Aura rotation
       aura.current.rotation.x = t * 0.6
       aura.current.rotation.y = t * 0.9
       const auraScale = 1.2 + Math.sin(t * pulseSpeed * 0.8) * (isResponding ? 0.1 : 0.04)
@@ -67,7 +60,8 @@ export default function CompanionCharacter({ animation = 'idle', companion = 'sa
   })
 
   return (
-    <group ref={group} {...props} position={[0, 3.0, 0]}>
+    // Centered at origin — FloatingCharacter controls Y offset
+    <group ref={group} {...props}>
       {/* Outer Aura */}
       <mesh ref={aura}>
         <icosahedronGeometry args={[1.2, 2]} />

@@ -210,7 +210,7 @@ export default function SaiChat({ session }) {
   const [inputText, setInputText] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false)
-  const [isSoundEnabled, setIsSoundEnabled] = useState(false)
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true)
   const [characterAnim, setCharacterAnim] = useState('idle')
   const [currentAura, setCurrentAura] = useState('neutral')
   const [memories, setMemories] = useState([])
@@ -400,9 +400,9 @@ export default function SaiChat({ session }) {
           <button
             className={`voice-toggle ${isSoundEnabled ? 'active' : ''}`}
             onClick={() => setIsSoundEnabled(!isSoundEnabled)}
-            title="Ambient Sound"
+            title={isSoundEnabled ? 'Turn off ambient hum' : 'Turn on ambient hum'}
           >
-            {isSoundEnabled ? '🎵' : '🎵'}
+            {isSoundEnabled ? '🔊' : '🔈'}
           </button>
           <button
             className={`voice-toggle ${isVoiceEnabled ? 'active' : ''}`}
