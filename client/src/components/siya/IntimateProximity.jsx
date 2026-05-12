@@ -4,7 +4,7 @@ import * as THREE from 'three'
 
 export default function IntimateProximity() {
   const { camera, scene } = useThree()
-  
+
   // Reference to original lighting to restore when moving back
   const originalLights = useRef(new Map())
   const hasDimmed = useRef(false)
@@ -32,9 +32,9 @@ export default function IntimateProximity() {
   }, [scene])
 
   useFrame(() => {
-    // Calculate distance from camera to the center (where Siya is)
+    // Calculate distance from camera to the center (where SHUNAis)
     const distance = camera.position.distanceTo(new THREE.Vector3(0, 0, 0))
-    
+
     // Threshold for "intimate" distance (e.g. less than 2.5 units away)
     if (distance < 2.5) {
       if (!hasDimmed.current) {

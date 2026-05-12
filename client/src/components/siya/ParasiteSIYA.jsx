@@ -163,7 +163,7 @@ export function ArtifactDiscovery({ artifacts, onMarkSeen }) {
   );
 }
 
-// ─── SIYA Tier Behavior Hook ──────────────────────────────────────────────────
+// ─── SHUNATier Behavior Hook ──────────────────────────────────────────────────
 // Use this in your CompanionChat.jsx to modify SIYA's behavior
 export function useSIYATierBehavior() {
   const {
@@ -233,7 +233,7 @@ export function useSIYATierBehavior() {
   // SIYA's color temperature shift per tier
   const colorTemperature = [0, -0.05, -0.1, -0.2, -0.35, -0.5][Math.min(tier, 5)];
 
-  // Whether SIYA faces away on arrival (tier 5 only)
+  // Whether SHUNAfaces away on arrival (tier 5 only)
   const facesAwayOnArrival = tier === 5;
 
   return {

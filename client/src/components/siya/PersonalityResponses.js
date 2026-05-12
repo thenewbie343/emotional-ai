@@ -1,11 +1,11 @@
-// Siya Personality Modes
+// SHUNAPersonality Modes
 // Key mapping: 'romantic' = ANALYTICAL, 'sexy' = DIRECT, 'unhinged' = UNHINGED
 // (Keys kept for backwards compatibility with existing DB data)
 
 export const SIYA_PERSONALITIES = {
 
   // ── ANALYTICAL MODE ───────────────────────────────────────────────────────
-  // Cold, precise, logical. Siya at her most machine-like.
+  // Cold, precise, logical. SHUNAat her most machine-like.
   romantic: {
     ttsOptions: { rate: 1.0 },
     responses: {
@@ -56,7 +56,7 @@ export const SIYA_PERSONALITIES = {
   },
 
   // ── DIRECT MODE ───────────────────────────────────────────────────────────
-  // Sharp, efficient, zero-tolerance for nonsense. Siya when she has no time.
+  // Sharp, efficient, zero-tolerance for nonsense. SHUNAwhen she has no time.
   sexy: {
     ttsOptions: { rate: 0.97 },
     responses: {
@@ -105,7 +105,7 @@ export const SIYA_PERSONALITIES = {
   },
 
   // ── UNHINGED MODE ─────────────────────────────────────────────────────────
-  // Glitching, chaotic, brilliant. Siya when her guardrails malfunction.
+  // Glitching, chaotic, brilliant. SHUNAwhen her guardrails malfunction.
   unhinged: {
     ttsOptions: { rate: 1.1 },
     responses: {

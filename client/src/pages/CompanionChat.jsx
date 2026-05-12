@@ -108,7 +108,7 @@ export default function CompanionChat({ session }) {
       if (data && data.length > 0) setMessages(data)
       else setMessages([{
         id: 'initial',
-        text: "System online. Siya operational. How can I assist you?",
+        text: "System online. SHUNAoperational. How can I assist you?",
         sender: 'ai'
       }])
     }
@@ -174,23 +174,24 @@ export default function CompanionChat({ session }) {
     setTimeout(async () => {
       const emotionKey = detectSiyaEmotion(capturedInput)
       const personalityKey = MODE_TO_PERSONALITY[activeMode]
-      
+
       let generatedText = "Processing error. Rebooting language modules.";
       try {
+        const API_BASE = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
         // Send full chat history to the backend AI Router
-        const apiRes = await fetch('/api/ai/message', {
+        const apiRes = await fetch(`${API_BASE}/api/ai/message`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            messages: [...messages, newUserMsg].map(m => ({ 
-              role: m.sender === 'user' ? 'user' : 'ai', 
-              content: m.text 
+            messages: [...messages, newUserMsg].map(m => ({
+              role: m.sender === 'user' ? 'user' : 'ai',
+              content: m.text
             })),
             emotion: emotionKey,
             mode: activeMode
           })
         });
-        
+
         if (apiRes.ok) {
           const aiData = await apiRes.json();
           generatedText = aiData.text;
@@ -232,124 +233,124 @@ export default function CompanionChat({ session }) {
 
   return (
     <ParasiteSIYA>
-    <div className="companion-container">
-      {/* 3D Scene — full viewport background */}
-      <div className="avatar-section">
-        <Companion3D
-          companion="siya"
-          characterAnim={characterAnim}
-          messages={messages}
-          features={features}
-        />
-      </div>
-
-      {/* Draw mode rune canvas overlay */}
-      <RuneCanvas onSpellCast={handleSpellCast} isDrawModeActive={isDrawModeActive} />
-
-      {/* Header */}
-      <div className="pro-header">
-        <button className="back-btn" onClick={() => navigate('/')}>
-          <span style={{ opacity: 0.5 }}>←</span> HUB
-        </button>
-        <div className="status-indicator">
-          <div className={`status-dot ${isTyping ? 'pulsing' : ''}`} />
-          SIYA · {isTyping ? 'THINKING...' : 'ONLINE'}
+      <div className="companion-container">
+        {/* 3D Scene — full viewport background */}
+        <div className="avatar-section">
+          <Companion3D
+            companion="siya"
+            characterAnim={characterAnim}
+            messages={messages}
+            features={features}
+          />
         </div>
-      </div>
 
-      {/* Effects menu button */}
-      <button
-        className={`magic-menu-btn ${isMenuOpen ? 'open' : ''}`}
-        onClick={() => setIsMenuOpen(!isMenuOpen)}
-        aria-label="Siya effects menu"
-      >
-        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="1.5" fill="none">
-          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+        {/* Draw mode rune canvas overlay */}
+        <RuneCanvas onSpellCast={handleSpellCast} isDrawModeActive={isDrawModeActive} />
 
-      {isMenuOpen && (
-        <div className="magic-menu-panel">
-          <div className="menu-label">SIYA ABILITIES</div>
-
-          {/* Rune Cast — the only active ability */}
-          <button
-            className={`magic-toggle ${isDrawModeActive ? 'active' : ''}`}
-            onClick={() => { setIsDrawModeActive(!isDrawModeActive); if (!isDrawModeActive) setIsMenuOpen(false) }}
-          >
-            <span className="toggle-icon">✍️</span>
-            <div className="toggle-text">
-              <span className="toggle-name">{isDrawModeActive ? 'CANCEL DRAW' : 'RUNE CAST'}</span>
-              <span className="toggle-desc">Draw symbols to command Siya</span>
-            </div>
+        {/* Header */}
+        <div className="pro-header">
+          <button className="back-btn" onClick={() => navigate('/')}>
+            <span style={{ opacity: 0.5 }}>←</span> HUB
           </button>
+          <div className="status-indicator">
+            <div className={`status-dot ${isTyping ? 'pulsing' : ''}`} />
+            SHUNA· {isTyping ? 'THINKING...' : 'ONLINE'}
+          </div>
         </div>
-      )}
 
-      {/* Chat panel */}
-      <div className="chat-section">
-        <div className="chat-history" ref={chatHistoryRef}>
-          {messages.map(msg => (
-            <div key={msg.id} className={`chat-bubble ${msg.sender}`}>
-              <div className="bubble-content">{msg.text}</div>
-            </div>
-          ))}
-          {isTyping && (
-            <div className="chat-bubble ai typing">
-              <div className="bubble-content">
-                <div className="dot" /><div className="dot" /><div className="dot" />
+        {/* Effects menu button */}
+        <button
+          className={`magic-menu-btn ${isMenuOpen ? 'open' : ''}`}
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label="SHUNAeffects menu"
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="1.5" fill="none">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+
+        {isMenuOpen && (
+          <div className="magic-menu-panel">
+            <div className="menu-label">SHUNAABILITIES</div>
+
+            {/* Rune Cast — the only active ability */}
+            <button
+              className={`magic-toggle ${isDrawModeActive ? 'active' : ''}`}
+              onClick={() => { setIsDrawModeActive(!isDrawModeActive); if (!isDrawModeActive) setIsMenuOpen(false) }}
+            >
+              <span className="toggle-icon">✍️</span>
+              <div className="toggle-text">
+                <span className="toggle-name">{isDrawModeActive ? 'CANCEL DRAW' : 'RUNE CAST'}</span>
+                <span className="toggle-desc">Draw symbols to command Siya</span>
               </div>
-            </div>
-          )}
-        </div>
+            </button>
+          </div>
+        )}
 
-        <div className="chat-controls-container">
-          {/* Mode selector */}
-          <div className="personality-bar">
-            {MODES.map(mode => (
-              <button
-                key={mode.key}
-                className={`persona-btn ${activeMode === mode.key ? 'active' : ''}`}
-                style={activeMode === mode.key ? { color: mode.color, borderBottomColor: mode.color } : {}}
-                onClick={() => setActiveMode(mode.key)}
-                title={mode.desc}
-              >
-                {mode.label}
-              </button>
+        {/* Chat panel */}
+        <div className="chat-section">
+          <div className="chat-history" ref={chatHistoryRef}>
+            {messages.map(msg => (
+              <div key={msg.id} className={`chat-bubble ${msg.sender}`}>
+                <div className="bubble-content">{msg.text}</div>
+              </div>
             ))}
+            {isTyping && (
+              <div className="chat-bubble ai typing">
+                <div className="bubble-content">
+                  <div className="dot" /><div className="dot" /><div className="dot" />
+                </div>
+              </div>
+            )}
           </div>
 
-          <form className="chat-input-area" onSubmit={handleSend}>
-            <button
-              type="button"
-              className={`voice-btn ${isVoiceEnabled ? 'active' : ''}`}
-              onClick={() => { setIsVoiceEnabled(!isVoiceEnabled); window.speechSynthesis.cancel() }}
-              title={isVoiceEnabled ? 'Mute Siya' : 'Unmute Siya'}
-            >
-              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
-                {isVoiceEnabled ? (
-                  <path d="M11 5L6 9H2v6h4l5 4V5z M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" strokeLinecap="round" strokeLinejoin="round" />
-                ) : (
-                  <path d="M11 5L6 9H2v6h4l5 4V5z M23 9l-6 6 M17 9l6 6" strokeLinecap="round" strokeLinejoin="round" />
-                )}
-              </svg>
-            </button>
-            <input
-              type="text"
-              placeholder={`Talk to Siya [${MODES.find(m => m.key === activeMode)?.label}]...`}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-            />
-            <button type="submit" className="send-btn" disabled={!inputText.trim()}>
-              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-            </button>
-          </form>
+          <div className="chat-controls-container">
+            {/* Mode selector */}
+            <div className="personality-bar">
+              {MODES.map(mode => (
+                <button
+                  key={mode.key}
+                  className={`persona-btn ${activeMode === mode.key ? 'active' : ''}`}
+                  style={activeMode === mode.key ? { color: mode.color, borderBottomColor: mode.color } : {}}
+                  onClick={() => setActiveMode(mode.key)}
+                  title={mode.desc}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+
+            <form className="chat-input-area" onSubmit={handleSend}>
+              <button
+                type="button"
+                className={`voice-btn ${isVoiceEnabled ? 'active' : ''}`}
+                onClick={() => { setIsVoiceEnabled(!isVoiceEnabled); window.speechSynthesis.cancel() }}
+                title={isVoiceEnabled ? 'Mute Siya' : 'Unmute Siya'}
+              >
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
+                  {isVoiceEnabled ? (
+                    <path d="M11 5L6 9H2v6h4l5 4V5z M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" strokeLinecap="round" strokeLinejoin="round" />
+                  ) : (
+                    <path d="M11 5L6 9H2v6h4l5 4V5z M23 9l-6 6 M17 9l6 6" strokeLinecap="round" strokeLinejoin="round" />
+                  )}
+                </svg>
+              </button>
+              <input
+                type="text"
+                placeholder={`Talk to SHUNA[${MODES.find(m => m.key === activeMode)?.label}]...`}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+              />
+              <button type="submit" className="send-btn" disabled={!inputText.trim()}>
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              </button>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
     </ParasiteSIYA>
   )
 }

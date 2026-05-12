@@ -44,13 +44,13 @@ Do NOT be generic. Make it feel like you actually know them.`
 
 // ─── Seal Form ────────────────────────────────────────────────────────────────
 function SealForm({ userId, onSealed }) {
-  const [message, setMessage]     = useState("");
-  const [mood, setMood]           = useState(0);
+  const [message, setMessage] = useState("");
+  const [mood, setMood] = useState(0);
   const [unlockDate, setUnlockDate] = useState("");
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
-  const [audioUrl, setAudioUrl]   = useState(null);
-  const [sealing, setSealing]     = useState(false);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [sealing, setSealing] = useState(false);
   const mediaRef = useRef(null);
 
   const minDate = new Date(Date.now() + 86400000 * 7).toISOString().split("T")[0];
@@ -211,12 +211,12 @@ function SnapshotDiff({ label, past, present }) {
 
 // ─── Capsule Card ─────────────────────────────────────────────────────────────
 function CapsuleCard({ capsule, onOpen, currentSnapshot }) {
-  const [opening, setOpening]       = useState(false);
+  const [opening, setOpening] = useState(false);
   const [comparison, setComparison] = useState(capsule.comparison?.text || null);
-  const today      = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split("T")[0];
   const isUnlocked = today >= capsule.unlock_date;
-  const daysLeft   = Math.ceil((new Date(capsule.unlock_date) - new Date()) / 86400000);
-  const moodColor  = MOOD_COLORS[capsule.mood_score ?? 2];
+  const daysLeft = Math.ceil((new Date(capsule.unlock_date) - new Date()) / 86400000);
+  const moodColor = MOOD_COLORS[capsule.mood_score ?? 2];
 
   const openCapsule = async () => {
     if (!isUnlocked || capsule.opened) return;
@@ -269,7 +269,7 @@ function CapsuleCard({ capsule, onOpen, currentSnapshot }) {
             Your past self left you something. Are you ready to see it?
           </div>
           <button onClick={openCapsule} disabled={opening} style={styles.openBtn}>
-            {opening ? "✨ SIYA is preparing..." : "💌 Open Time Capsule"}
+            {opening ? "✨ SHUNAis preparing..." : "💌 Open Time Capsule"}
           </button>
         </div>
       )}
@@ -304,7 +304,7 @@ function CapsuleCard({ capsule, onOpen, currentSnapshot }) {
           {capsule.snapshot && (
             <div style={styles.snapshotRow}>
               <SnapshotDiff label="Wellness" past={capsule.snapshot.wellness} present={capsule.comparison?.currentWellness} />
-              <SnapshotDiff label="Level"    past={capsule.snapshot.level}    present={capsule.comparison?.currentLevel}    />
+              <SnapshotDiff label="Level" past={capsule.snapshot.level} present={capsule.comparison?.currentLevel} />
             </div>
           )}
         </div>
@@ -316,9 +316,9 @@ function CapsuleCard({ capsule, onOpen, currentSnapshot }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function SaiTimeCapsule({ session }) {
   const userId = session?.user?.id;
-  const [capsules, setCapsules]           = useState([]);
-  const [loading, setLoading]             = useState(true);
-  const [view, setView]                   = useState("list");
+  const [capsules, setCapsules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState("list");
   const [currentSnapshot, setCurrentSnapshot] = useState(null);
 
   const fetchData = useCallback(async () => {
@@ -338,7 +338,7 @@ export default function SaiTimeCapsule({ session }) {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleSealed = (newCapsule) => { setCapsules(c => [newCapsule, ...c]); setView("list"); };
-  const handleOpen   = (updated) => setCapsules(c => c.map(cap => cap.id === updated.id ? updated : cap));
+  const handleOpen = (updated) => setCapsules(c => c.map(cap => cap.id === updated.id ? updated : cap));
 
   const unlocked = capsules.filter(c => new Date().toISOString().split("T")[0] >= c.unlock_date && !c.opened);
 
@@ -409,7 +409,7 @@ const styles = {
   },
   pageHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 },
   pageTitle: { fontSize: 26, fontWeight: 700, margin: "0 0 4px" },
-  pageSub:   { fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 },
+  pageSub: { fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 },
   createBtn: {
     padding: "10px 18px", background: "linear-gradient(135deg, #4c1d95, #7c3aed)",
     border: "none", borderRadius: 12, color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer",
@@ -458,7 +458,7 @@ const styles = {
   },
   formHeader: { display: "flex", alignItems: "center", gap: 16 },
   formTitle: { fontSize: 20, fontWeight: 700, margin: "0 0 4px" },
-  formSub:   { fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 },
+  formSub: { fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 },
   fieldGroup: { display: "flex", flexDirection: "column", gap: 8 },
   label: { fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.7)" },
   textarea: {

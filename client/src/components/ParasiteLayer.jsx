@@ -77,7 +77,7 @@ export function ParasiteIslandModifier({ islandRef, buildingRef, portalRef }) {
       {/* Tier 5 — center light always on */}
       {isSilent && <CenterLight />}
 
-      {/* Unraveling particle drift from SIYA */}
+      {/* Unraveling particle drift from SHUNA*/}
       {isUnraveling && <UnravelingParticles />}
 
       {/* Extra shooting stars */}
@@ -169,7 +169,7 @@ function UnravelingParticles() {
   const positions = useMemo(() => {
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      pos[i * 3]     = (Math.random() - 0.5) * 3;
+      pos[i * 3] = (Math.random() - 0.5) * 3;
       pos[i * 3 + 1] = Math.random() * 4;
       pos[i * 3 + 2] = (Math.random() - 0.5) * 3;
     }
@@ -182,12 +182,12 @@ function UnravelingParticles() {
     const t = clock.getElapsedTime();
     for (let i = 0; i < count; i++) {
       // Drift slowly outward
-      pos[i * 3]     += Math.sin(t * 0.2 + i) * 0.003;
+      pos[i * 3] += Math.sin(t * 0.2 + i) * 0.003;
       pos[i * 3 + 1] += 0.005; // slowly rise
       pos[i * 3 + 2] += Math.cos(t * 0.3 + i) * 0.003;
       // Reset when too far
       if (pos[i * 3 + 1] > 6) {
-        pos[i * 3]     = (Math.random() - 0.5) * 3;
+        pos[i * 3] = (Math.random() - 0.5) * 3;
         pos[i * 3 + 1] = 0;
         pos[i * 3 + 2] = (Math.random() - 0.5) * 3;
       }

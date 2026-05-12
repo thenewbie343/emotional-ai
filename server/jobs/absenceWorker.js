@@ -16,7 +16,7 @@ async function runAbsenceCheck() {
 
   try {
     // Get all users who have a parasite state record
-    // (i.e. users who have interacted with SIYA at least once)
+    // (i.e. users who have interacted with SHUNAat least once)
     const { data: users, error } = await supabase
       .from("siya_parasite_state")
       .select("user_id, last_genuine_engagement, absence_tier");

@@ -18,7 +18,7 @@ import SaiTimeCapsule from './pages/SaiTimeCapsule'
 import OnboardingTutorial from './components/OnboardingTutorial'
 import './index.css'
 
-// ── SAI ↔ SIYA Toggle Button ────────────────────────────────────────────────
+// ── SAI ↔ SHUNAToggle Button ────────────────────────────────────────────────
 function CompanionToggle({ session, onToggle }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -67,7 +67,7 @@ function CompanionToggle({ session, onToggle }) {
       }}
       onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(124,92,252,0.5)'}
       onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'}
-      title={isSai ? 'Switch to SIYA (Companion Mode)' : 'Switch to SAI (Personal AI)'}
+      title={isSai ? 'Switch to SHUNA(Companion Mode)' : 'Switch to SAI (Personal AI)'}
     >
       <span style={{
         display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -102,7 +102,7 @@ function CompanionToggle({ session, onToggle }) {
 export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-  // Bump this to force the 3D canvas to remount after SAI↔SIYA toggle
+  // Bump this to force the 3D canvas to remount after SAI↔SHUNAtoggle
   const [companionKey, setCompanionKey] = useState(0)
 
   useEffect(() => {
@@ -143,9 +143,9 @@ export default function App() {
         <Route path="/sai/memories" element={session ? <SaiMemories session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/wellness" element={session ? <SaiWellness session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/insights" element={session ? <SaiInsights session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/goals"         element={session ? <SaiGoals         session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/sai/goals" element={session ? <SaiGoals session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/constellation" element={session ? <SaiConstellation session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/capsule"       element={session ? <SaiTimeCapsule  session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/sai/capsule" element={session ? <SaiTimeCapsule session={session} /> : <Navigate to="/auth" />} />
       </Routes>
     </>
   )

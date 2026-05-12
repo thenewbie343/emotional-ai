@@ -2,9 +2,9 @@ import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-// ── Neural Pulse: dynamic energy rings that emanate from Siya ─────────────
+// ── Neural Pulse: dynamic energy rings that emanate from SHUNA─────────────
 // Replaces: Singularity (too gimmicky), AudioMandala (too simple)
-// Role: Shows Siya is "thinking" / in deep processing mode
+// Role: Shows SHUNAis "thinking" / in deep processing mode
 
 export function NeuralPulse({ active }) {
   const rings = useRef([])
@@ -52,7 +52,7 @@ export function NeuralPulse({ active }) {
 
 // ── Phase Shift: chromatic ghosting / holographic body double ─────────────
 // Replaces: MirrorDimension (too dark/distracting), RealWorldEnv (not visual)
-// Role: Shows Siya shifting between digital and physical states
+// Role: Shows SHUNAshifting between digital and physical states
 
 export function PhaseShift({ active }) {
   const ghost1 = useRef()

@@ -26,10 +26,10 @@ const supabase = createClient(
 
 // ─── Genuine Engagement Detection ────────────────────────────────────────────
 const EMOTIONAL_KEYWORDS = [
-  "feel","feeling","felt","scared","happy","sad","angry","anxious","excited",
-  "depressed","lonely","love","hate","afraid","worried","hurt","confused",
-  "lost","tired","proud","ashamed","nervous","grateful","frustrated","empty",
-  "overwhelmed","hopeful","heartbroken","jealous","guilty","miss","afraid"
+  "feel", "feeling", "felt", "scared", "happy", "sad", "angry", "anxious", "excited",
+  "depressed", "lonely", "love", "hate", "afraid", "worried", "hurt", "confused",
+  "lost", "tired", "proud", "ashamed", "nervous", "grateful", "frustrated", "empty",
+  "overwhelmed", "hopeful", "heartbroken", "jealous", "guilty", "miss", "afraid"
 ];
 
 const PERSONAL_PRONOUNS = ["i ", "i'm", "i've", "i'll", "i'd", "my ", "me ", "myself"];
@@ -38,10 +38,10 @@ function isGenuineEngagement(message) {
   if (!message || typeof message !== "string") return false;
   const lower = message.toLowerCase();
   const checks = {
-    length:   message.length > 80,
-    emotion:  EMOTIONAL_KEYWORDS.some(k => lower.includes(k)),
+    length: message.length > 80,
+    emotion: EMOTIONAL_KEYWORDS.some(k => lower.includes(k)),
     personal: PERSONAL_PRONOUNS.some(p => lower.includes(p)),
-    depth:    message.split(" ").length > 15,
+    depth: message.split(" ").length > 15,
   };
   return Object.values(checks).filter(Boolean).length >= 2;
 }
@@ -50,9 +50,9 @@ function isGenuineEngagement(message) {
 function calculateTier(lastEngagement) {
   if (!lastEngagement) return 5;
   const days = (Date.now() - new Date(lastEngagement).getTime()) / 86400000;
-  if (days < 2)  return 0;
-  if (days < 4)  return 1;
-  if (days < 7)  return 2;
+  if (days < 2) return 0;
+  if (days < 4) return 1;
+  if (days < 7) return 2;
   if (days < 11) return 3;
   if (days < 16) return 4;
   return 5;
@@ -62,31 +62,31 @@ function calculateTier(lastEngagement) {
 // Each change has an id so we never duplicate it
 const TIER_CHANGES = {
   1: [
-    { id: "cloud_drift",      type: "island", target: "cloud_position",    value: { x: 12, y: 8, z: -5 } },
-    { id: "bird_minus_one",   type: "island", target: "bird_count",        value: -1 },
-    { id: "island_tilt",      type: "island", target: "small_island_tilt", value: 3 },
+    { id: "cloud_drift", type: "island", target: "cloud_position", value: { x: 12, y: 8, z: -5 } },
+    { id: "bird_minus_one", type: "island", target: "bird_count", value: -1 },
+    { id: "island_tilt", type: "island", target: "small_island_tilt", value: 3 },
   ],
   2: [
-    { id: "portal_shift",     type: "island", target: "portal_position",   value: { x: 2, y: 0, z: 0 } },
-    { id: "flowers_appear",   type: "island", target: "new_flowers",       value: true },
-    { id: "water_darkens",    type: "island", target: "water_darkness",    value: 0.3 },
-    { id: "stars_frequent",   type: "island", target: "shooting_star_rate",value: 3.0 },
+    { id: "portal_shift", type: "island", target: "portal_position", value: { x: 2, y: 0, z: 0 } },
+    { id: "flowers_appear", type: "island", target: "new_flowers", value: true },
+    { id: "water_darkens", type: "island", target: "water_darkness", value: 0.3 },
+    { id: "stars_frequent", type: "island", target: "shooting_star_rate", value: 3.0 },
   ],
   3: [
-    { id: "phantom_island",   type: "island", target: "phantom_island",    value: true },
-    { id: "new_music_note",   type: "audio",  target: "extra_tone",        value: { freq: 432, vol: 0.08 } },
-    { id: "time_shift",       type: "island", target: "time_of_day",       value: "early_morning" },
+    { id: "phantom_island", type: "island", target: "phantom_island", value: true },
+    { id: "new_music_note", type: "audio", target: "extra_tone", value: { freq: 432, vol: 0.08 } },
+    { id: "time_shift", type: "island", target: "time_of_day", value: "early_morning" },
   ],
   4: [
-    { id: "dark_building",    type: "island", target: "building_lights",   value: false },
+    { id: "dark_building", type: "island", target: "building_lights", value: false },
     { id: "cool_temperature", type: "island", target: "color_temperature", value: -0.4 },
-    { id: "new_object",       type: "island", target: "placed_objects",    value: ["lantern"] },
+    { id: "new_object", type: "island", target: "placed_objects", value: ["lantern"] },
   ],
   5: [
-    { id: "full_stillness",   type: "island", target: "frozen",            value: true },
-    { id: "no_birds",         type: "island", target: "bird_count",        value: 0 },
-    { id: "no_clouds",        type: "island", target: "cloud_movement",    value: false },
-    { id: "center_light",     type: "island", target: "center_light",      value: true },
+    { id: "full_stillness", type: "island", target: "frozen", value: true },
+    { id: "no_birds", type: "island", target: "bird_count", value: 0 },
+    { id: "no_clouds", type: "island", target: "cloud_movement", value: false },
+    { id: "center_light", type: "island", target: "center_light", value: true },
   ],
 };
 
@@ -286,7 +286,7 @@ async function getParasiteState(userId) {
   };
 }
 
-// Called when SIYA deflects a question about changes
+// Called when SHUNAdeflects a question about changes
 async function recordDeflection(userId) {
   const { data: state } = await supabase
     .from("siya_parasite_state")

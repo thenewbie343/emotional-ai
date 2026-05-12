@@ -57,7 +57,7 @@ router.post("/engage", authMiddleware, async (req, res) => {
 });
 
 // POST /api/parasite/deflect
-// Called when SIYA deflects a question about the changes
+// Called when SHUNAdeflects a question about the changes
 router.post("/deflect", authMiddleware, async (req, res) => {
   try {
     await recordDeflection(req.userId);

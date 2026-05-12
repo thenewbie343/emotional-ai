@@ -14,8 +14,8 @@ const STEPS = [
   },
   {
     icon: "✨",
-    title: "Meet SIYA — The Immersive Companion",
-    desc: "SIYA is pure magic. She reacts to your emotions with 3D animations, lets you cast runes, and shifts between Analytical, Direct, and Unhinged modes.",
+    title: "Meet SHUNA— The Immersive Companion",
+    desc: "SHUNAis pure magic. She reacts to your emotions with 3D animations, lets you cast runes, and shifts between Analytical, Direct, and Unhinged modes.",
   },
   {
     icon: "📊",

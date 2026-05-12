@@ -70,7 +70,7 @@ export function useParasiteState() {
     }
   }, []);
 
-  // Called when SIYA deflects
+  // Called when SHUNAdeflects
   const recordDeflection = useCallback(async () => {
     try {
       await apiFetch("/deflect", { method: "POST" });
@@ -134,11 +134,11 @@ export function useParasiteState() {
     hasChange,
     getChangeValue,
     // Convenience tier booleans
-    isPresent:    state.tier === 0,
-    isAware:      state.tier === 1,
-    isRestless:   state.tier === 2,
-    isHungry:     state.tier === 3,
+    isPresent: state.tier === 0,
+    isAware: state.tier === 1,
+    isRestless: state.tier === 2,
+    isHungry: state.tier === 3,
     isUnraveling: state.tier === 4,
-    isSilent:     state.tier === 5,
+    isSilent: state.tier === 5,
   };
 }
