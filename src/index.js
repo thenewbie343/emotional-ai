@@ -3,6 +3,8 @@ const express = require('express');
 const path = require('path');
 const { setupDatabase } = require('./database/setup');
 const apiRoutes = require('./api/routes');
+const parasiteRoutes = require('../server/api/parasiteRoutes');
+const { startAbsenceWorker } = require('../server/jobs/absenceWorker');
 
 // Initialize express app
 const app = express();
@@ -18,10 +20,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 // API routes
 app.use('/api', apiRoutes);
 
+// Parasite Engine routes
+app.use('/api/parasite', parasiteRoutes);
+
 // Serve the main HTML file for all other routes (for SPA)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// Start background absence worker (runs every 6 hours)
+startAbsenceWorker();
 
 // Initialize database
 setupDatabase()

@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Sky, Environment, PerspectiveCamera, Clouds, Cloud, Sparkles } from '@react-three/drei'
@@ -10,6 +10,7 @@ import FloatingDebris from '../components/FloatingDebris'
 import ShootingStars from '../components/ShootingStars'
 import MagicDrip from '../components/MagicDrip'
 import MovingCloud from '../components/MovingCloud'
+import { ParasiteIslandModifier } from '../components/ParasiteLayer'
 import { initAudio, setAudioVolume, stopAudio } from '../utils/audioSynth'
 
 export default function HomeScene() {
@@ -18,6 +19,7 @@ export default function HomeScene() {
   const [isMuted, setIsMuted] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   const [showPicker, setShowPicker] = useState(false)
+  const portalRef = useRef()
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768)
@@ -173,6 +175,9 @@ export default function HomeScene() {
             floatOffset={2.4}
             floatSpeed={0.65}
           />
+          
+          {/* Parasite Engine — reacts to user absence tier */}
+          <ParasiteIslandModifier portalRef={portalRef} />
           
         </Suspense>
 

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import Companion3D from '../components/Companion3D'
 import { SIYA_PERSONALITIES, detectSiyaEmotion } from '../components/siya/PersonalityResponses'
 import { RuneCanvas } from '../components/siya/RuneCasting'
+import ParasiteSIYA, { useSIYATierBehavior } from '../components/siya/ParasiteSIYA'
 import './CompanionChat.css'
 
 // ── Feminine voice selector ─────────────────────────────────────────────────
@@ -80,6 +81,14 @@ export default function CompanionChat({ session }) {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isDrawModeActive, setIsDrawModeActive] = useState(false)
+
+  // Parasite Engine — tier-aware behavior + deflection system
+  const {
+    applyTierBehavior,
+    recordEngagement,
+    idleAnimationSpeed,
+    colorTemperature,
+  } = useSIYATierBehavior()
 
   // Load voices asynchronously (Chrome needs this)
   useEffect(() => {
@@ -162,35 +171,40 @@ export default function CompanionChat({ session }) {
     setInputText('')
     setIsTyping(true)
 
-    setTimeout(() => {
+    setTimeout(async () => {
       const emotionKey = detectSiyaEmotion(capturedInput)
       const personalityKey = MODE_TO_PERSONALITY[activeMode]
       const currentPersona = SIYA_PERSONALITIES[personalityKey]?.responses || SIYA_PERSONALITIES.romantic.responses
       const responsePool = currentPersona[emotionKey] || currentPersona.default
       const selectedResponse = responsePool[Math.floor(Math.random() * responsePool.length)]
 
-      const aiReply = { id: Date.now() + 1, text: selectedResponse.text, sender: 'ai' }
+      // Record engagement + apply tier-based modifications / deflection
+      await recordEngagement(capturedInput)
+      const { response: tieredText } = applyTierBehavior(capturedInput, selectedResponse.text)
+
+      const aiReply = { id: Date.now() + 1, text: tieredText, sender: 'ai' }
       setMessages(prev => [...prev, aiReply])
       setIsTyping(false)
 
       if (session?.user?.id) {
         supabase.from('messages').insert([{
-          user_id: session.user.id, text: selectedResponse.text, sender: 'ai', source: 'aria'
+          user_id: session.user.id, text: tieredText, sender: 'ai', source: 'aria'
         }]).then(({ error }) => { if (error) console.error('Save AI reply error:', error) })
       }
 
-      speakText(selectedResponse.text)
+      speakText(tieredText)
 
       if (capturedInput.toLowerCase().includes('dance')) setCharacterAnim('dance')
       else setCharacterAnim(selectedResponse.emotion)
 
-      const readingTime = Math.max(3000, selectedResponse.text.length * 100)
+      const readingTime = Math.max(3000, tieredText.length * 100)
       setTimeout(() => setCharacterAnim('idle'), readingTime)
 
     }, 1200 + Math.random() * 600)
   }
 
   return (
+    <ParasiteSIYA>
     <div className="companion-container">
       {/* 3D Scene — full viewport background */}
       <div className="avatar-section">
@@ -309,5 +323,6 @@ export default function CompanionChat({ session }) {
         </div>
       </div>
     </div>
+    </ParasiteSIYA>
   )
 }
