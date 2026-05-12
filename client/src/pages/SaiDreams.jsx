@@ -76,74 +76,81 @@ function localAnalyzeDream(dreamText) {
 
 // ─── Particle System ─────────────────────────────────────────────────────────
 function DreamParticles({ analysis }) {
-  const mesh = useRef();
-  const count = 2500;
+  const mesh = useRef()
+  const count = 2500
 
   const { positions, colors } = useMemo(() => {
-    const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-    const primary = new THREE.Color(analysis?.palette?.primary || "#7c3aed");
-    const secondary = new THREE.Color(analysis?.palette?.secondary || "#1e1b4b");
-    const accent = new THREE.Color(analysis?.palette?.accent || "#a78bfa");
-    const style = analysis?.particleStyle || "drift";
+    // Guard: return 1 invisible dummy particle when analysis isn't ready
+    if (!analysis || !analysis.palette) {
+      return { positions: new Float32Array(3), colors: new Float32Array(3) }
+    }
+
+    const positions = new Float32Array(count * 3)
+    const colors    = new Float32Array(count * 3)
+    const primary   = new THREE.Color(analysis.palette.primary   || '#7c3aed')
+    const secondary = new THREE.Color(analysis.palette.secondary || '#1e1b4b')
+    const accent    = new THREE.Color(analysis.palette.accent    || '#a78bfa')
+    const style     = analysis.particleStyle || 'drift'
 
     for (let i = 0; i < count; i++) {
-      let x, y, z;
-      if (style === "storm") {
-        const angle = Math.random() * Math.PI * 2;
-        const radius = Math.random() * 18;
-        x = Math.cos(angle) * radius + (Math.random() - 0.5) * 4;
-        y = (Math.random() - 0.5) * 28;
-        z = Math.sin(angle) * radius + (Math.random() - 0.5) * 4;
-      } else if (style === "spiral") {
-        const t = Math.random() * Math.PI * 8;
-        x = Math.cos(t) * (t / 3) + (Math.random() - 0.5) * 2;
-        y = (Math.random() - 0.5) * 18;
-        z = Math.sin(t) * (t / 3) + (Math.random() - 0.5) * 2;
+      let x, y, z
+      if (style === 'storm') {
+        const angle  = Math.random() * Math.PI * 2
+        const radius = Math.random() * 18
+        x = Math.cos(angle) * radius + (Math.random() - 0.5) * 4
+        y = (Math.random() - 0.5) * 28
+        z = Math.sin(angle) * radius + (Math.random() - 0.5) * 4
+      } else if (style === 'spiral') {
+        const t2 = Math.random() * Math.PI * 8
+        x = Math.cos(t2) * (t2 / 3) + (Math.random() - 0.5) * 2
+        y = (Math.random() - 0.5) * 18
+        z = Math.sin(t2) * (t2 / 3) + (Math.random() - 0.5) * 2
       } else {
-        x = (Math.random() - 0.5) * 40;
-        y = (Math.random() - 0.5) * 40;
-        z = (Math.random() - 0.5) * 40;
+        x = (Math.random() - 0.5) * 40
+        y = (Math.random() - 0.5) * 40
+        z = (Math.random() - 0.5) * 40
       }
-      positions[i * 3] = x;
-      positions[i * 3 + 1] = y;
-      positions[i * 3 + 2] = z;
+      positions[i * 3]     = x
+      positions[i * 3 + 1] = y
+      positions[i * 3 + 2] = z
 
-      const t = Math.random();
+      const t = Math.random()
       const c = t < 0.5
         ? primary.clone().lerp(secondary, t * 2)
-        : secondary.clone().lerp(accent, (t - 0.5) * 2);
-      colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+        : secondary.clone().lerp(accent, (t - 0.5) * 2)
+      colors[i * 3]     = c.r
+      colors[i * 3 + 1] = c.g
+      colors[i * 3 + 2] = c.b
     }
-    return { positions, colors };
-  }, [analysis]);
+    return { positions, colors }
+  }, [analysis])
 
   useFrame(({ clock }) => {
-    if (!mesh.current || !analysis) return;
-    const t = clock.elapsedTime;
-    const style = analysis?.particleStyle;
-    const intensity = analysis?.intensity || 0.5;
-    const pos = mesh.current.geometry.attributes.position.array;
+    if (!mesh.current || !analysis || !analysis.palette) return
+    const t         = clock.elapsedTime
+    const style     = analysis.particleStyle || 'drift'
+    const intensity = analysis.intensity || 0.5
+    const pos       = mesh.current.geometry.attributes.position.array
 
     for (let i = 0; i < count; i++) {
-      const i3 = i * 3;
-      if (style === "storm") {
-        pos[i3]     += Math.sin(t * 0.5 + i) * 0.015 * intensity;
-        pos[i3 + 1] += Math.cos(t * 0.3 + i * 0.5) * 0.02 * intensity;
-        pos[i3 + 2] += Math.sin(t * 0.4 + i * 0.3) * 0.015 * intensity;
-      } else if (style === "spiral") {
-        const angle = t * 0.08 * intensity;
-        const ox = pos[i3], oz = pos[i3 + 2];
-        pos[i3]     = ox * Math.cos(angle * 0.01) - oz * Math.sin(angle * 0.01);
-        pos[i3 + 2] = ox * Math.sin(angle * 0.01) + oz * Math.cos(angle * 0.01);
+      const i3 = i * 3
+      if (style === 'storm') {
+        pos[i3]     += Math.sin(t * 0.5 + i) * 0.015 * intensity
+        pos[i3 + 1] += Math.cos(t * 0.3 + i * 0.5) * 0.02 * intensity
+        pos[i3 + 2] += Math.sin(t * 0.4 + i * 0.3) * 0.015 * intensity
+      } else if (style === 'spiral') {
+        const angle = t * 0.08 * intensity
+        const ox = pos[i3], oz = pos[i3 + 2]
+        pos[i3]     = ox * Math.cos(angle * 0.01) - oz * Math.sin(angle * 0.01)
+        pos[i3 + 2] = ox * Math.sin(angle * 0.01) + oz * Math.cos(angle * 0.01)
       } else {
-        pos[i3 + 1] += Math.sin(t * 0.2 + i) * 0.004 * intensity;
-        pos[i3]     += Math.cos(t * 0.15 + i * 0.3) * 0.002 * intensity;
+        pos[i3 + 1] += Math.sin(t * 0.2 + i) * 0.004 * intensity
+        pos[i3]     += Math.cos(t * 0.15 + i * 0.3) * 0.002 * intensity
       }
     }
-    mesh.current.geometry.attributes.position.needsUpdate = true;
-    mesh.current.rotation.y = t * 0.02;
-  });
+    mesh.current.geometry.attributes.position.needsUpdate = true
+    mesh.current.rotation.y = t * 0.02
+  })
 
   return (
     <points ref={mesh}>
@@ -156,28 +163,30 @@ function DreamParticles({ analysis }) {
         opacity={0.9} depthWrite={false} blending={THREE.AdditiveBlending}
       />
     </points>
-  );
+  )
 }
 
 function LightOrbs({ palette }) {
-  const orbs = useRef([]);
+  const orbs = useRef([])
   useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
+    if (!palette) return
+    const t = clock.elapsedTime
     orbs.current.forEach((orb, i) => {
-      if (!orb) return;
-      orb.position.x = Math.sin(t * 0.3 + i * 2) * 10;
-      orb.position.y = Math.cos(t * 0.2 + i) * 5;
-      orb.position.z = Math.cos(t * 0.4 + i * 1.5) * 10;
-    });
-  });
+      if (!orb) return
+      orb.position.x = Math.sin(t * 0.3 + i * 2) * 10
+      orb.position.y = Math.cos(t * 0.2 + i) * 5
+      orb.position.z = Math.cos(t * 0.4 + i * 1.5) * 10
+    })
+  })
+  if (!palette) return null
   return [0, 1, 2].map(i => (
     <pointLight
       key={i}
       ref={el => orbs.current[i] = el}
-      color={i === 0 ? palette?.primary : i === 1 ? palette?.accent : palette?.secondary}
+      color={i === 0 ? palette.primary : i === 1 ? palette.accent : palette.secondary}
       intensity={2} distance={20}
     />
-  ));
+  ))
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
