@@ -1,3 +1,4 @@
+require('dotenv').config();
 // Main application entry point
 const express = require('express');
 const cors = require('cors');
@@ -15,19 +16,13 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, 'public')));
-
 // API routes
 app.use('/api', apiRoutes);
 
 // Parasite Engine routes
 app.use('/api/parasite', parasiteRoutes);
 
-// Serve the main HTML file for all other routes (for SPA)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// Parasite Engine routes
 
 // Start background absence worker (runs every 6 hours)
 startAbsenceWorker();

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
 
-const API_BASE = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
+const rawApiBase = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
+const API_BASE = rawApiBase.replace(/\/$/, ""); // Remove trailing slash
 
 async function apiFetch(path, options = {}) {
   const { data: { session } } = await supabase.auth.getSession();
