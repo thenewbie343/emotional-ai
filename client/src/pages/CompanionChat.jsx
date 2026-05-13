@@ -177,7 +177,7 @@ export default function CompanionChat({ session }) {
 
       let generatedText = "Processing error. Rebooting language modules.";
       try {
-        const API_BASE = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+        const API_BASE = "https://emotional-ai-18zi.onrender.com";
         // Send full chat history to the backend AI Router
         const apiRes = await fetch(`${API_BASE}/api/ai/message`, {
           method: 'POST',

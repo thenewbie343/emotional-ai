@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
 
-const rawApiBase = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
-const API_BASE = rawApiBase.replace(/\/$/, ""); // Remove trailing slash
+const API_BASE = "https://emotional-ai-18zi.onrender.com";
 
 async function apiFetch(path, options = {}) {
   const { data: { session } } = await supabase.auth.getSession();
