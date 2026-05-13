@@ -2,7 +2,6 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { setupDatabase } = require('./database/setup');
 const apiRoutes = require('./api/routes');
 const parasiteRoutes = require('../server/api/parasiteRoutes');
 const { startAbsenceWorker } = require('../server/jobs/absenceWorker');
@@ -33,15 +32,7 @@ app.get('*', (req, res) => {
 // Start background absence worker (runs every 6 hours)
 startAbsenceWorker();
 
-// Initialize database
-setupDatabase()
-  .then(() => {
-    // Start the server
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Emotional AI server running on port ${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('Failed to initialize database:', err);
-    process.exit(1);
-  });
+// Start the server
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Emotional AI server running on port ${PORT}`);
+});
