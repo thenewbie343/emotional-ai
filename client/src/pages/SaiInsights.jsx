@@ -117,7 +117,7 @@ export default function SaiInsights({ session }) {
     if (!session?.user?.id) return
     const load = async () => {
       const [{ data: msgs }, { data: mems }] = await Promise.all([
-        supabase.from('messages').select('*').eq('user_id', session.user.id).eq('source', 'sai').order('created_at', { ascending: false }).limit(200),
+        supabase.from('messages').select('*').eq('user_id', session.user.id).eq('source', 'aria').order('created_at', { ascending: false }).limit(200),
         supabase.from('sai_memories').select('*').eq('user_id', session.user.id),
       ])
       const finalMsgs = msgs || []
@@ -141,9 +141,9 @@ export default function SaiInsights({ session }) {
     <div className="insights-page">
       {/* Header */}
       <div className="insights-header">
-        <Link to="/sai" className="insights-back">←</Link>
+        <Link to="/chat" className="insights-back">←</Link>
         <div>
-          <h1 className="insights-title">🔮 SAI Insights</h1>
+          <h1 className="insights-title">🔮 Siya's Insights</h1>
           <p className="insights-subtitle">What your conversations reveal about you</p>
         </div>
       </div>
@@ -158,15 +158,15 @@ export default function SaiInsights({ session }) {
           <div className="insights-empty">
             <div className="insights-empty-icon">🌑</div>
             <h2>Not enough data yet</h2>
-            <p>Chat with SAI for a while and come back — she'll have deep insights waiting for you.</p>
-            <Link to="/sai/chat" className="insights-chat-btn">💬 Go Chat with SAI</Link>
+            <p>Chat with Siya for a while and come back — she'll have deep insights waiting for you.</p>
+            <Link to="/chat" className="insights-chat-btn">💬 Go Chat with Siya</Link>
           </div>
         ) : (
           <>
             {/* Main AI Insight */}
             <div className="insights-main-card">
               <div className="insights-main-icon">🤖</div>
-              <h2 className="insights-card-title">SAI's Personal Read on You</h2>
+              <h2 className="insights-card-title">Siya's Personal Read on You</h2>
               <p className="insights-main-text">{insight.main}</p>
               <p className="insights-secondary-text">{insight.positivityNote}</p>
               <p className="insights-secondary-text" style={{ marginTop: 8 }}>{insight.memoryNote}</p>
@@ -243,7 +243,7 @@ export default function SaiInsights({ session }) {
               </div>
               <div className="trait-description">
                 Your conversations most frequently reflect {analysis.dominant[0]?.[0]} energy.
-                SAI adapts to mirror and balance this to support you best.
+                Siya adapts to mirror and balance this to support you best.
               </div>
             </div>
 

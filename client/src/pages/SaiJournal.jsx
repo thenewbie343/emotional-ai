@@ -11,7 +11,7 @@ const MOODS = [
   { emoji: '😡', label: 'Angry', color: '#ff4466' },
 ]
 
-const SAI_MOOD_COMMENTS = {
+const SIYA_MOOD_COMMENTS = {
   '🤩': [
     "That's incredible! I love seeing you on top of the world!",
     "Your positive energy is absolutely radiant right now!",
@@ -58,7 +58,7 @@ export default function SaiJournal({ session }) {
   const [selectedMood, setSelectedMood] = useState(null)
   const [note, setNote] = useState('')
   const [entries, setEntries] = useState([])
-  const [saiComment, setSaiComment] = useState(null)
+  const [siyaComment, setSiyaComment] = useState(null)
   const [saving, setSaving] = useState(false)
 
   // Load past mood entries
@@ -78,10 +78,10 @@ export default function SaiJournal({ session }) {
 
   const handleMoodSelect = (emoji) => {
     setSelectedMood(emoji)
-    // SAI gives a comment
-    const comments = SAI_MOOD_COMMENTS[emoji] || []
+    // Siya gives a comment
+    const comments = SIYA_MOOD_COMMENTS[emoji] || []
     const comment = comments[Math.floor(Math.random() * comments.length)]
-    setSaiComment(comment)
+    setSiyaComment(comment)
   }
 
   const handleSave = async () => {
@@ -103,7 +103,7 @@ export default function SaiJournal({ session }) {
 
     setSelectedMood(null)
     setNote('')
-    setSaiComment(null)
+    setSiyaComment(null)
     setSaving(false)
   }
 
@@ -111,7 +111,7 @@ export default function SaiJournal({ session }) {
     <div className="sai-journal-page">
       {/* Header */}
       <div className="sai-journal-header">
-        <Link to="/sai" className="back-link">←</Link>
+        <Link to="/chat" className="back-link">←</Link>
         <h2>Mood Journal</h2>
         <div className="spacer"></div>
       </div>
@@ -133,10 +133,10 @@ export default function SaiJournal({ session }) {
         </div>
       </div>
 
-      {/* SAI's comment on the selected mood */}
-      {saiComment && (
+      {/* Siya's comment on the selected mood */}
+      {siyaComment && (
         <div className="sai-comment">
-          <div className="comment-bubble">💬 {saiComment}</div>
+          <div className="comment-bubble">💬 {siyaComment}</div>
         </div>
       )}
 

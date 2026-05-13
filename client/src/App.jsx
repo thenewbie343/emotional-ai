@@ -132,19 +132,19 @@ export default function App() {
         {/* key prop forces full remount of 3D canvas on toggle */}
         <Route path="/chat" element={session ? <CompanionChat key={`siya-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
 
+        {/* SIYA features */}
+        <Route path="/siya/journal" element={session ? <SaiJournal session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/siya/wellness" element={session ? <SaiWellness session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/siya/insights" element={session ? <SaiInsights session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/siya/diary" element={session ? <SaiDiary session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/siya/memory" element={session ? <SaiConstellation session={session} /> : <Navigate to="/auth" />} />
+
         {/* SAI routes */}
         <Route path="/sai" element={session ? <SaiHub key={`saihub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/chat" element={session ? <SaiChat key={`saichat-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/journal" element={session ? <SaiJournal session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/dreams" element={session ? <SaiDreams session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/diary" element={session ? <SaiDiary session={session} /> : <Navigate to="/auth" />} />
-
-        {/* 3 new SAI features */}
         <Route path="/sai/memories" element={session ? <SaiMemories session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/wellness" element={session ? <SaiWellness session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/insights" element={session ? <SaiInsights session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/goals" element={session ? <SaiGoals session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/constellation" element={session ? <SaiConstellation session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/capsule" element={session ? <SaiTimeCapsule session={session} /> : <Navigate to="/auth" />} />
       </Routes>
     </>

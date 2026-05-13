@@ -22,14 +22,9 @@ function getGreeting() {
 
 const FEATURES = [
   { to: '/sai/chat',     icon: '💬', label: 'Chat',         desc: 'Talk to SAI',              accent: '#7c5cfc' },
-  { to: '/sai/journal',  icon: '📓', label: 'Journal',      desc: 'Track your mood',          accent: '#10b981' },
   { to: '/sai/memories', icon: '🧠', label: 'Memory Vault', desc: 'What SAI knows about you', accent: '#00d4ff' },
-  { to: '/sai/wellness', icon: '💊', label: 'Wellness',     desc: 'Daily check-in',           accent: '#f59e0b' },
   { to: '/sai/goals',    icon: '🎯', label: 'Goals',        desc: 'Daily challenges',         accent: '#f97316' },
-  { to: '/sai/insights', icon: '🔮', label: 'Insights',     desc: 'Your emotional profile',   accent: '#a855f7' },
   { to: '/sai/dreams',        icon: '🌙', label: 'Dream Worlds',  desc: 'Visualize your dreams',     accent: '#7c3aed' },
-  { to: '/sai/diary',         icon: '📖', label: 'SAI Diary',    desc: "SAI's private thoughts",    accent: '#ff88cc' },
-  { to: '/sai/constellation', icon: '⭐', label: 'Memory Stars', desc: '3D memory constellation',   accent: '#60a5fa' },
   { to: '/sai/capsule',       icon: '⏳', label: 'Time Capsules', desc: 'Messages to future self',  accent: '#facc15' },
   { to: '/',                  icon: '🏝️', label: 'Island',       desc: '3D world',                  accent: '#00ffaa' },
 ]
@@ -140,9 +135,9 @@ export default function SaiHub({ session }) {
           <span className="nav-icon">🎯</span>
           <span className="nav-label">Goals</span>
         </Link>
-        <Link to="/sai/wellness" className="sai-nav-item">
-          <span className="nav-icon">💊</span>
-          <span className="nav-label">Wellness</span>
+        <Link to="/sai/dreams" className="sai-nav-item">
+          <span className="nav-icon">🌙</span>
+          <span className="nav-label">Dreams</span>
         </Link>
         <Link to="/sai/memories" className="sai-nav-item">
           <span className="nav-icon">🧠</span>

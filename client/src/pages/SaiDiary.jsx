@@ -54,11 +54,11 @@ export default function SaiDiary({ session }) {
 
   return (
     <div className="diary-container">
-      <button className="back-btn" onClick={() => navigate('/sai')}>← Back to Hub</button>
+      <button className="back-btn" onClick={() => navigate('/chat')}>← Back to Chat</button>
       
       <div className="diary-header">
-        <h1>SAI's Private Diary</h1>
-        <p>A look into what SAI thinks when you aren't around.</p>
+        <h1>Siya's Private Diary</h1>
+        <p>A look into what Siya thinks when you aren't around.</p>
         <button 
           className="write-entry-btn" 
           onClick={writeEntry}
@@ -70,7 +70,7 @@ export default function SaiDiary({ session }) {
 
       <div className="diary-timeline">
         {entries.length === 0 ? (
-          <div className="empty-state">No entries yet. Wait for SAI to write one, or force an update.</div>
+          <div className="empty-state">No entries yet. Wait for Siya to write one, or force an update.</div>
         ) : (
           entries.map(entry => (
             <div key={entry.id} className="diary-entry">

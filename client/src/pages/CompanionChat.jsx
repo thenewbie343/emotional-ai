@@ -284,6 +284,48 @@ export default function CompanionChat({ session }) {
                 <span className="toggle-desc">Draw symbols to command Siya</span>
               </div>
             </button>
+            
+            <div className="menu-label" style={{ marginTop: '16px' }}>SIYA'S MIND</div>
+            
+            <button className="magic-toggle" onClick={() => navigate('/siya/journal')}>
+              <span className="toggle-icon">📓</span>
+              <div className="toggle-text">
+                <span className="toggle-name">JOURNAL</span>
+                <span className="toggle-desc">Track your mood with Siya</span>
+              </div>
+            </button>
+
+            <button className="magic-toggle" onClick={() => navigate('/siya/insights')}>
+              <span className="toggle-icon">🔮</span>
+              <div className="toggle-text">
+                <span className="toggle-name">INSIGHTS</span>
+                <span className="toggle-desc">Your emotional profile</span>
+              </div>
+            </button>
+
+            <button className="magic-toggle" onClick={() => navigate('/siya/wellness')}>
+              <span className="toggle-icon">💊</span>
+              <div className="toggle-text">
+                <span className="toggle-name">WELLNESS</span>
+                <span className="toggle-desc">Daily check-in with Siya</span>
+              </div>
+            </button>
+
+            <button className="magic-toggle" onClick={() => navigate('/siya/diary')}>
+              <span className="toggle-icon">📖</span>
+              <div className="toggle-text">
+                <span className="toggle-name">SIYA DIARY</span>
+                <span className="toggle-desc">Siya's private thoughts</span>
+              </div>
+            </button>
+
+            <button className="magic-toggle" onClick={() => navigate('/siya/memory')}>
+              <span className="toggle-icon">⭐</span>
+              <div className="toggle-text">
+                <span className="toggle-name">SIYA'S MEMORY</span>
+                <span className="toggle-desc">3D memory constellation</span>
+              </div>
+            </button>
           </div>
         )}
 

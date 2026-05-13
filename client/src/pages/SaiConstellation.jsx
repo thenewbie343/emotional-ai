@@ -239,7 +239,7 @@ export default function SaiConstellation({ session }) {
   return (
     <div style={styles.container}>
       {/* Back link */}
-      <a href="/sai" style={styles.backBtn}>← SAI</a>
+      <a href="/chat" style={styles.backBtn}>← Chat</a>
 
       {/* HUD */}
       <div style={styles.hud}>
@@ -266,10 +266,10 @@ export default function SaiConstellation({ session }) {
           <div style={{ fontSize: 52, marginBottom: 16 }}>🌌</div>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>No Memory Stars Yet</div>
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', maxWidth: 280, textAlign: 'center', lineHeight: 1.7, marginBottom: 20 }}>
-            Chat with SAI and share things about yourself.<br />
-            Tell SAI your name, what you love, where you're from — she'll remember and create stars for each memory.
+            Chat with Siya and share things about yourself.<br />
+            Tell Siya your name, what you love, where you're from — she'll remember and create stars for each memory.
           </div>
-          <a href="/sai/chat" style={styles.chatBtn}>💬 Chat with SAI</a>
+          <a href="/chat" style={styles.chatBtn}>💬 Chat with Siya</a>
         </div>
       )}
 
