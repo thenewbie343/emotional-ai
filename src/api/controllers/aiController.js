@@ -26,8 +26,8 @@ exports.processMessage = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('AI Controller Error:', error);
-    res.status(500).json({ error: 'Failed to process AI message' });
+    console.error('AI Controller Error:', error.message || error);
+    res.status(500).json({ error: 'Failed to process AI message', detail: error.message });
   }
 };
 
