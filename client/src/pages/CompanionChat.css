@@ -252,29 +252,42 @@
   bottom: 34px;
   left: 24px;
   z-index: 200;
-  width: 48px;
   height: 48px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.07);
+  padding: 0 20px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(124,92,252,0.85), rgba(88,28,135,0.85));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(167,139,250,0.5);
   color: white;
   display: flex;
   align-items: center;
+  gap: 10px;
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+  box-shadow: 0 0 15px rgba(124,92,252,0.4);
+  animation: pulseHub 2.5s infinite alternate;
+}
+@keyframes pulseHub {
+  0% { box-shadow: 0 0 10px rgba(124,92,252,0.3); transform: scale(1); }
+  100% { box-shadow: 0 0 25px rgba(167,139,250,0.7); transform: scale(1.02); }
 }
 .magic-menu-btn:hover {
-  background: rgba(255,255,255,0.14);
-  transform: scale(1.06);
+  background: linear-gradient(135deg, rgba(139,92,246,0.9), rgba(109,40,217,0.9));
+  transform: scale(1.06) !important;
 }
 .magic-menu-btn.open {
-  transform: rotate(45deg);
-  background: rgba(124,92,252,0.4);
+  background: rgba(8,8,14,0.9);
   border-color: rgba(124,92,252,0.6);
   color: white;
+  animation: none;
+  box-shadow: none;
+}
+.hub-text {
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  font-size: 0.75rem;
 }
 
 /* ── Effects Menu Panel ─────────────────────────────────────────────────── */
@@ -395,8 +408,8 @@
   .magic-menu-btn {
     bottom: calc(48dvh + 14px);
     left: 14px;
-    width: 44px;
     height: 44px;
+    padding: 0 16px;
   }
 
   .magic-menu-panel {

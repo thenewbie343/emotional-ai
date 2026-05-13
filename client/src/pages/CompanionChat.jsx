@@ -262,11 +262,10 @@ export default function CompanionChat({ session }) {
         <button
           className={`magic-menu-btn ${isMenuOpen ? 'open' : ''}`}
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          aria-label="SHUNAeffects menu"
+          aria-label="Siya Hub menu"
         >
-          <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="1.5" fill="none">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <span className="hub-icon">{isMenuOpen ? '✕' : '✨'}</span>
+          <span className="hub-text">{isMenuOpen ? 'CLOSE' : "SIYA'S HUB"}</span>
         </button>
 
         {isMenuOpen && (
