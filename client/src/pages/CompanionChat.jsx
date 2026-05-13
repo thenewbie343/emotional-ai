@@ -184,7 +184,7 @@ export default function CompanionChat({ session }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messages: [...messages, newUserMsg].map(m => ({
-              role: m.sender === 'user' ? 'user' : 'ai',
+              role: m.sender === 'user' ? 'user' : 'assistant',
               content: m.text
             })),
             emotion: emotionKey,
