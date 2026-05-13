@@ -398,7 +398,7 @@ const styles = {
   page: {
     maxWidth: 680, margin: "0 auto", padding: "24px 20px 80px",
     color: "#fff", fontFamily: "'Inter', system-ui, sans-serif",
-    minHeight: "100vh", minHeight: "100dvh",
+    minHeight: "100dvh",
     background: "linear-gradient(180deg, #0a0a1a 0%, #120824 100%)",
     overflowY: "auto", WebkitOverflowScrolling: "touch",
   },

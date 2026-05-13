@@ -346,7 +346,7 @@ export default function SaiConstellation({ session }) {
 }
 
 const styles = {
-  container: { width: "100%", height: "100vh", height: "100dvh", position: "relative", background: "#020208", overflow: "hidden", fontFamily: "'Inter', system-ui, sans-serif" },
+  container: { width: "100%", height: "100dvh", position: "relative", background: "#020208", overflow: "hidden", fontFamily: "'Inter', system-ui, sans-serif" },
   loading: {
     height: "100vh", display: "flex", flexDirection: "column",
     alignItems: "center", justifyContent: "center",
