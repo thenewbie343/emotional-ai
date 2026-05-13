@@ -210,9 +210,10 @@ async function generateAiResponse(emotion, messages, systemPrompt) {
     try {
       console.log(`[AI Router] Attempting to generate with ${providerName} for emotion '${emotion}'`);
       const response = await PROVIDERS[providerName](messages, systemPrompt);
+      console.log(`[AI Router] SUCCESS with ${providerName}`);
       return response;
     } catch (error) {
-      console.error(`[AI Router] Error with ${providerName}:`, error.message);
+      console.error(`[AI Router] FAILED with ${providerName}: ${error.message}`);
       if (error.message === "RATE_LIMIT") {
         markExhausted(providerName);
       }
