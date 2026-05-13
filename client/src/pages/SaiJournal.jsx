@@ -11,7 +11,7 @@ const MOODS = [
   { emoji: '😡', label: 'Angry', color: '#ff4466' },
 ]
 
-const SIYA_MOOD_COMMENTS = {
+const SHUNA_MOOD_COMMENTS = {
   '🤩': [
     "That's incredible! I love seeing you on top of the world!",
     "Your positive energy is absolutely radiant right now!",
@@ -58,7 +58,7 @@ export default function SaiJournal({ session }) {
   const [selectedMood, setSelectedMood] = useState(null)
   const [note, setNote] = useState('')
   const [entries, setEntries] = useState([])
-  const [siyaComment, setSiyaComment] = useState(null)
+  const [shunaComment, setShunaComment] = useState(null)
   const [saving, setSaving] = useState(false)
 
   // Load past mood entries
@@ -78,10 +78,10 @@ export default function SaiJournal({ session }) {
 
   const handleMoodSelect = (emoji) => {
     setSelectedMood(emoji)
-    // Siya gives a comment
-    const comments = SIYA_MOOD_COMMENTS[emoji] || []
+    // Shuna gives a comment
+    const comments = SHUNA_MOOD_COMMENTS[emoji] || []
     const comment = comments[Math.floor(Math.random() * comments.length)]
-    setSiyaComment(comment)
+    setShunaComment(comment)
   }
 
   const handleSave = async () => {
@@ -103,7 +103,7 @@ export default function SaiJournal({ session }) {
 
     setSelectedMood(null)
     setNote('')
-    setSiyaComment(null)
+    setShunaComment(null)
     setSaving(false)
   }
 
@@ -133,10 +133,10 @@ export default function SaiJournal({ session }) {
         </div>
       </div>
 
-      {/* Siya's comment on the selected mood */}
-      {siyaComment && (
+      {/* Shuna's comment on the selected mood */}
+      {shunaComment && (
         <div className="sai-comment">
-          <div className="comment-bubble">💬 {siyaComment}</div>
+          <div className="comment-bubble">💬 {shunaComment}</div>
         </div>
       )}
 

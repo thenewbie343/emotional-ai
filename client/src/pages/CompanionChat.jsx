@@ -108,7 +108,7 @@ export default function CompanionChat({ session }) {
       if (data && data.length > 0) setMessages(data)
       else setMessages([{
         id: 'initial',
-        text: "System online. SHUNAoperational. How can I assist you?",
+        text: "System online. Shuna is operational. How can I assist you?",
         sender: 'ai'
       }])
     }
@@ -262,10 +262,10 @@ export default function CompanionChat({ session }) {
         <button
           className={`magic-menu-btn ${isMenuOpen ? 'open' : ''}`}
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          aria-label="Siya Hub menu"
+          aria-label="Shuna Hub menu"
         >
           <span className="hub-icon">{isMenuOpen ? '✕' : '✨'}</span>
-          <span className="hub-text">{isMenuOpen ? 'CLOSE' : "SIYA'S HUB"}</span>
+          <span className="hub-text">{isMenuOpen ? 'CLOSE' : "SHUNA'S HUB"}</span>
         </button>
 
         {isMenuOpen && (
@@ -280,17 +280,17 @@ export default function CompanionChat({ session }) {
               <span className="toggle-icon">✍️</span>
               <div className="toggle-text">
                 <span className="toggle-name">{isDrawModeActive ? 'CANCEL DRAW' : 'RUNE CAST'}</span>
-                <span className="toggle-desc">Draw symbols to command Siya</span>
+                <span className="toggle-desc">Draw symbols to command Shuna</span>
               </div>
             </button>
             
-            <div className="menu-label" style={{ marginTop: '16px' }}>SIYA'S MIND</div>
+            <div className="menu-label" style={{ marginTop: '16px' }}>SHUNA'S MIND</div>
             
             <button className="magic-toggle" onClick={() => navigate('/siya/journal')}>
               <span className="toggle-icon">📓</span>
               <div className="toggle-text">
                 <span className="toggle-name">JOURNAL</span>
-                <span className="toggle-desc">Track your mood with Siya</span>
+                <span className="toggle-desc">Track your mood with Shuna</span>
               </div>
             </button>
 
@@ -306,22 +306,22 @@ export default function CompanionChat({ session }) {
               <span className="toggle-icon">💊</span>
               <div className="toggle-text">
                 <span className="toggle-name">WELLNESS</span>
-                <span className="toggle-desc">Daily check-in with Siya</span>
+                <span className="toggle-desc">Daily check-in with Shuna</span>
               </div>
             </button>
 
             <button className="magic-toggle" onClick={() => navigate('/siya/diary')}>
               <span className="toggle-icon">📖</span>
               <div className="toggle-text">
-                <span className="toggle-name">SIYA DIARY</span>
-                <span className="toggle-desc">Siya's private thoughts</span>
+                <span className="toggle-name">SHUNA DIARY</span>
+                <span className="toggle-desc">Shuna's private thoughts</span>
               </div>
             </button>
 
             <button className="magic-toggle" onClick={() => navigate('/siya/memory')}>
               <span className="toggle-icon">⭐</span>
               <div className="toggle-text">
-                <span className="toggle-name">SIYA'S MEMORY</span>
+                <span className="toggle-name">SHUNA'S MEMORY</span>
                 <span className="toggle-desc">3D memory constellation</span>
               </div>
             </button>
@@ -366,7 +366,7 @@ export default function CompanionChat({ session }) {
                 type="button"
                 className={`voice-btn ${isVoiceEnabled ? 'active' : ''}`}
                 onClick={() => { setIsVoiceEnabled(!isVoiceEnabled); window.speechSynthesis.cancel() }}
-                title={isVoiceEnabled ? 'Mute Siya' : 'Unmute Siya'}
+                title={isVoiceEnabled ? 'Mute Shuna' : 'Unmute Shuna'}
               >
                 <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
                   {isVoiceEnabled ? (

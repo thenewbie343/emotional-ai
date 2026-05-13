@@ -87,7 +87,7 @@ function CompanionToggle({ session, onToggle }) {
         display: 'inline-flex', alignItems: 'center', gap: '6px',
         color: isChat ? '#a78bfa' : 'rgba(255,255,255,0.4)', transition: 'color 0.3s',
       }}>
-        SIYA
+        SHUNA
         <span style={{
           width: 6, height: 6, borderRadius: '50%',
           background: isChat ? '#a78bfa' : 'rgba(255,255,255,0.2)',

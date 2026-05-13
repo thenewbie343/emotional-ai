@@ -148,7 +148,7 @@ export default function SaiWellness({ session }) {
         <Link to="/chat" className="wellness-back">←</Link>
         <div>
           <h1 className="wellness-title">💊 Wellness Center</h1>
-          <p className="wellness-subtitle">Daily mental health check-in with Siya</p>
+          <p className="wellness-subtitle">Daily mental health check-in with Shuna</p>
         </div>
         <button
           className={`wellness-tab ${step === 'history' ? 'active' : ''}`}
@@ -164,7 +164,7 @@ export default function SaiWellness({ session }) {
           <div className="wellness-intro">
             <div className="wellness-orb">🌿</div>
             <h2>How are you really doing?</h2>
-            <p>This check-in is private and helps Siya understand and support you better.</p>
+            <p>This check-in is private and helps Shuna understand and support you better.</p>
           </div>
 
           <div className="wellness-questions">
@@ -229,7 +229,7 @@ export default function SaiWellness({ session }) {
           <div className="affirmation-card">
             <div className="affirmation-icon">💬</div>
             <p className="affirmation-text">{affirmation}</p>
-            <span className="affirmation-source">— Siya</span>
+            <span className="affirmation-source">— Shuna</span>
           </div>
 
           {/* Breakdown */}
@@ -250,7 +250,7 @@ export default function SaiWellness({ session }) {
           {/* Tips for low areas */}
           {getLowTips().length > 0 && (
             <div className="wellness-tips">
-              <h3 className="tips-title">💡 Siya's Personalized Tips</h3>
+              <h3 className="tips-title">💡 Shuna's Personalized Tips</h3>
               {getLowTips().map((tip, i) => (
                 <div key={i} className="tip-card">
                   <span className="tip-icon">{tip.icon}</span>

@@ -266,10 +266,10 @@ export default function SaiConstellation({ session }) {
           <div style={{ fontSize: 52, marginBottom: 16 }}>🌌</div>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>No Memory Stars Yet</div>
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', maxWidth: 280, textAlign: 'center', lineHeight: 1.7, marginBottom: 20 }}>
-            Chat with Siya and share things about yourself.<br />
-            Tell Siya your name, what you love, where you're from — she'll remember and create stars for each memory.
+            Chat with Shuna and share things about yourself.<br />
+            Tell Shuna your name, what you love, where you're from — she'll remember and create stars for each memory.
           </div>
-          <a href="/chat" style={styles.chatBtn}>💬 Chat with Siya</a>
+          <a href="/chat" style={styles.chatBtn}>💬 Chat with Shuna</a>
         </div>
       )}
 
