@@ -1,6 +1,6 @@
-// Companion3D — Full 3D scene for both SAI and Siya
+// Companion3D — Full 3D scene for both SAI and Shuna
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Suspense, useRef } from 'react'
+import { Suspense, useRef, memo } from 'react'
 import * as THREE from 'three'
 import { OrbitControls, Environment } from '@react-three/drei'
 import CompanionCharacter from './CompanionCharacter'
@@ -53,7 +53,7 @@ function SceneEffects({ messages, features }) {
 }
 
 // ── Main export ────────────────────────────────────────────────────────────
-export default function Companion3D({ characterAnim, messages, features, companion = 'sai' }) {
+const Companion3D = memo(function Companion3D({ characterAnim, messages, features, companion = 'sai' }) {
   return (
     <Canvas
       camera={{ position: [0, 0, 5.5], fov: 52 }}
@@ -90,4 +90,6 @@ export default function Companion3D({ characterAnim, messages, features, compani
       </Suspense>
     </Canvas>
   )
-}
+})
+
+export default Companion3D

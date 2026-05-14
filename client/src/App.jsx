@@ -18,7 +18,7 @@ import SaiTimeCapsule from './pages/SaiTimeCapsule'
 import OnboardingTutorial from './components/OnboardingTutorial'
 import './index.css'
 
-// ── SAI ↔ SHUNAToggle Button ────────────────────────────────────────────────
+// ── SAI ↔ SHUNA Toggle Button ────────────────────────────────────────────────
 function CompanionToggle({ session, onToggle }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -30,7 +30,7 @@ function CompanionToggle({ session, onToggle }) {
   if (!showToggle) return null
 
   const handleToggle = () => {
-    onToggle()           // tells App to bump remount key
+    onToggle()           
     if (isSai) {
       navigate('/chat')
     } else {
@@ -41,68 +41,29 @@ function CompanionToggle({ session, onToggle }) {
   return (
     <button
       onClick={handleToggle}
+      className="companion-toggle-btn"
       style={{
-        position: 'fixed',
-        top: '18px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 9999,
-        background: 'rgba(10,10,18,0.75)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255,255,255,0.12)',
-        borderRadius: '50px',
-        padding: '7px 18px',
-        color: 'white',
-        fontFamily: "'Inter', system-ui, sans-serif",
-        fontSize: '0.7rem',
-        fontWeight: 600,
-        letterSpacing: '1.5px',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        transition: 'all 0.3s ease',
+        position: 'fixed', top: '18px', left: '50%', transform: 'translateX(-50%)',
+        zIndex: 9999, background: 'rgba(10,10,18,0.75)', backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)',
+        borderRadius: '50px', padding: '7px 18px', color: 'white',
+        fontFamily: "'Inter', system-ui, sans-serif", fontSize: '0.7rem',
+        fontWeight: 600, letterSpacing: '1.5px', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.3s ease',
         boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
       }}
-      onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(124,92,252,0.5)'}
-      onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'}
-      title={isSai ? 'Switch to SHUNA(Companion Mode)' : 'Switch to SAI (Personal AI)'}
+      title={isSai ? 'Switch to SHUNA (Companion Mode)' : 'Switch to SAI (Personal AI)'}
     >
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', gap: '6px',
-        color: isSai ? '#00d4ff' : 'rgba(255,255,255,0.4)', transition: 'color 0.3s',
-      }}>
-        <span style={{
-          width: 6, height: 6, borderRadius: '50%',
-          background: isSai ? '#00d4ff' : 'rgba(255,255,255,0.2)',
-          boxShadow: isSai ? '0 0 8px #00d4ff' : 'none', transition: 'all 0.3s',
-        }} />
-        SAI
-      </span>
-
-      <span style={{ opacity: 0.3, fontSize: '0.8rem' }}>⇄</span>
-
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', gap: '6px',
-        color: isChat ? '#a78bfa' : 'rgba(255,255,255,0.4)', transition: 'color 0.3s',
-      }}>
-        SHUNA
-        <span style={{
-          width: 6, height: 6, borderRadius: '50%',
-          background: isChat ? '#a78bfa' : 'rgba(255,255,255,0.2)',
-          boxShadow: isChat ? '0 0 8px #a78bfa' : 'none', transition: 'all 0.3s',
-        }} />
-      </span>
+      <span style={{ color: isSai ? '#00d4ff' : 'rgba(255,255,255,0.4)' }}>SAI</span>
+      <span style={{ opacity: 0.3 }}>⇄</span>
+      <span style={{ color: isChat ? '#a78bfa' : 'rgba(255,255,255,0.4)' }}>SHUNA</span>
     </button>
   )
 }
 
-// ── App ─────────────────────────────────────────────────────────────────────
 export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-  // Bump this to force the 3D canvas to remount after SAI↔SHUNAtoggle
   const [companionKey, setCompanionKey] = useState(0)
 
   useEffect(() => {
@@ -118,9 +79,7 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  if (loading) {
-    return <div style={{ width: '100vw', height: '100vh', background: '#0a0e1a' }} />
-  }
+  if (loading) return <div style={{ width: '100vw', height: '100vh', background: '#0a0e1a' }} />
 
   return (
     <>
@@ -129,10 +88,9 @@ export default function App() {
       <Routes>
         <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/sai" />} />
         <Route path="/" element={session ? <HomeScene /> : <Navigate to="/auth" />} />
-        {/* key prop forces full remount of 3D canvas on toggle */}
         <Route path="/chat" element={session ? <CompanionChat key={`siya-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
 
-        {/* SIYA features */}
+        {/* SHUNA features */}
         <Route path="/siya/journal" element={session ? <SaiJournal session={session} /> : <Navigate to="/auth" />} />
         <Route path="/siya/wellness" element={session ? <SaiWellness session={session} /> : <Navigate to="/auth" />} />
         <Route path="/siya/insights" element={session ? <SaiInsights session={session} /> : <Navigate to="/auth" />} />
