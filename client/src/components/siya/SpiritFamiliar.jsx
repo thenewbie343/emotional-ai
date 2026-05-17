@@ -54,30 +54,20 @@ export function SpiritFamiliar({ active, onInteract }) {
         }}
         onPointerUp={() => setClicked(false)}
       >
-        <sphereGeometry args={[0.4, 64, 64]} /> {/* Much larger, massive orb */}
+        <sphereGeometry args={[0.4, 32, 32]} /> {/* Optimized orb */}
         
-        {/* Hyper-premium glass/orb material */}
-        <meshPhysicalMaterial 
+        {/* Mobile-optimized glowing material */}
+        <meshStandardMaterial 
           color={hovered ? "#00ffff" : "#ffffff"}
           emissive={hovered ? "#0044ff" : "#444444"}
           emissiveIntensity={hovered ? 2 : 0.5}
-          transmission={0.9}
-          opacity={1}
-          metalness={0.1}
-          roughness={0}
-          ior={1.5}
-          thickness={2}
-          clearcoat={1}
-          clearcoatRoughness={0.1}
+          transparent={true}
+          opacity={0.8}
+          metalness={0.5}
+          roughness={0.2}
         />
       </mesh>
 
-      <pointLight 
-        ref={lightRef} 
-        color={hovered ? "#00ffff" : "#ffffff"} 
-        distance={10} 
-        decay={2}
-      />
       
       {/* Subtle core inside the orb */}
       <mesh>

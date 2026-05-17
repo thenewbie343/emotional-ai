@@ -1,0 +1,18 @@
+binds:
+- port: 3000
+  listeners:
+  - routes:
+    - backends:
+      - mcp:
+          targets:
+          - name: everything
+            stdio:
+              cmd: uvx
+              args:
+              - '@modelcontextprotocol/server-everything'
+      - mcp:
+          targets:
+          - name: agentgateway
+            mcp:
+              host: http://localhost:3000/mcp
+          statefulMode: stateful

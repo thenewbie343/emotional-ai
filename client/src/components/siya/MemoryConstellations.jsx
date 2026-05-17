@@ -78,7 +78,6 @@ export default function MemoryConstellations({ messages = [] }) {
             <sphereGeometry args={[0.05, 8, 8]} />
             <meshBasicMaterial color="#ffffff" />
           </mesh>
-          <pointLight color="#ffffff" intensity={0.5} distance={2} />
           
           {/* Floating Memory Text */}
           <Text
