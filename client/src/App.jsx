@@ -16,6 +16,7 @@ import SaiGoals from './pages/SaiGoals'
 import SaiConstellation from './pages/SaiConstellation'
 import SaiTimeCapsule from './pages/SaiTimeCapsule'
 import SaiDashboard from './pages/SaiDashboard'
+import SiyaHub from './pages/SiyaHub'
 import OnboardingTutorial from './components/OnboardingTutorial'
 import './index.css'
 
@@ -26,14 +27,15 @@ function CompanionToggle({ session, onToggle }) {
 
   const isSai = location.pathname.startsWith('/sai')
   const isChat = location.pathname === '/chat'
-  const showToggle = session && (isSai || isChat)
+  const isSiya = location.pathname.startsWith('/siya')
+  const showToggle = session && (isSai || isChat || isSiya)
 
   if (!showToggle) return null
 
   const handleToggle = () => {
     onToggle()           
     if (isSai) {
-      navigate('/chat')
+      navigate('/siya')
     } else {
       navigate('/sai')
     }
@@ -57,7 +59,7 @@ function CompanionToggle({ session, onToggle }) {
     >
       <span style={{ color: isSai ? '#00d4ff' : 'rgba(255,255,255,0.4)' }}>SAI</span>
       <span style={{ opacity: 0.3 }}>⇄</span>
-      <span style={{ color: isChat ? '#a78bfa' : 'rgba(255,255,255,0.4)' }}>SHUNA</span>
+      <span style={{ color: (isChat || isSiya) ? '#a78bfa' : 'rgba(255,255,255,0.4)' }}>SHUNA</span>
     </button>
   )
 }
@@ -92,6 +94,7 @@ export default function App() {
         <Route path="/chat" element={session ? <CompanionChat key={`siya-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
 
         {/* SHUNA features */}
+        <Route path="/siya" element={session ? <SiyaHub key={`siyahub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
         <Route path="/siya/journal" element={session ? <SaiJournal session={session} /> : <Navigate to="/auth" />} />
         <Route path="/siya/wellness" element={session ? <SaiWellness session={session} /> : <Navigate to="/auth" />} />
         <Route path="/siya/insights" element={session ? <SaiInsights session={session} /> : <Navigate to="/auth" />} />

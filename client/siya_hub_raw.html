@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SIYA | Reflection Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&amp;family=Outfit:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Config Verbatim -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#f7b6b6",
+                    "on-primary-container": "#734344",
+                    "background": "#180e27",
+                    "secondary-fixed-dim": "#dfc29c",
+                    "error-container": "#93000a",
+                    "primary-container": "#f4b3b3",
+                    "inverse-surface": "#ecdcff",
+                    "surface-bright": "#3f344f",
+                    "outline": "#9e8d8c",
+                    "surface-container-high": "#30253f",
+                    "outline-variant": "#514343",
+                    "on-secondary-fixed": "#281902",
+                    "surface-container": "#251b34",
+                    "on-secondary-container": "#d0b48e",
+                    "on-error-container": "#ffdad6",
+                    "surface-dim": "#180e27",
+                    "surface-container-lowest": "#130922",
+                    "on-primary": "#4e2425",
+                    "on-error": "#690005",
+                    "surface-container-low": "#211730",
+                    "on-tertiary": "#3c0090",
+                    "inverse-on-surface": "#362b46",
+                    "on-primary-fixed-variant": "#683a3b",
+                    "on-primary-fixed": "#341012",
+                    "inverse-primary": "#835051",
+                    "secondary": "#dfc29c",
+                    "secondary-fixed": "#fcdeb6",
+                    "tertiary-container": "#ceb8ff",
+                    "primary-fixed": "#ffdad9",
+                    "primary": "#ffd6d5",
+                    "on-tertiary-fixed-variant": "#5520b3",
+                    "surface-container-highest": "#3b304b",
+                    "tertiary-fixed-dim": "#d1bcff",
+                    "secondary-container": "#5a4628",
+                    "surface": "#180e27",
+                    "on-secondary-fixed-variant": "#574326",
+                    "tertiary": "#e7d9ff",
+                    "surface-variant": "#3b304b",
+                    "on-secondary": "#3f2d12",
+                    "on-surface": "#ecdcff",
+                    "primary-fixed-dim": "#f7b6b6",
+                    "tertiary-fixed": "#e9ddff",
+                    "on-tertiary-fixed": "#23005b",
+                    "on-background": "#ecdcff",
+                    "on-tertiary-container": "#5f2ebd",
+                    "on-surface-variant": "#d6c2c1",
+                    "error": "#ffb4ab"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-margin-mobile": "24px",
+                    "gutter": "24px",
+                    "stack-lg": "48px",
+                    "stack-sm": "12px",
+                    "stack-md": "24px",
+                    "unit": "8px",
+                    "container-margin-desktop": "64px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Playfair Display"],
+                    "headline-sm": ["Playfair Display"],
+                    "body-md": ["Outfit"],
+                    "display-lg": ["Playfair Display"],
+                    "body-lg": ["Outfit"],
+                    "label-md": ["Outfit"],
+                    "display-lg-mobile": ["Playfair Display"]
+            },
+            "fontSize": {
+                    "headline-md": ["32px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                    "headline-sm": ["24px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "display-lg-mobile": ["36px", {"lineHeight": "1.2", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #180e27;
+            overflow-x: hidden;
+            color: #ecdcff;
+        }
+
+        /* Glassmorphism Styles */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Lava Lamp Blobs */
+        .blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.35;
+        }
+
+        .blob-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #f7b6b6 0%, transparent 70%);
+            top: -100px;
+            left: -100px;
+        }
+
+        .blob-2 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, #574326 0%, transparent 70%);
+            bottom: -150px;
+            right: -100px;
+        }
+
+        /* Star Map Pulse */
+        @keyframes pulse-star {
+            0%, 100% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        .star {
+            animation: pulse-star 4s infinite ease-in-out;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 214, 213, 0.2); border-radius: 10px; }
+    </style>
+</head>
+<body class="font-body-md">
+<!-- Background Decoration -->
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<!-- TopNavBar (Shared Component) -->
+<nav class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-8 h-16 max-w-7xl mx-auto rounded-full mt-4 mx-container-margin-desktop bg-surface/5 dark:bg-surface/5 backdrop-blur-xl border border-white/20 shadow-[0_0_40px_rgba(247,182,182,0.1)]">
+<div class="text-headline-sm font-headline-sm text-on-surface tracking-widest">SIYA</div>
+<div class="hidden md:flex items-center space-x-8">
+<a class="text-on-surface-variant font-body-md hover:text-on-surface transition-colors" href="#">Wellness</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1" href="#">Journal</a>
+<a class="text-on-surface-variant font-body-md hover:text-on-surface transition-colors" href="#">Memories</a>
+<a class="text-on-surface-variant font-body-md hover:text-on-surface transition-colors" href="#">Insights</a>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary cursor-pointer hover:scale-110 transition-transform">account_circle</span>
+</div>
+</nav>
+<main class="pt-32 pb-40 px-container-margin-mobile md:px-container-margin-desktop max-w-7xl mx-auto">
+<!-- Hero Section: Memory Constellation -->
+<section class="mb-stack-lg relative overflow-hidden glass-panel rounded-xl p-8 md:p-12 min-h-[400px] flex flex-col justify-center">
+<!-- Background Image -->
+<div class="absolute inset-0 z-0">
+<img alt="Constellation Map" class="w-full h-full object-cover opacity-40 mix-blend-screen" data-alt="An ethereal, 3D star map visualization set against a deep purple and rose-colored nebula background. Glowing gold stars are connected by delicate, luminous filaments, creating a sense of a vast emotional network. The atmosphere is one of profound calm and introspective luxury, with soft light blooming around the celestial bodies in a premium glassmorphic digital art style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAivIx7RDsWsPbnKwkglD9d0kef4Ra-UH4cA2PZFc0CRAeFkZC5AhCW3MEOnKs-ktgxGbAQY7buSbO4-krJ6C21LsTQf4AsxK3w-aSi9zgEYJ5DMn_WXjU9lZYE-keoOAIUJgTvVOVxYuoue7SGupVUVaPJQ1skvmW58W5xamN1hF5pADgIAx-3UrlL8av0uKUBaD1aROHIZ8UgRhMHBbf6E5fW9t6a5BVHwZCo66ti6HXO6S_m3ggdVrMlDl1qgNyj-Xus9QIi0yQT"/>
+<!-- Overlay glow -->
+<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+</div>
+<!-- Content -->
+<div class="relative z-10 max-w-2xl">
+<h1 class="font-headline-md text-display-lg-mobile md:text-display-lg text-primary mb-4 leading-tight">
+                    Memory Constellation
+                </h1>
+<p class="font-body-md text-body-lg text-on-surface-variant">
+                    Your journey, mapped across time and emotion. Each star represents a moment of clarity, a fragment of peace, or a milestone of growth.
+                </p>
+<div class="mt-8 flex gap-4">
+<button class="bg-primary text-on-primary px-8 py-3 rounded-full font-label-md hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,214,213,0.3)]">
+                        Explore Map
+                    </button>
+<button class="border border-white/20 bg-white/5 backdrop-blur-md px-8 py-3 rounded-full font-label-md hover:bg-white/10 transition-colors">
+                        Add Entry
+                    </button>
+</div>
+</div>
+<!-- Floating Decorative Stars -->
+<div class="absolute top-1/4 right-1/4 star w-2 h-2 bg-secondary rounded-full shadow-[0_0_10px_#dfc29c]"></div>
+<div class="absolute bottom-1/3 right-1/2 star w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_#ffd6d5]" style="animation-delay: 1s"></div>
+<div class="absolute top-1/2 right-10 star w-3 h-3 bg-secondary-fixed-dim rounded-full shadow-[0_0_12px_#dfc29c]" style="animation-delay: 2s"></div>
+</section>
+<!-- Bento Grid Main Content -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Card 1: Daily Reflection (Large) -->
+<div class="md:col-span-8 glass-panel rounded-xl p-stack-md flex flex-col justify-between min-h-[420px]">
+<div>
+<div class="flex justify-between items-start mb-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">edit_note</span>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Daily Reflection</h2>
+</div>
+<span class="text-label-md text-on-surface-variant opacity-60">Today, 8:45 AM</span>
+</div>
+<div class="space-y-6">
+<p class="font-headline-sm text-headline-sm text-secondary-fixed-dim italic leading-relaxed opacity-90 px-4 border-l-2 border-primary/30">
+                            "The morning mist felt like a fresh beginning, wrapping the world in a quiet promise. I found a moment of pure silence before the day began..."
+                        </p>
+<div class="flex flex-wrap gap-3">
+<span class="px-4 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-label-md flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span> Peaceful
+                            </span>
+<span class="px-4 py-1.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20 text-label-md flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span> Grateful
+                            </span>
+</div>
+</div>
+</div>
+<div class="mt-8 p-4 bg-white/5 rounded-lg border border-white/10">
+<p class="text-label-md text-on-surface-variant mb-4">Journal Completion</p>
+<div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-secondary w-[85%] shadow-[0_0_10px_rgba(255,214,213,0.5)]"></div>
+</div>
+</div>
+</div>
+<!-- Card 2: Wellness Radar (Medium) -->
+<div class="md:col-span-4 glass-panel rounded-xl p-stack-md flex flex-col items-center justify-center relative overflow-hidden min-h-[420px]">
+<div class="absolute inset-0 flex items-center justify-center opacity-10">
+<div class="w-64 h-64 border border-primary rounded-full"></div>
+<div class="absolute w-48 h-48 border border-secondary rounded-full"></div>
+<div class="absolute w-32 h-32 border border-primary/50 rounded-full"></div>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface mb-8 text-center">Wellness Radar</h2>
+<!-- Radar Visualization Placeholder -->
+<div class="relative w-48 h-48 flex items-center justify-center">
+<svg class="w-full h-full drop-shadow-[0_0_15px_rgba(255,214,213,0.4)]" viewbox="0 0 100 100">
+<polygon fill="rgba(255, 214, 213, 0.2)" points="50,10 90,50 50,90 10,50" stroke="#ffd6d5" stroke-width="0.5"></polygon>
+<path d="M50 10 L80 40 L60 85 L20 60 Z" fill="rgba(223, 194, 156, 0.4)" stroke="#dfc29c" stroke-width="1.5"></path>
+<!-- Points -->
+<circle cx="50" cy="10" fill="#ffd6d5" r="2"></circle>
+<circle cx="80" cy="40" fill="#dfc29c" r="2"></circle>
+<circle cx="60" cy="85" fill="#dfc29c" r="2"></circle>
+<circle cx="20" cy="60" fill="#dfc29c" r="2"></circle>
+</svg>
+<!-- Labels -->
+<span class="absolute -top-6 text-label-md text-primary font-bold">Focus</span>
+<span class="absolute -bottom-6 text-label-md text-secondary">Balance</span>
+<span class="absolute -right-8 top-1/2 -translate-y-1/2 text-label-md text-secondary">Rest</span>
+<span class="absolute -left-12 top-1/2 -translate-y-1/2 text-label-md text-secondary">Energy</span>
+</div>
+<div class="mt-12 text-center">
+<p class="text-body-md text-on-surface-variant">Your balance is up <span class="text-primary font-bold">12%</span> this week.</p>
+</div>
+</div>
+<!-- Card 3: Emotional Resonance (Wide) -->
+<div class="md:col-span-12 glass-panel rounded-xl p-stack-md min-h-[300px]">
+<div class="flex items-center gap-3 mb-8">
+<span class="material-symbols-outlined text-secondary">auto_awesome</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Emotional Resonance</h2>
+</div>
+<div class="flex flex-wrap items-center justify-center gap-x-12 gap-y-8 py-4">
+<span class="font-headline-md text-[40px] text-primary opacity-90 drop-shadow-[0_0_15px_rgba(255,214,213,0.3)] hover:scale-110 transition-transform cursor-default">Serenity</span>
+<span class="font-headline-sm text-secondary-fixed-dim opacity-70 hover:opacity-100 transition-opacity cursor-default">Growth</span>
+<span class="font-headline-md text-[32px] text-on-surface drop-shadow-[0_0_10px_rgba(236,220,255,0.2)] hover:scale-105 transition-transform cursor-default">Connection</span>
+<span class="font-headline-sm text-primary-container opacity-60 hover:opacity-100 transition-opacity cursor-default">Clarity</span>
+<span class="font-headline-md text-[48px] text-secondary drop-shadow-[0_0_20px_rgba(223,194,156,0.3)] hover:scale-110 transition-transform cursor-default">Balance</span>
+<span class="font-headline-sm text-on-surface-variant opacity-50 hover:opacity-100 transition-opacity cursor-default">Wonder</span>
+<span class="font-headline-md text-[28px] text-primary opacity-80 hover:scale-105 transition-transform cursor-default">Awareness</span>
+</div>
+<div class="mt-8 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-body-md text-on-surface-variant text-center md:text-left">These keywords were most frequent in your reflections over the last 30 days.</p>
+<button class="text-label-md text-primary flex items-center gap-2 group">
+                        Full Analysis <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Shared Component) -->
+<footer class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-8 pt-4 bg-surface-container-lowest/20 dark:bg-surface-container-lowest/20 backdrop-blur-3xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]">
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined">explore</span>
+<span class="text-label-md font-label-md mt-1">Explore</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined">center_focus_strong</span>
+<span class="text-label-md font-label-md mt-1">Focus</span>
+</button>
+<button class="flex flex-col items-center justify-center text-primary drop-shadow-[0_0_8px_rgba(255,214,213,0.5)] scale-110 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">audiotrack</span>
+<span class="text-label-md font-label-md mt-1">Listen</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined">person</span>
+<span class="text-label-md font-label-md mt-1">Profile</span>
+</button>
+</footer>
+</body></html>
