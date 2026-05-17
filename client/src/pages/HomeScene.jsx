@@ -106,12 +106,12 @@ export default function HomeScene() {
             <div onClick={(e) => e.stopPropagation()} className="modal-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px 50px', borderRadius: '24px', background: 'rgba(20, 24, 40, 0.85)', border: '1px solid rgba(255,255,255,0.1)', maxWidth: '420px', width: '90%' }}>
               <h2 style={{ color: 'white', fontFamily: 'Inter, sans-serif' }}>Choose Your Companion</h2>
               <div style={{ display: 'flex', gap: '16px', width: '100%' }}>
-                <div onClick={() => { setShowPicker(false); navigate('/chat'); }} className="companion-card shuna" style={{ flex: 1, padding: '24px 16px', borderRadius: '18px', textAlign: 'center', background: 'rgba(0, 170, 255, 0.08)', border: '1px solid rgba(0, 170, 255, 0.2)', cursor: 'pointer' }}>
+                <div onClick={() => { setShowPicker(false); navigate('/siya'); }} className="companion-card shuna" style={{ flex: 1, padding: '24px 16px', borderRadius: '18px', textAlign: 'center', background: 'rgba(0, 170, 255, 0.08)', border: '1px solid rgba(0, 170, 255, 0.2)', cursor: 'pointer' }}>
                   <div style={{ fontSize: '2.5rem' }}>✨</div>
                   <div style={{ color: '#00aaff', fontSize: '1.3rem', fontWeight: 600 }}>Shuna</div>
                   <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>Soulful companion</div>
                 </div>
-                <div onClick={() => { setShowPicker(false); navigate('/sai/chat'); }} className="companion-card sai" style={{ flex: 1, padding: '24px 16px', borderRadius: '18px', textAlign: 'center', background: 'rgba(124, 92, 252, 0.08)', border: '1px solid rgba(124, 92, 252, 0.2)', cursor: 'pointer' }}>
+                <div onClick={() => { setShowPicker(false); navigate('/sai'); }} className="companion-card sai" style={{ flex: 1, padding: '24px 16px', borderRadius: '18px', textAlign: 'center', background: 'rgba(124, 92, 252, 0.08)', border: '1px solid rgba(124, 92, 252, 0.2)', cursor: 'pointer' }}>
                   <div style={{ fontSize: '2.5rem' }}>🧠</div>
                   <div style={{ color: '#7c5cfc', fontSize: '1.3rem', fontWeight: 600 }}>SAI</div>
                   <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>Analytical AI</div>
