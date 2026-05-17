@@ -417,7 +417,7 @@ export default function SaiDreams({ session }) {
 const styles = {
   container: {
     display: "flex", flexDirection: "column",
-    height: "100vh", height: "100dvh",
+    height: "100dvh",
     background: "#0a0a1a", color: "#fff",
     fontFamily: "'Inter', system-ui, sans-serif",
     overflow: "hidden",
