@@ -99,7 +99,7 @@ export default function App() {
         <Route path="/siya/memory" element={session ? <SaiConstellation session={session} /> : <Navigate to="/auth" />} />
 
         {/* SAI routes */}
-        <Route path="/sai" element={session ? <SaiDashboard key={`saidashboard-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/sai" element={session ? <SaiHub key={`saihub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/chat" element={session ? <SaiChat key={`saichat-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/dreams" element={session ? <SaiDreams session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/memories" element={session ? <SaiMemories session={session} /> : <Navigate to="/auth" />} />
