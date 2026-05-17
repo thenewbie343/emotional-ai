@@ -15,6 +15,7 @@ import SaiInsights from './pages/SaiInsights'
 import SaiGoals from './pages/SaiGoals'
 import SaiConstellation from './pages/SaiConstellation'
 import SaiTimeCapsule from './pages/SaiTimeCapsule'
+import SaiDashboard from './pages/SaiDashboard'
 import OnboardingTutorial from './components/OnboardingTutorial'
 import './index.css'
 
@@ -104,6 +105,7 @@ export default function App() {
         <Route path="/sai/memories" element={session ? <SaiMemories session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/goals" element={session ? <SaiGoals session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/capsule" element={session ? <SaiTimeCapsule session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/dashboard" element={session ? <SaiDashboard session={session} /> : <Navigate to="/auth" />} />
       </Routes>
     </>
   )

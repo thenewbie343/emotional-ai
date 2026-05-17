@@ -99,3 +99,28 @@ canvas {
     line-height: 1.4;
   }
 }
+
+/* Animations for SaiDashboard */
+@keyframes drift {
+    0% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+    25% { transform: translate(40px, 40px) scale(1.1); opacity: 0.6; }
+    50% { transform: translate(-20px, 60px) scale(0.9); opacity: 0.4; }
+    75% { transform: translate(-50px, -20px) scale(1.05); opacity: 0.6; }
+    100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+}
+
+@keyframes wave-move {
+    0% { stroke-dashoffset: 0; transform: scaleY(0.8); }
+    50% { stroke-dashoffset: 100; transform: scaleY(1.2); }
+    100% { stroke-dashoffset: 200; transform: scaleY(0.8); }
+}
+
+/* Utilities */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
