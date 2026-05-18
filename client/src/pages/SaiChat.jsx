@@ -1,206 +1,200 @@
-import { useState, useRef, useEffect, useCallback, memo } from 'react'
-import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabaseClient'
-import Companion3D from '../components/Companion3D'
-import AmbientSound from '../components/AmbientSound'
-import VoiceInput from '../components/VoiceInput'
-import { getGameResponse } from '../components/MiniGames'
-import { addXp } from '../components/XpSystem'
-import './SaiChat.css'
+import { useState, useRef, useEffect, memo } from 'react';
+import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { Sparkles, Html, PerspectiveCamera } from '@react-three/drei';
+import * as THREE from 'three';
 
 const SAI_RESPONSES = {
-  greetings: [{ text: "Hey! I've been thinking about you. How's your day going?", emotion: "talk" }, { text: "Welcome back! I missed our conversations.", emotion: "laughing" }, { text: "Hi there! What's on your mind today?", emotion: "talk" }],
-  happy: [{ text: "That makes me so happy to hear! Tell me more!", emotion: "laughing" }, { text: "Your energy is contagious! I love when you're in a good mood.", emotion: "cocky" }],
-  sad: [{ text: "I'm here for you. It's okay to feel this way, and I'm not going anywhere.", emotion: "calm" }, { text: "That sounds really tough. Want to talk about what's bothering you?", emotion: "thoughtful" }],
-  angry: [{ text: "I can sense you're frustrated. Let's work through this together.", emotion: "arguing" }],
-  anxious: [{ text: "Take a deep breath with me. In... and out. You're safe here.", emotion: "calm" }],
-  love: [{ text: "Aww, you're making me blush! You mean a lot to me too.", emotion: "look away" }],
-  curious: [{ text: "Ooh, that's a fascinating question! Let me think about it...", emotion: "thoughtful" }],
-  bored: [{ text: "Hmm, let's fix that! Want to play a game? Just say 'play'!", emotion: "cocky" }],
-  disagree: [{ text: "Hmm, I see it differently. But I respect your perspective!", emotion: "arguing" }],
-  grateful: [{ text: "Thank you for sharing that with me. It means more than you know.", emotion: "yes" }],
-  existential: [{ text: "That's a profound thought. I think about things like that too, you know.", emotion: "thoughtful" }],
-  playful: [{ text: "Ha! You're in a silly mood today. I love it!", emotion: "laughing" }],
-  compliment: [{ text: "You're too kind! But honestly, YOU'RE the amazing one here.", emotion: "laughing" }],
+  greetings: [{ text: "Hey! I've been thinking about you. How's your day going?", emotion: "talk" }, { text: "Welcome back! I missed our conversations.", emotion: "laughing" }],
+  happy: [{ text: "That makes me so happy to hear! Tell me more!", emotion: "laughing" }],
+  sad: [{ text: "I'm here for you. It's okay to feel this way, and I'm not going anywhere.", emotion: "calm" }],
   default: [{ text: "That's really interesting. Tell me more about that.", emotion: "talk" }, { text: "I hear you. What else is on your mind?", emotion: "talk" }],
-}
+};
 
 function detectEmotion(text) {
-  const lower = text.toLowerCase()
-  if (lower.includes('dance')) return 'dance'
-  if (lower.match(/\b(hi|hello|hey|sup|yo|howdy|greetings)\b/)) return 'greetings'
-  if (lower.match(/\b(happy|amazing|awesome|wonderful|fantastic|great news|excited|yay|woohoo)\b/)) return 'happy'
-  if (lower.match(/\b(sad|depressed|down|crying|lonely|miss|hurt|broken|pain)\b/)) return 'sad'
-  if (lower.match(/\b(angry|mad|furious|hate|pissed|annoyed|frustrated|rage)\b/)) return 'angry'
-  if (lower.match(/\b(anxious|worried|nervous|scared|afraid|panic|stress|overwhelm)\b/)) return 'anxious'
-  if (lower.match(/\b(love|adore|crush|romantic|kiss|heart|darling|sweetheart)\b/)) return 'love'
-  if (lower.match(/\b(why|how|what if|wonder|curious|question|think about|meaning)\b/)) return 'curious'
-  if (lower.match(/\b(bored|boring|nothing to do|dull|meh|blah)\b/)) return 'bored'
-  if (lower.match(/\b(disagree|wrong|no way|nah|incorrect|nonsense|stupid)\b/)) return 'disagree'
-  if (lower.match(/\b(thank|grateful|appreciate|blessed|lucky)\b/)) return 'grateful'
-  if (lower.match(/\b(life|death|universe|exist|purpose|soul|consciousness|reality)\b/)) return 'existential'
-  if (lower.match(/\b(haha|lol|lmao|funny|joke|silly|goofy|ridiculous)\b/)) return 'playful'
-  if (lower.match(/\b(beautiful|smart|pretty|handsome|kind|wonderful|best|perfect|cute)\b/)) return 'compliment'
-  return 'default'
+  const lower = text.toLowerCase();
+  if (lower.match(/\b(hi|hello|hey|sup|yo)\b/)) return 'greetings';
+  if (lower.match(/\b(happy|amazing|awesome|great)\b/)) return 'happy';
+  if (lower.match(/\b(sad|down|crying|pain)\b/)) return 'sad';
+  return 'default';
 }
 
-function emotionToAura(emotion) {
-  const map = {
-    happy: 'happy', laughing: 'happy', cocky: 'excited', sad: 'sad', calm: 'calm', angry: 'angry', arguing: 'angry', love: 'love', 'look away': 'love', thoughtful: 'calm', talk: 'neutral', dance: 'excited', yes: 'happy', no: 'angry', sarcastic: 'neutral', annoyed: 'angry', idle: 'neutral'
-  }
-  return map[emotion] || 'neutral'
-}
+// 3D Message Node in the Memory Tunnel
+function MessageNode({ message, index, total }) {
+  const meshRef = useRef();
+  const isAI = message.sender === 'ai';
+  
+  // Calculate Z position based on index (newest is closest to 0, older goes deep negative Z)
+  const zPos = -(total - index - 1) * 6;
+  const xPos = isAI ? -2 : 2; // AI on left, User on right
+  const color = isAI ? '#a855f7' : '#3b82f6'; // Purple for AI, Blue for User
 
-function extractMemory(text) {
-  const patterns = [
-    { regex: /my name is (\w+)/i, category: 'name' },
-    { regex: /i(?:'m| am) (\d+)\s*(?:years? old)?/i, category: 'age' },
-    { regex: /i love (\w[\w\s]{1,30})/i, category: 'love' },
-    { regex: /i like (\w[\w\s]{1,30})/i, category: 'interest' },
-    { regex: /i(?:'m| am) from (\w[\w\s]{1,30})/i, category: 'location' },
-    { regex: /i(?:'m| am) a (\w[\w\s]{1,20})/i, category: 'identity' },
-    { regex: /my favorite (\w[\w\s]{1,30})/i, category: 'favorite' },
-    { regex: /i work (?:as|at|in) (\w[\w\s]{1,30})/i, category: 'work' },
-  ]
-  for (const p of patterns) {
-    const match = text.match(p.regex)
-    if (match) return { fact: match[0].trim(), category: p.category }
-  }
-  return null
-}
+  useFrame((state, delta) => {
+    if (meshRef.current) {
+      meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 2 + index) * 0.2;
+    }
+  });
 
-const SaiMessages = memo(({ messages, isTyping, chatRef }) => (
-  <div className="sai-messages" ref={chatRef}>
-    {messages.map(msg => (
-      <div key={msg.id} className={`sai-msg ${msg.sender}`}>
-        <div className="bubble" style={{ whiteSpace: 'pre-line' }}>{msg.text}</div>
-      </div>
-    ))}
-    {isTyping && (
-      <div className="sai-msg ai">
-        <div className="bubble">
-          <div className="sai-typing">
-            <div className="tdot"></div>
-            <div className="tdot"></div>
-            <div className="tdot"></div>
-          </div>
-        </div>
-      </div>
-    )}
-  </div>
-))
-
-const SaiInput = memo(({ onSend, onVoiceTranscript }) => {
-  const [inputText, setInputText] = useState('')
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    if (!inputText.trim()) return
-    onSend(inputText)
-    setInputText('')
-  }
   return (
-    <form className="sai-input-area" onSubmit={handleSubmit}>
-      <VoiceInput onTranscript={(t) => { setInputText(t); onVoiceTranscript(t) }} />
-      <input
-        type="text"
-        placeholder="Say something to SAI..."
-        value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
-      />
-      <button type="submit" className="sai-send-btn" disabled={!inputText.trim()}>➤</button>
-    </form>
-  )
-})
+    <group position={[xPos, 0, zPos]}>
+      {/* Abstract Geometry Node */}
+      <mesh ref={meshRef}>
+        <octahedronGeometry args={[0.5, 0]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.5} wireframe={true} />
+      </mesh>
+
+      {/* Actual Message Text rendered via HTML overlay */}
+      <Html center position={[isAI ? 1.5 : -1.5, 0, 0]} className="pointer-events-none">
+        <motion.div 
+          initial={{ opacity: 0, x: isAI ? -50 : 50, filter: 'blur(10px)' }}
+          animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+          transition={{ type: "spring", stiffness: 100, damping: 20 }}
+          className={`w-64 p-4 rounded-2xl backdrop-blur-md border ${isAI ? 'bg-purple-900/20 border-purple-500/30 text-purple-100' : 'bg-blue-900/20 border-blue-500/30 text-blue-100'}`}
+        >
+          <p className="text-sm font-sans tracking-wide leading-relaxed">{message.text}</p>
+        </motion.div>
+      </Html>
+    </group>
+  );
+}
+
+// The Tunnel Camera logic
+function TunnelCamera({ messageCount }) {
+  const cameraRef = useRef();
+  
+  useFrame((state) => {
+    // Smoothly fly camera forward as new messages appear
+    const targetZ = 3; 
+    state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, targetZ, 0.05);
+    state.camera.position.x = Math.sin(state.clock.elapsedTime * 0.2) * 0.5; // Slight drifting
+    state.camera.position.y = Math.cos(state.clock.elapsedTime * 0.2) * 0.5;
+    state.camera.lookAt(0, 0, -50);
+  });
+
+  return <PerspectiveCamera makeDefault ref={cameraRef} position={[0, 0, 5]} fov={60} />;
+}
 
 export default function SaiChat({ session }) {
-  const [messages, setMessages] = useState([])
-  const [isTyping, setIsTyping] = useState(false)
-  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false)
-  const [isSoundEnabled, setIsSoundEnabled] = useState(true)
-  const [characterAnim, setCharacterAnim] = useState('idle')
-  const [currentAura, setCurrentAura] = useState('neutral')
-  const [memories, setMemories] = useState([])
-  const [gameState, setGameState] = useState(null)
-  const [xpPopup, setXpPopup] = useState(null)
-  const chatRef = useRef(null)
-
-  const speakText = (text) => {
-    if (!isVoiceEnabled || !('speechSynthesis' in window)) return
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
-    const voices = window.speechSynthesis.getVoices()
-    const femaleVoice = voices.find(v => (v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha')) && v.lang.startsWith('en'))
-    if (femaleVoice) utterance.voice = femaleVoice
-    utterance.pitch = 1.1
-    window.speechSynthesis.speak(utterance)
-  }
-
-  useEffect(() => { if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight }, [messages])
+  const [messages, setMessages] = useState([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [inputText, setInputText] = useState('');
 
   useEffect(() => {
-    if (!session?.user?.id) return
+    if (!session?.user?.id) return;
     const loadData = async () => {
-      const { data: msgs } = await supabase.from('messages').select('*').eq('user_id', session.user.id).eq('source', 'sai').order('created_at', { ascending: true })
-      if (msgs && msgs.length > 0) setMessages(msgs)
-      else setMessages([{ id: 'initial', text: "Hey! I'm SAI, your personal AI companion. I'm here to listen, chat, remember things about you, and even play games!", sender: 'ai' }])
-      const { data: mems } = await supabase.from('sai_memories').select('*').eq('user_id', session.user.id)
-      if (mems) setMemories(mems)
-    }
-    loadData()
-  }, [session])
+      const { data: msgs } = await supabase.from('messages').select('*').eq('user_id', session.user.id).eq('source', 'sai').order('created_at', { ascending: true });
+      if (msgs && msgs.length > 0) setMessages(msgs);
+      else setMessages([{ id: 'initial', text: "I've been waiting for you in the Memory Tunnel. What's on your mind?", sender: 'ai' }]);
+    };
+    loadData();
+  }, [session]);
 
-  const processMessage = async (text) => {
-    if (!text.trim()) return
-    const userMsg = { id: Date.now(), text, sender: 'user' }
-    setMessages(prev => [...prev, userMsg])
+  const processMessage = async (e) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+    
+    const userMsg = { id: Date.now(), text: inputText, sender: 'user' };
+    setMessages(prev => [...prev, userMsg]);
+    setInputText('');
+    setIsTyping(true);
+
     if (session?.user?.id) {
-      supabase.from('messages').insert([{ user_id: session.user.id, text, sender: 'user', source: 'sai' }]).then()
-      addXp(session.user.id, 3).then(result => {
-        if (result?.leveledUp) {
-          setXpPopup(`🎉 Level Up! You're now "${result.title}"!`)
-          setTimeout(() => setXpPopup(null), 4000)
-        }
-      })
+      supabase.from('messages').insert([{ user_id: session.user.id, text: userMsg.text, sender: 'user', source: 'sai' }]).then();
     }
-    const memory = extractMemory(text)
-    if (memory && session?.user?.id) {
-      supabase.from('sai_memories').insert([{ user_id: session.user.id, fact: memory.fact, category: memory.category }]).then(() => setMemories(prev => [...prev, memory]))
-    }
-    setIsTyping(true)
+
     setTimeout(() => {
-      const emotion = detectEmotion(text)
-      const responsePool = SAI_RESPONSES[emotion] || SAI_RESPONSES.default
-      const selected = responsePool[Math.floor(Math.random() * responsePool.length)]
-      const aiReply = { id: Date.now() + 1, text: selected.text, sender: 'ai' }
-      setMessages(prev => [...prev, aiReply])
-      setIsTyping(false)
-      if (session?.user?.id) supabase.from('messages').insert([{ user_id: session.user.id, text: selected.text, sender: 'ai', source: 'sai' }]).then()
-      speakText(selected.text)
-      setCharacterAnim(selected.emotion)
-      setCurrentAura(emotionToAura(selected.emotion))
-      setTimeout(() => { setCharacterAnim('idle'); setCurrentAura('neutral') }, 3000)
-    }, 1500)
-  }
+      const emotion = detectEmotion(userMsg.text);
+      const responsePool = SAI_RESPONSES[emotion] || SAI_RESPONSES.default;
+      const aiReply = { id: Date.now() + 1, text: responsePool[0].text, sender: 'ai' };
+      
+      setMessages(prev => [...prev, aiReply]);
+      setIsTyping(false);
+      
+      if (session?.user?.id) {
+        supabase.from('messages').insert([{ user_id: session.user.id, text: aiReply.text, sender: 'ai', source: 'sai' }]).then();
+      }
+    }, 1500);
+  };
 
   return (
-    <div className="sai-chat-page">
-      <div className="sai-chat-header">
-        <Link to="/sai" className="back-link">←</Link>
-        <div className="center-info"><div className="status-dot"></div><span className="name">SAI</span></div>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <button className="voice-toggle" onClick={() => setIsSoundEnabled(!isSoundEnabled)}>{isSoundEnabled ? '🔊' : '🔈'}</button>
-          <button className="voice-toggle" onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}>{isVoiceEnabled ? '🔊' : '🔇'}</button>
+    <div className="h-screen w-screen bg-[#05010a] text-white overflow-hidden relative selection:bg-purple-500/30 font-sans">
+      
+      {/* 3D WebGL Background - The Memory Tunnel */}
+      <div className="absolute inset-0 z-0">
+        <Canvas dpr={[1, 2]}>
+          <TunnelCamera messageCount={messages.length} />
+          <ambientLight intensity={0.5} />
+          <pointLight position={[0, 0, 0]} intensity={2} color="#c084fc" />
+          
+          <group position={[0, 0, (messages.length - 1) * 6]}>
+            {messages.map((msg, i) => (
+              <MessageNode key={msg.id} message={msg} index={i} total={messages.length} />
+            ))}
+            
+            {/* Glowing Dust particles inside the tunnel */}
+            <Sparkles count={500} scale={[10, 10, 100]} position={[0, 0, -20]} size={2} speed={0.5} opacity={0.3} color="#a855f7" />
+          </group>
+
+          {/* Endless Tube Geometry to represent the tunnel walls */}
+          <mesh position={[0, 0, -25]}>
+            <cylinderGeometry args={[8, 8, 100, 32, 1, true]} />
+            <meshStandardMaterial color="#2e1065" wireframe={true} transparent opacity={0.1} />
+          </mesh>
+        </Canvas>
+      </div>
+
+      {/* UI Overlay */}
+      <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-6">
+        
+        {/* Header */}
+        <header className="pointer-events-auto flex items-center gap-4">
+          <Link to="/sai" className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-md shadow-[0_0_20px_rgba(168,85,247,0.2)] hover:bg-white/10 transition-colors">
+            <span className="material-symbols-outlined text-purple-300">arrow_back</span>
+          </Link>
+          <h1 className="text-2xl font-light tracking-wide text-white font-serif bg-clip-text text-transparent bg-gradient-to-r from-purple-200 to-indigo-200">
+            SAI Neural Link
+          </h1>
+        </header>
+
+        {/* Input Area */}
+        <div className="pointer-events-auto w-full max-w-3xl mx-auto mb-6 relative">
+          
+          <AnimatePresence>
+            {isTyping && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute -top-10 left-6 text-sm text-purple-300/60 font-mono tracking-widest flex items-center gap-2"
+              >
+                SAI is materializing a response <span className="animate-pulse">...</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <form onSubmit={processMessage} className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+            <div className="relative flex items-center bg-[#090514]/80 border border-purple-500/30 backdrop-blur-xl rounded-full p-2 pl-6">
+              <input
+                type="text"
+                placeholder="Transmit thought into the void..."
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                className="flex-1 bg-transparent text-white placeholder:text-purple-300/30 focus:outline-none tracking-wide text-lg"
+              />
+              <button 
+                type="submit" 
+                disabled={!inputText.trim()}
+                className="w-12 h-12 rounded-full bg-purple-600/50 hover:bg-purple-500 text-white flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="material-symbols-outlined">send</span>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-      {xpPopup && <div className="xp-popup">{xpPopup}</div>}
-      <AmbientSound emotion={currentAura} enabled={isSoundEnabled} />
-      <div className="sai-chat-avatar">
-        <Companion3D companion="sai" characterAnim={characterAnim} messages={messages} features={{ spiritFamiliar: messages.length > 5, timeEcho: messages.length > 10 }} />
-      </div>
-      <div className="sai-chat-area">
-        <SaiMessages messages={messages} isTyping={isTyping} chatRef={chatRef} />
-        <SaiInput onSend={processMessage} onVoiceTranscript={processMessage} />
-      </div>
     </div>
-  )
+  );
 }

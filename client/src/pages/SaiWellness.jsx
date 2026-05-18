@@ -1,329 +1,323 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabaseClient'
-import MorphingRadarFull from '../components/MorphingRadarFull'
-import './SaiWellness.css'
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Environment, Float, Sparkles, SpotLight } from '@react-three/drei';
+import * as THREE from 'three';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const QUESTIONS = [
-  { id: 'sleep',   label: 'How did you sleep last night?',              icon: '🌙', scale: ['Terrible', 'Poor', 'Okay', 'Good', 'Great'] },
-  { id: 'energy',  label: 'How is your energy level right now?',        icon: '⚡', scale: ['Drained', 'Low', 'Medium', 'High', 'Electric'] },
-  { id: 'stress',  label: 'How stressed are you feeling?',              icon: '🌀', scale: ['Very High', 'High', 'Moderate', 'Low', 'None'] },
-  { id: 'connect', label: 'Do you feel connected to others today?',     icon: '🤝', scale: ['Very Alone', 'Isolated', 'Neutral', 'Connected', 'Loved'] },
-  { id: 'purpose', label: 'How purposeful does today feel?',            icon: '🎯', scale: ['Lost', 'Uncertain', 'Neutral', 'Meaningful', 'Inspired'] },
-]
-
-const AFFIRMATIONS = {
-  high: [
-    "You're radiating positive energy today — keep going! 🌟",
-    "You're thriving. Take a moment to appreciate how far you've come. ✨",
-    "Your resilience is showing. Today, everything is working in your favor. 💪",
-  ],
-  medium: [
-    "Balance is a superpower. You're maintaining yours beautifully. 🌿",
-    "Every small step forward counts. You're doing better than you think. 🐾",
-    "Neutral can be the strongest foundation. Build from here. 🏗️",
-  ],
-  low: [
-    "It's okay to have hard days. I'm here, and tomorrow is always a new chapter. 🌅",
-    "You don't have to have it all together. Just breathing is enough for now. 🌬️",
-    "Even in the storm, you are the eye — calm, centered, resilient. You've got this. 🌪️",
-  ],
-}
-
-const TIPS = {
-  sleep:   ['Try a 20-min wind-down routine before bed', 'Avoid screens 30 mins before sleep', 'Keep a consistent sleep schedule'],
-  energy:  ['Take a 10-min walk to boost energy naturally', 'Stay hydrated — drink water now', 'Try 5 deep breaths to re-center'],
-  stress:  ['Write down what\'s stressing you, then close the notebook', 'Name 3 things you can control right now', '4-7-8 breathing: inhale 4s, hold 7s, exhale 8s'],
-  connect: ['Reach out to one person today, even just a text', 'Practice self-compassion — you are your own best companion', 'Being present with yourself IS connection'],
-  purpose: ['Define one tiny win you can achieve today', 'Revisit your "why" — why does today matter to you?', 'Do one thing purely because it makes you happy'],
-}
-
-function ScoreBar({ value, max = 4 }) {
-  const pct = (value / max) * 100
-  const color = pct > 66 ? '#10b981' : pct > 33 ? '#f59e0b' : '#ef4444'
-  return (
-    <div className="score-bar-bg">
-      <div className="score-bar-fill" style={{ width: `${pct}%`, background: color }} />
-    </div>
-  )
-}
-
-function formatDate(dateStr) {
-  const d = new Date(dateStr)
-  const today = new Date()
-  if (d.toDateString() === today.toDateString()) return 'Today'
-  const yesterday = new Date(today)
-  yesterday.setDate(today.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday'
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-}
+  { id: 'sleep',   label: 'Physical (Sleep)', icon: '🌙', scale: ['Terrible', 'Poor', 'Okay', 'Good', 'Great'] },
+  { id: 'energy',  label: 'Mental (Energy)', icon: '⚡', scale: ['Drained', 'Low', 'Medium', 'High', 'Electric'] },
+  { id: 'stress',  label: 'Emotional (Stress)', icon: '🌀', scale: ['Very High', 'High', 'Moderate', 'Low', 'None'] },
+  { id: 'connect', label: 'Social (Connect)', icon: '🤝', scale: ['Very Alone', 'Isolated', 'Neutral', 'Connected', 'Loved'] },
+  { id: 'purpose', label: 'Spiritual (Purpose)', icon: '🎯', scale: ['Lost', 'Uncertain', 'Neutral', 'Meaningful', 'Inspired'] },
+];
 
 function getTodayKey() {
-  return new Date().toISOString().slice(0, 10)
+  return new Date().toISOString().slice(0, 10);
 }
 
+// ─── 3D Gyroscope Component ──────────────────────────────────────────────────
+function GyroscopeRings({ scores }) {
+  const ringsRef = useRef([]);
+  const coreRef = useRef();
+  
+  // Calculate balance based on scores (0 to 1)
+  const balance = useMemo(() => {
+    if (!scores || scores.length === 0) return 0.5;
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    return avg / 4; // 0 to 1
+  }, [scores]);
+
+  const isPerfectlyAligned = balance >= 0.8;
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    
+    // Wobble amount increases as balance decreases
+    const wobble = (1 - balance) * 0.5;
+    const baseSpeed = 0.5 + balance * 1.5; // Rotates faster when balanced
+
+    ringsRef.current.forEach((ring, i) => {
+      if (!ring) return;
+      
+      // Target rotations for alignment (0,0,0 is perfectly aligned)
+      const targetX = isPerfectlyAligned ? 0 : Math.sin(t * baseSpeed + i) * wobble * Math.PI;
+      const targetY = isPerfectlyAligned ? t * (0.2 + i * 0.1) : Math.cos(t * baseSpeed * 0.8 + i) * wobble * Math.PI;
+      const targetZ = isPerfectlyAligned ? 0 : Math.sin(t * baseSpeed * 1.2 + i) * wobble * Math.PI;
+
+      ring.rotation.x = THREE.MathUtils.lerp(ring.rotation.x, targetX, 0.05);
+      ring.rotation.y = THREE.MathUtils.lerp(ring.rotation.y, targetY, 0.05);
+      ring.rotation.z = THREE.MathUtils.lerp(ring.rotation.z, targetZ, 0.05);
+      
+      // Color shifts based on alignment
+      const material = ring.children[0].material;
+      const targetColor = new THREE.Color().setHSL(0.6 + (i * 0.05), balance, 0.3 + (balance * 0.5));
+      material.color.lerp(targetColor, 0.05);
+    });
+
+    if (coreRef.current) {
+      const coreScale = 0.5 + balance * 0.5;
+      coreRef.current.scale.setScalar(THREE.MathUtils.lerp(coreRef.current.scale.x, coreScale, 0.1));
+      coreRef.current.rotation.y += 0.01;
+      coreRef.current.material.emissiveIntensity = balance * 2;
+    }
+  });
+
+  return (
+    <group>
+      {/* 5 Intersecting Rings */}
+      {[0, 1, 2, 3, 4].map((i) => (
+        <group key={i} ref={(el) => ringsRef.current[i] = el}>
+          <mesh>
+            <torusGeometry args={[2.5 - i * 0.3, 0.03, 16, 100]} />
+            <meshStandardMaterial 
+              metalness={0.9} 
+              roughness={0.1} 
+              transparent 
+              opacity={0.8}
+              envMapIntensity={2}
+            />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Core Energy */}
+      <mesh ref={coreRef}>
+        <octahedronGeometry args={[0.5, 0]} />
+        <meshStandardMaterial 
+          color="#a78bfa" 
+          emissive="#7c3aed" 
+          wireframe={!isPerfectlyAligned}
+          transparent 
+          opacity={0.9} 
+        />
+      </mesh>
+
+      {/* Volumetric God Rays when aligned */}
+      {isPerfectlyAligned && (
+        <group position={[0, 5, 0]}>
+          <SpotLight
+            distance={20}
+            angle={0.4}
+            attenuation={10}
+            anglePower={5}
+            color="#a78bfa"
+            intensity={5}
+            penumbra={1}
+            castShadow
+          />
+        </group>
+      )}
+
+      {/* Atmospheric Particles */}
+      <Sparkles 
+        count={isPerfectlyAligned ? 200 : 50} 
+        scale={6} 
+        size={isPerfectlyAligned ? 3 : 1} 
+        color="#a78bfa" 
+        speed={balance * 2} 
+      />
+    </group>
+  );
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────────
 export default function SaiWellness({ session }) {
-  const [step, setStep] = useState('check') // 'check' | 'result' | 'history'
-  const [answers, setAnswers] = useState({})
-  const [history, setHistory] = useState([])
-  const [todayEntry, setTodayEntry] = useState(null)
-  const [saving, setSaving] = useState(false)
-  const [affirmation, setAffirmation] = useState('')
+  const navigate = useNavigate();
+  const [step, setStep] = useState('check'); // 'check' | 'result'
+  const [answers, setAnswers] = useState({});
+  const [todayEntry, setTodayEntry] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!session?.user?.id) return
+    if (!session?.user?.id) return;
     const load = async () => {
       const { data } = await supabase
         .from('sai_wellness')
         .select('*')
         .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(14)
-      if (data) {
-        setHistory(data)
-        const today = data.find(d => d.date_key === getTodayKey())
-        if (today) {
-          setTodayEntry(today)
-          setStep('result')
-          pickAffirmation(calcAvg(today))
-        }
+        .eq('date_key', getTodayKey())
+        .limit(1);
+      if (data && data.length > 0) {
+        setTodayEntry(data[0]);
+        setAnswers({
+          sleep: data[0].sleep,
+          energy: data[0].energy,
+          stress: data[0].stress,
+          connect: data[0].connect,
+          purpose: data[0].purpose
+        });
+        setStep('result');
       }
-    }
-    load()
-  }, [session])
+    };
+    load();
+  }, [session]);
 
-  function calcAvg(entry) {
-    const scores = QUESTIONS.map(q => entry[q.id] ?? 2)
-    return scores.reduce((a, b) => a + b, 0) / scores.length
-  }
+  const calcAvg = (entry) => {
+    const scores = QUESTIONS.map(q => entry[q.id] ?? 2);
+    return scores.reduce((a, b) => a + b, 0) / scores.length;
+  };
 
-  function pickAffirmation(avg) {
-    const pool = avg >= 3 ? AFFIRMATIONS.high : avg >= 2 ? AFFIRMATIONS.medium : AFFIRMATIONS.low
-    setAffirmation(pool[Math.floor(Math.random() * pool.length)])
-  }
-
-  const allAnswered = QUESTIONS.every(q => answers[q.id] !== undefined)
+  const allAnswered = QUESTIONS.every(q => answers[q.id] !== undefined);
 
   const handleSubmit = async () => {
-    if (!allAnswered || !session?.user?.id) return
-    setSaving(true)
+    if (!allAnswered || !session?.user?.id) return;
+    setSaving(true);
 
     const payload = {
       user_id: session.user.id,
       date_key: getTodayKey(),
       ...answers,
       avg_score: calcAvg(answers),
-    }
+    };
 
     const { data, error } = await supabase
       .from('sai_wellness')
       .upsert([payload], { onConflict: 'user_id,date_key' })
-      .select()
+      .select();
 
     if (data?.[0] && !error) {
-      setTodayEntry(data[0])
-      setHistory(prev => [data[0], ...prev.filter(e => e.date_key !== getTodayKey())])
-      pickAffirmation(payload.avg_score)
+      setTodayEntry(data[0]);
     }
-    setSaving(false)
-    setStep('result')
-  }
+    setSaving(false);
+    setStep('result');
+  };
 
-  // Pick a random tip for a low-scored category
-  const getLowTips = () => {
-    if (!todayEntry) return []
-    return QUESTIONS
-      .filter(q => (todayEntry[q.id] ?? 2) <= 2)
-      .slice(0, 2)
-      .map(q => {
-        const tip = TIPS[q.id][Math.floor(Math.random() * TIPS[q.id].length)]
-        return { icon: q.icon, label: q.label, tip }
-      })
-  }
+  // Convert answers object to array for Gyroscope
+  const currentScores = Object.keys(answers).length > 0 
+    ? QUESTIONS.map(q => answers[q.id] !== undefined ? answers[q.id] : 2) 
+    : [2, 2, 2, 2, 2]; // Default mid
 
   return (
-    <div className="wellness-page">
-      {/* Header */}
-      <div className="wellness-header">
-        <Link to="/chat" className="wellness-back">←</Link>
-        <div>
-          <h1 className="wellness-title">💊 Wellness Center</h1>
-          <p className="wellness-subtitle">Daily mental health check-in with Shuna</p>
-        </div>
-        <button
-          className={`wellness-tab ${step === 'history' ? 'active' : ''}`}
-          onClick={() => setStep(step === 'history' ? (todayEntry ? 'result' : 'check') : 'history')}
-        >
-          📈 Trends
-        </button>
+    <div className="h-screen w-screen bg-[#020005] overflow-hidden relative font-sans text-white">
+      
+      {/* 3D Gyroscope Canvas */}
+      <div className="absolute inset-0 z-0">
+        <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
+          <color attach="background" args={["#020005"]} />
+          <ambientLight intensity={0.5} />
+          <directionalLight position={[5, 5, 5]} intensity={1} color="#a78bfa" />
+          <Environment preset="night" />
+          <Suspense fallback={null}>
+            <Float speed={1.5} rotationIntensity={0.5} floatIntensity={0.5}>
+              <GyroscopeRings scores={currentScores} />
+            </Float>
+          </Suspense>
+          <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5} />
+        </Canvas>
       </div>
 
-      {/* Check-in form */}
-      {step === 'check' && (
-        <div className="wellness-body">
-          <div className="wellness-intro">
-            <div className="wellness-orb">🌿</div>
-            <h2>How are you really doing?</h2>
-            <p>This check-in is private and helps Shuna understand and support you better.</p>
-          </div>
-
-          <div className="wellness-questions">
-            {QUESTIONS.map(q => (
-              <div key={q.id} className="wellness-question">
-                <div className="q-label">
-                  <span className="q-icon">{q.icon}</span>
-                  {q.label}
-                </div>
-                <div className="q-options">
-                  {q.scale.map((label, i) => (
-                    <button
-                      key={i}
-                      className={`q-option ${answers[q.id] === i ? 'selected' : ''}`}
-                      onClick={() => setAnswers(prev => ({ ...prev, [q.id]: i }))}
-                    >
-                      <span className="q-num">{i + 1}</span>
-                      <span className="q-opt-label">{label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <button
-            className={`wellness-submit ${allAnswered ? 'ready' : ''}`}
-            onClick={handleSubmit}
-            disabled={!allAnswered || saving}
-          >
-            {saving ? 'Saving...' : allAnswered ? '✨ Complete Check-in' : 'Answer all questions to continue'}
-          </button>
+      {/* Header */}
+      <header className="absolute top-6 left-6 z-50 flex items-center gap-4">
+        <button onClick={() => navigate('/sai')} className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all backdrop-blur-md">
+          <span className="material-symbols-outlined text-sm">arrow_back</span>
+        </button>
+        <div className="flex flex-col">
+          <span className="text-sm tracking-[0.2em] font-light text-gray-300">WELLNESS RADAR</span>
+          <span className="text-[10px] tracking-widest uppercase text-indigo-400">The Gyroscope</span>
         </div>
-      )}
+      </header>
 
-      {/* Result */}
-      {step === 'result' && todayEntry && (
-        <div className="wellness-body">
-          <div className="result-card">
-            <div className="result-score-ring">
-              <svg viewBox="0 0 100 100" className="ring-svg">
-                <circle cx="50" cy="50" r="40" className="ring-bg" />
-                <circle
-                  cx="50" cy="50" r="40"
-                  className="ring-fill"
-                  strokeDasharray={`${(calcAvg(todayEntry) / 4) * 251} 251`}
-                  strokeDashoffset="0"
-                  style={{
-                    stroke: calcAvg(todayEntry) >= 3 ? '#10b981' : calcAvg(todayEntry) >= 2 ? '#f59e0b' : '#ef4444'
-                  }}
-                />
-              </svg>
-              <div className="ring-score">
-                <span className="ring-num">{Math.round((calcAvg(todayEntry) / 4) * 100)}</span>
-                <span className="ring-label">/ 100</span>
+      {/* Main Content Overlay */}
+      <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none p-6">
+        <AnimatePresence mode="wait">
+          
+          {step === 'check' && (
+            <motion.div 
+              key="check"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg bg-black/40 border border-white/10 rounded-3xl backdrop-blur-xl p-8 pointer-events-auto"
+            >
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-light tracking-wide mb-2">Align Your Rings</h2>
+                <p className="text-sm text-gray-400">Log your state to stabilize the Gyroscope.</p>
               </div>
-            </div>
-            <h2 className="result-title">Today's Wellness Score</h2>
-          </div>
 
-          {/* Affirmation */}
-          <div className="affirmation-card">
-            <div className="affirmation-icon">💬</div>
-            <p className="affirmation-text">{affirmation}</p>
-            <span className="affirmation-source">— Shuna</span>
-          </div>
-
-          {/* Breakdown */}
-          <div className="wellness-breakdown">
-            <h3 className="breakdown-title">Today's Breakdown</h3>
-            {QUESTIONS.map(q => (
-              <div key={q.id} className="breakdown-row">
-                <span className="breakdown-icon">{q.icon}</span>
-                <div className="breakdown-info">
-                  <span className="breakdown-label">{q.scale[todayEntry[q.id] ?? 2]}</span>
-                  <ScoreBar value={todayEntry[q.id] ?? 2} />
-                </div>
-                <span className="breakdown-cat">{q.label.split(' ').slice(0, 3).join(' ')}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Tips for low areas */}
-          {getLowTips().length > 0 && (
-            <div className="wellness-tips">
-              <h3 className="tips-title">💡 Shuna's Personalized Tips</h3>
-              {getLowTips().map((tip, i) => (
-                <div key={i} className="tip-card">
-                  <span className="tip-icon">{tip.icon}</span>
-                  <div>
-                    <p className="tip-text">{tip.tip}</p>
+              <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-2 no-scrollbar">
+                {QUESTIONS.map(q => (
+                  <div key={q.id} className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-indigo-200 uppercase tracking-widest">
+                      <span>{q.icon}</span> {q.label}
+                    </div>
+                    <div className="flex gap-2">
+                      {q.scale.map((label, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setAnswers(prev => ({ ...prev, [q.id]: i }))}
+                          className={`flex-1 py-3 text-xs rounded-xl border transition-all ${
+                            answers[q.id] === i 
+                              ? 'bg-indigo-600/50 border-indigo-400 shadow-[0_0_15px_rgba(79,70,229,0.3)] text-white' 
+                              : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                          }`}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+
+              <button
+                onClick={handleSubmit}
+                disabled={!allAnswered || saving}
+                className="w-full mt-8 py-4 rounded-xl bg-white text-black font-semibold tracking-widest uppercase text-sm hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? 'Aligning...' : 'Sync Resonance'}
+              </button>
+            </motion.div>
           )}
 
-          <button className="redo-btn" onClick={() => { setAnswers({}); setStep('check'); }}>
-            🔄 Redo Check-in
-          </button>
-        </div>
-      )}
-
-      {/* Trend History */}
-      {step === 'history' && (
-        <div className="wellness-body">
-          <h2 className="history-title">📊 Your Wellness Trends</h2>
-
-          {history.length === 0 ? (
-            <div className="wellness-empty">
-              <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🌱</div>
-              <p>No history yet.</p>
-              <p style={{ fontSize: '0.85rem', opacity: 0.6, marginBottom: '20px' }}>
-                Complete your first check-in to start seeing your wellness trends here.
-              </p>
-              <button className="wellness-start-btn" onClick={() => setStep('check')}>
-                Start First Check-in
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Morphing Radar — only shown with real data */}
-              <div style={{ marginBottom: '24px', background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <h3 style={{ marginTop: 0, marginBottom: '16px', color: '#fff', fontSize: '1.1rem' }}>Emotional Time Machine</h3>
-                <MorphingRadarFull snapshots={history.map(entry => ({
-                  snapshot_date: entry.date_key || entry.created_at || new Date().toISOString(),
-                  dimensions: {
-                    Sleep:   Math.round(((entry.sleep   ?? 2) / 4) * 100),
-                    Energy:  Math.round(((entry.energy  ?? 2) / 4) * 100),
-                    Calm:    Math.round((1 - (entry.stress  ?? 2) / 4) * 100),
-                    Connect: Math.round(((entry.connect ?? 2) / 4) * 100),
-                    Purpose: Math.round(((entry.purpose ?? 2) / 4) * 100),
-                  },
-                }))} />
-              </div>
-
-              <div className="history-list">
-                {history.map(entry => {
-                  const avg = calcAvg(entry)
-                  const pct = Math.round((avg / 4) * 100)
-                  const color = pct > 66 ? '#10b981' : pct > 33 ? '#f59e0b' : '#ef4444'
+          {step === 'result' && todayEntry && (
+            <motion.div 
+              key="result"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="absolute bottom-12 left-12 p-8 rounded-3xl bg-black/40 border border-white/10 backdrop-blur-xl pointer-events-auto max-w-sm"
+            >
+              <h2 className="text-sm uppercase tracking-widest text-indigo-400 mb-6">Alignment Status</h2>
+              
+              <div className="space-y-4">
+                {QUESTIONS.map(q => {
+                  const val = todayEntry[q.id] ?? 2;
+                  const pct = (val / 4) * 100;
                   return (
-                    <div key={entry.id} className="history-row">
-                      <span className="history-date">{formatDate(entry.date_key || entry.created_at)}</span>
-                      <div className="history-bar-wrap">
-                        <div className="history-bar" style={{ width: `${pct}%`, background: color }} />
+                    <div key={q.id}>
+                      <div className="flex justify-between text-xs text-gray-400 mb-1">
+                        <span>{q.label}</span>
+                        <span>{q.scale[val]}</span>
                       </div>
-                      <span className="history-pct" style={{ color }}>{pct}</span>
+                      <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${pct}%` }}
+                          transition={{ duration: 1, delay: 0.5 }}
+                          className={`h-full ${pct > 66 ? 'bg-emerald-400' : pct > 33 ? 'bg-amber-400' : 'bg-rose-400'}`}
+                        />
+                      </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
-            </>
+
+              <div className="mt-8 pt-6 border-t border-white/10">
+                <button 
+                  onClick={() => setStep('check')}
+                  className="text-xs uppercase tracking-widest text-gray-400 hover:text-white transition-colors"
+                >
+                  Recalibrate
+                </button>
+              </div>
+            </motion.div>
           )}
-          <button className="redo-btn" onClick={() => setStep(todayEntry ? 'result' : 'check')}>
-            ← Back
-          </button>
-        </div>
-      )}
+
+        </AnimatePresence>
+      </div>
+
     </div>
-  )
+  );
 }

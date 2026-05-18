@@ -33,5 +33,22 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // Animation
+          'vendor-motion': ['framer-motion'],
+          // Three.js core
+          'vendor-three': ['three'],
+          // React Three Fiber + Drei
+          'vendor-r3f': ['@react-three/fiber', '@react-three/drei'],
+        }
+      }
+    }
   }
 })

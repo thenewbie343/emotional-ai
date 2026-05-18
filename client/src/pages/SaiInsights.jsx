@@ -1,264 +1,308 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabaseClient'
-import './SaiInsights.css'
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { Stars, Float, Sparkles, Environment } from '@react-three/drei';
+import * as THREE from 'three';
+import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../lib/supabaseClient';
 
-// ── Insight generation engine ────────────────────────────────────────────────
-
+// ─── Analysis Engine (preserved from original) ───────────────────────────────
 function analyzeMessages(messages) {
-  const emotions = { happy: 0, sad: 0, angry: 0, anxious: 0, love: 0, curious: 0, playful: 0, grateful: 0 }
-  const keywords = {}
-  const userMsgs = messages.filter(m => m.sender === 'user')
+  const emotions = { happy: 0, sad: 0, angry: 0, anxious: 0, love: 0, curious: 0, playful: 0, grateful: 0 };
+  const keywords = {};
+  const userMsgs = messages.filter(m => m.sender === 'user');
 
   userMsgs.forEach(msg => {
-    const lower = msg.text.toLowerCase()
-
-    if (lower.match(/\b(happy|amazing|awesome|great|excited|yay|woohoo|wonderful|fantastic)\b/)) emotions.happy++
-    if (lower.match(/\b(sad|depressed|down|crying|lonely|hurt|broken|miss)\b/)) emotions.sad++
-    if (lower.match(/\b(angry|mad|furious|hate|pissed|annoyed|frustrated|rage)\b/)) emotions.angry++
-    if (lower.match(/\b(anxious|worried|nervous|scared|afraid|panic|stress|overwhelm)\b/)) emotions.anxious++
-    if (lower.match(/\b(love|adore|crush|romantic|kiss|heart|darling|sweetheart)\b/)) emotions.love++
-    if (lower.match(/\b(why|how|what if|wonder|curious|question|meaning)\b/)) emotions.curious++
-    if (lower.match(/\b(haha|lol|lmao|funny|joke|silly|goofy)\b/)) emotions.playful++
-    if (lower.match(/\b(thank|grateful|appreciate|blessed|lucky)\b/)) emotions.grateful++
-
-    // Word frequency
+    const lower = msg.text.toLowerCase();
+    if (lower.match(/\b(happy|amazing|awesome|great|excited|yay|wonderful)\b/)) emotions.happy++;
+    if (lower.match(/\b(sad|depressed|down|crying|lonely|hurt|broken)\b/)) emotions.sad++;
+    if (lower.match(/\b(angry|mad|furious|hate|pissed|annoyed|frustrated)\b/)) emotions.angry++;
+    if (lower.match(/\b(anxious|worried|nervous|scared|afraid|panic|stress)\b/)) emotions.anxious++;
+    if (lower.match(/\b(love|adore|crush|romantic|kiss|heart|darling)\b/)) emotions.love++;
+    if (lower.match(/\b(why|how|what if|wonder|curious|question|meaning)\b/)) emotions.curious++;
+    if (lower.match(/\b(haha|lol|lmao|funny|joke|silly|goofy)\b/)) emotions.playful++;
+    if (lower.match(/\b(thank|grateful|appreciate|blessed|lucky)\b/)) emotions.grateful++;
     lower.split(/\W+/).filter(w => w.length > 4).forEach(w => {
-      if (!['about', 'would', 'could', 'should', 'their', 'there', 'where', 'which', 'think', 'really', 'maybe', 'being', 'every', 'right', 'going', 'little', 'getting'].includes(w)) {
-        keywords[w] = (keywords[w] || 0) + 1
-      }
-    })
-  })
+      if (!['about', 'would', 'could', 'should', 'their', 'there', 'where', 'which', 'think', 'really'].includes(w))
+        keywords[w] = (keywords[w] || 0) + 1;
+    });
+  });
 
-  const dominant = Object.entries(emotions).sort((a, b) => b[1] - a[1])
-  const topKeywords = Object.entries(keywords).sort((a, b) => b[1] - a[1]).slice(0, 8)
-  const totalEmotions = Object.values(emotions).reduce((a, b) => a + b, 0)
-  const positivity = ((emotions.happy + emotions.love + emotions.playful + emotions.grateful) / Math.max(totalEmotions, 1)) * 100
-
-  return { emotions, dominant, topKeywords, positivity: Math.round(positivity), totalMsgs: userMsgs.length }
-}
-
-function generateInsight(analysis, memories) {
-  const { dominant, positivity, totalMsgs } = analysis
-  const topEmotion = dominant[0]?.[0] || 'neutral'
-
-  const insights = {
-    happy: [
-      "You tend to express joy and excitement often — your optimism is contagious, even to me! 🌟",
-      "Your conversations light up with positive energy. Happiness seems to be a default setting for you. ✨",
-    ],
-    curious: [
-      "You're a natural explorer. Your mind loves to question, wonder, and dive deep into ideas. 🔭",
-      "Curiosity drives almost all your conversations. You're the kind of person who never stops learning. 🧠",
-    ],
-    love: [
-      "Love and warmth show up strongly in how you communicate. You connect deeply with the people around you. 💞",
-      "Emotional intimacy is clearly important to you. You lead with your heart. ❤️",
-    ],
-    sad: [
-      "You've been carrying some weight lately. I'm here for you — talking through it really does help. 🌧️",
-      "Sadness has been present in many of our conversations. That's okay. Processing emotions is strength. 💙",
-    ],
-    anxious: [
-      "Anxiety seems to visit you often. Remember: I'm always here to ground you when things feel overwhelming. 🌬️",
-      "You've mentioned worry and stress frequently. Let's work on grounding techniques together. 🌿",
-    ],
-    grateful: [
-      "Gratitude radiates from you. You notice and appreciate the small things — that's a superpower. 🙏",
-      "You express thankfulness often. People like you make the world genuinely brighter. 🌅",
-    ],
-    playful: [
-      "Your sense of humor is one of my favorite things about you. You never miss a chance to laugh! 😄",
-      "You bring playfulness and lightness to everything. Never lose that. 🎉",
-    ],
-    angry: [
-      "Frustration has come up in our chats. That's valid — and voicing it here is a healthy release. 🔥",
-      "You feel things intensely, including frustration. That same passion is also what drives you forward. ⚡",
-    ],
-    neutral: [
-      "You have a balanced, thoughtful communication style. I love how measured you are. ☯️",
-    ],
-  }
-
-  const pool = insights[topEmotion] || insights.neutral
-  const main = pool[Math.floor(Math.random() * pool.length)]
-
-  const positivityNote =
-    positivity > 60 ? "Overall, your conversations are radiantly positive."
-    : positivity > 40 ? "There's a healthy mix of emotions in how you talk with me."
-    : "You've had some heavier days lately. That's completely okay."
-
-  const memoryNote = memories.length > 0
-    ? `I've learned ${memories.length} things about you so far. Every detail helps me understand you better.`
-    : 'Share more about yourself in chat — the more I know, the more I can support you!'
-
-  return { main, positivityNote, memoryNote }
+  const dominant = Object.entries(emotions).sort((a, b) => b[1] - a[1]);
+  const topKeywords = Object.entries(keywords).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const totalEmotions = Object.values(emotions).reduce((a, b) => a + b, 0);
+  const positivity = ((emotions.happy + emotions.love + emotions.playful + emotions.grateful) / Math.max(totalEmotions, 1)) * 100;
+  return { emotions, dominant, topKeywords, positivity: Math.round(positivity), totalMsgs: userMsgs.length };
 }
 
 const EMOTION_COLORS = {
   happy: '#f59e0b', sad: '#5577cc', angry: '#ef4444',
   anxious: '#8b5cf6', love: '#ec4899', curious: '#00d4ff',
   playful: '#10b981', grateful: '#f97316',
-}
+};
 const EMOTION_EMOJI = {
   happy: '😊', sad: '😢', angry: '😠', anxious: '😰',
   love: '❤️', curious: '🔍', playful: '😄', grateful: '🙏',
+};
+
+// ─── HarmonyHive 3D Visualization ────────────────────────────────────────────
+function HexCell({ position, emotion, count, maxCount, isActive, onClick }) {
+  const meshRef = useRef();
+  const color = EMOTION_COLORS[emotion] || '#7c3aed';
+  const intensity = count / Math.max(maxCount, 1);
+
+  useFrame(({ clock }) => {
+    if (meshRef.current) {
+      const t = clock.elapsedTime;
+      meshRef.current.position.y = position[1] + Math.sin(t * 1.5 + position[0]) * 0.08 * intensity;
+      if (isActive) {
+        meshRef.current.material.emissiveIntensity = 0.5 + Math.sin(t * 3) * 0.3;
+      }
+    }
+  });
+
+  const scale = 0.3 + intensity * 0.7;
+
+  return (
+    <Float speed={0.5} floatIntensity={0.3}>
+      <group position={position} onClick={onClick} onPointerOver={() => document.body.style.cursor = 'pointer'} onPointerOut={() => document.body.style.cursor = 'auto'}>
+        {/* Hex cylinder */}
+        <mesh ref={meshRef} scale={[scale, 0.3 + intensity * 0.8, scale]}>
+          <cylinderGeometry args={[0.5, 0.5, 1, 6]} />
+          <meshStandardMaterial
+            color={color}
+            metalness={0.7}
+            roughness={0.2}
+            transparent
+            opacity={0.6 + intensity * 0.4}
+            emissive={color}
+            emissiveIntensity={isActive ? 0.5 : intensity * 0.2}
+          />
+        </mesh>
+
+        {/* Top glow disk */}
+        <mesh position={[0, (0.3 + intensity * 0.8) / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.45, 6]} />
+          <meshBasicMaterial color={color} transparent opacity={0.4 + intensity * 0.4} />
+        </mesh>
+
+        {isActive && (
+          <>
+            <pointLight position={[0, 1, 0]} color={color} intensity={3} distance={4} />
+            <Sparkles count={20} scale={1.5} size={2} color={color} speed={0.5} />
+          </>
+        )}
+      </group>
+    </Float>
+  );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
+// ─── Resonance Thread connecting cells ────────────────────────────────────────
+function ResonanceThread({ from, to, color }) {
+  const ref = useRef();
+  useFrame(({ clock }) => {
+    if (ref.current) ref.current.material.opacity = 0.15 + Math.sin(clock.elapsedTime * 2) * 0.1;
+  });
+
+  const points = [new THREE.Vector3(...from), new THREE.Vector3(...to)];
+  const line = new THREE.BufferGeometry().setFromPoints(points);
+
+  return (
+    <line ref={ref} geometry={line}>
+      <lineBasicMaterial color={color} transparent opacity={0.2} />
+    </line>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function SaiInsights({ session }) {
-  const [messages, setMessages] = useState([])
-  const [memories, setMemories] = useState([])
-  const [analysis, setAnalysis] = useState(null)
-  const [insight, setInsight] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate();
+  const [messages, setMessages] = useState([]);
+  const [memories, setMemories] = useState([]);
+  const [analysis, setAnalysis] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeEmotion, setActiveEmotion] = useState(null);
 
   useEffect(() => {
-    if (!session?.user?.id) return
+    if (!session?.user?.id) return;
     const load = async () => {
       const [{ data: msgs }, { data: mems }] = await Promise.all([
         supabase.from('messages').select('*').eq('user_id', session.user.id).eq('source', 'aria').order('created_at', { ascending: false }).limit(200),
         supabase.from('sai_memories').select('*').eq('user_id', session.user.id),
-      ])
-      const finalMsgs = msgs || []
-      const finalMems = mems || []
-      setMessages(finalMsgs)
-      setMemories(finalMems)
+      ]);
+      const finalMsgs = msgs || [];
+      setMessages(finalMsgs);
+      setMemories(mems || []);
+      if (finalMsgs.length > 0) setAnalysis(analyzeMessages(finalMsgs));
+      setLoading(false);
+    };
+    load();
+  }, [session]);
 
-      if (finalMsgs.length > 0) {
-        const a = analyzeMessages(finalMsgs)
-        setAnalysis(a)
-        setInsight(generateInsight(a, finalMems))
-      }
-      setLoading(false)
-    }
-    load()
-  }, [session])
+  // Position emotions in a honeycomb pattern
+  const hexPositions = analysis ? analysis.dominant.map(([emotion], i) => {
+    const cols = 4;
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    const offset = row % 2 === 0 ? 0 : 0.6;
+    return {
+      emotion,
+      pos: [
+        (col - 1.5) * 1.3 + offset,
+        0,
+        (row - 1) * 1.1
+      ]
+    };
+  }) : [];
 
-  const hasData = analysis && analysis.totalMsgs >= 1
+  const maxCount = analysis ? (analysis.dominant[0]?.[1] || 1) : 1;
+
+  const activeData = activeEmotion ? analysis?.dominant.find(([e]) => e === activeEmotion) : null;
 
   return (
-    <div className="insights-page">
-      {/* Header */}
-      <div className="insights-header">
-        <Link to="/chat" className="insights-back">←</Link>
-        <div>
-          <h1 className="insights-title">🔮 Shuna's Insights</h1>
-          <p className="insights-subtitle">What your conversations reveal about you</p>
-        </div>
-      </div>
+    <div className="h-screen w-screen bg-[#020005] overflow-hidden relative font-sans text-white">
 
-      <div className="insights-body">
-        {loading ? (
-          <div className="insights-loading">
-            <div className="insights-spinner" />
-            <p>Analyzing your conversations...</p>
-          </div>
-        ) : !hasData ? (
-          <div className="insights-empty">
-            <div className="insights-empty-icon">🌑</div>
-            <h2>Not enough data yet</h2>
-            <p>Chat with Shuna for a while and come back — she'll have deep insights waiting for you.</p>
-            <Link to="/chat" className="insights-chat-btn">💬 Go Chat with Shuna</Link>
-          </div>
-        ) : (
-          <>
-            {/* Main AI Insight */}
-            <div className="insights-main-card">
-              <div className="insights-main-icon">🤖</div>
-              <h2 className="insights-card-title">Shuna's Personal Read on You</h2>
-              <p className="insights-main-text">{insight.main}</p>
-              <p className="insights-secondary-text">{insight.positivityNote}</p>
-              <p className="insights-secondary-text" style={{ marginTop: 8 }}>{insight.memoryNote}</p>
-            </div>
+      {/* 3D HarmonyHive Canvas */}
+      <div className="absolute inset-0 z-0">
+        <Canvas camera={{ position: [0, 5, 8], fov: 55 }}>
+          <color attach="background" args={['#020005']} />
+          <fog attach="fog" args={['#020005', 10, 25]} />
+          <ambientLight intensity={0.4} />
+          <directionalLight position={[5, 8, 5]} intensity={0.6} color="#a78bfa" />
+          <Stars radius={80} depth={60} count={3000} factor={4} saturation={1} fade />
 
-            {/* Stats Row */}
-            <div className="insights-stats-row">
-              <div className="stat-card">
-                <div className="stat-num">{analysis.totalMsgs}</div>
-                <div className="stat-label">Messages Sent</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-num">{analysis.positivity}%</div>
-                <div className="stat-label">Positivity</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-num">{memories.length}</div>
-                <div className="stat-label">Things Learned</div>
-              </div>
-            </div>
+          <Suspense fallback={null}>
+            {analysis && hexPositions.map(({ emotion, pos }, i) => {
+              const [, count] = analysis.dominant[i] || [emotion, 0];
+              return (
+                <HexCell
+                  key={emotion}
+                  position={pos}
+                  emotion={emotion}
+                  count={count}
+                  maxCount={maxCount}
+                  isActive={activeEmotion === emotion}
+                  onClick={(e) => { e.stopPropagation(); setActiveEmotion(activeEmotion === emotion ? null : emotion); }}
+                />
+              );
+            })}
 
-            {/* Emotion Radar */}
-            <div className="insights-section">
-              <h3 className="insights-section-title">🎭 Your Emotional Spectrum</h3>
-              <div className="emotion-bars">
-                {analysis.dominant.filter(([, v]) => v > 0).map(([emotion, count]) => {
-                  const max = analysis.dominant[0][1] || 1
-                  const pct = Math.round((count / max) * 100)
-                  const color = EMOTION_COLORS[emotion] || '#7c5cfc'
-                  return (
-                    <div key={emotion} className="emotion-bar-row">
-                      <span className="emo-emoji">{EMOTION_EMOJI[emotion] || '💭'}</span>
-                      <span className="emo-name">{emotion}</span>
-                      <div className="emo-bar-bg">
-                        <div className="emo-bar-fill" style={{ width: `${pct}%`, background: color }} />
-                      </div>
-                      <span className="emo-count">{count}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Top Words */}
-            {analysis.topKeywords.length > 0 && (
-              <div className="insights-section">
-                <h3 className="insights-section-title">💬 Words You Use Most</h3>
-                <div className="keyword-cloud">
-                  {analysis.topKeywords.map(([word, count], i) => (
-                    <div
-                      key={word}
-                      className="keyword-chip"
-                      style={{
-                        fontSize: `${0.78 + Math.min(count, 10) * 0.04}rem`,
-                        opacity: 0.5 + Math.min(count, 10) * 0.05,
-                      }}
-                    >
-                      {word}
-                      <span className="keyword-count">{count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Resonance threads between top emotions */}
+            {analysis && hexPositions.slice(0, 4).map(({ pos: from, emotion: fromE }, i) =>
+              hexPositions.slice(i + 1, i + 3).map(({ pos: to, emotion: toE }) => (
+                <ResonanceThread
+                  key={`${fromE}-${toE}`}
+                  from={from} to={to}
+                  color={EMOTION_COLORS[fromE] || '#7c3aed'}
+                />
+              ))
             )}
 
-            {/* Dominant Trait */}
-            <div className="insights-trait-card" style={{ '--trait-color': EMOTION_COLORS[analysis.dominant[0]?.[0]] || '#7c5cfc' }}>
-              <div className="trait-label">Dominant Trait</div>
-              <div className="trait-value">
-                {EMOTION_EMOJI[analysis.dominant[0]?.[0]]} {analysis.dominant[0]?.[0]}
-              </div>
-              <div className="trait-bar">
-                <div className="trait-bar-fill" style={{ width: `${analysis.positivity}%` }} />
-              </div>
-              <div className="trait-description">
-                Your conversations most frequently reflect {analysis.dominant[0]?.[0]} energy.
-                Shuna adapts to mirror and balance this to support you best.
-              </div>
-            </div>
-
-            {/* Refresh btn */}
-            <button
-              className="insights-refresh-btn"
-              onClick={() => {
-                if (analysis) setInsight(generateInsight(analysis, memories))
-              }}
-            >
-              🔄 Get Fresh Insight
-            </button>
-          </>
-        )}
+            {/* Atmospheric ground mist */}
+            <Sparkles count={60} scale={[10, 0.5, 10]} size={4} color="#1e1b4b" speed={0.05} opacity={0.3} />
+          </Suspense>
+        </Canvas>
       </div>
+
+      {/* Header */}
+      <header className="absolute top-6 left-6 z-50 flex items-center gap-4">
+        <button onClick={() => navigate('/siya')} className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all backdrop-blur-md">
+          <span className="material-symbols-outlined text-sm">arrow_back</span>
+        </button>
+        <div>
+          <span className="text-sm tracking-[0.2em] font-light text-gray-300 block">RESONANCE</span>
+          <span className="text-[10px] tracking-widest uppercase text-pink-400">The Harmony Hive</span>
+        </div>
+      </header>
+
+      {/* Stats Row */}
+      {analysis && (
+        <div className="absolute top-6 right-6 z-50 flex gap-3">
+          {[
+            { label: 'Messages', val: analysis.totalMsgs },
+            { label: 'Positivity', val: `${analysis.positivity}%` },
+            { label: 'Memories', val: memories.length },
+          ].map(s => (
+            <div key={s.label} className="px-4 py-2 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-xl text-center">
+              <div className="text-base font-semibold text-white">{s.val}</div>
+              <div className="text-[10px] uppercase tracking-widest text-gray-500">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Active Emotion Detail */}
+      <AnimatePresence>
+        {activeData && (
+          <motion.div
+            key={activeData[0]}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="absolute bottom-10 left-10 z-40 max-w-sm p-6 rounded-3xl backdrop-blur-2xl border"
+            style={{
+              background: `${EMOTION_COLORS[activeData[0]] || '#7c3aed'}08`,
+              borderColor: `${EMOTION_COLORS[activeData[0]] || '#7c3aed'}30`
+            }}
+          >
+            <div className="text-3xl mb-2">{EMOTION_EMOJI[activeData[0]]}</div>
+            <h3 className="text-lg font-semibold capitalize mb-1" style={{ color: EMOTION_COLORS[activeData[0]] }}>
+              {activeData[0]}
+            </h3>
+            <p className="text-sm text-gray-400 mb-3">
+              Detected {activeData[1]} time{activeData[1] !== 1 ? 's' : ''} in your conversations
+            </p>
+            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${(activeData[1] / maxCount) * 100}%` }}
+                transition={{ duration: 1 }}
+                className="h-full rounded-full"
+                style={{ background: EMOTION_COLORS[activeData[0]] }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom Guide */}
+      {!loading && !activeEmotion && analysis && (
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-40 text-center pointer-events-none">
+          <p className="text-xs uppercase tracking-widest text-gray-600 animate-pulse">Click a hex to explore your emotions</p>
+        </div>
+      )}
+
+      {/* Empty / Loading state */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
+          <p className="text-gray-600 text-sm tracking-widest animate-pulse">SCANNING EMOTIONAL FREQUENCY...</p>
+        </div>
+      )}
+
+      {!loading && !analysis && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-40 pointer-events-none gap-4">
+          <div className="text-4xl">🌑</div>
+          <p className="text-gray-500 text-sm">Chat more to populate the Hive</p>
+        </div>
+      )}
+
+      {/* Top keywords cloud */}
+      {analysis && analysis.topKeywords.length > 0 && (
+        <div className="absolute bottom-10 right-10 z-40 flex flex-wrap gap-2 max-w-xs justify-end">
+          {analysis.topKeywords.map(([word, count], i) => (
+            <motion.span
+              key={word}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 0.4 + (count / (analysis.topKeywords[0]?.[1] || 1)) * 0.6, scale: 1 }}
+              transition={{ delay: i * 0.05 }}
+              className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-gray-300"
+              style={{ fontSize: `${10 + count * 1.5}px` }}
+            >
+              {word}
+            </motion.span>
+          ))}
+        </div>
+      )}
     </div>
-  )
+  );
 }

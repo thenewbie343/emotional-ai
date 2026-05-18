@@ -1,485 +1,347 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useNavigate } from "react-router-dom";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { Float, Sparkles, Environment, Stars, SpotLight } from "@react-three/drei";
+import * as THREE from "three";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabaseClient";
 
 const MOODS = ["🌟 Thriving", "😊 Good", "😐 Okay", "😔 Struggling", "🌑 Dark"];
-const MOOD_COLORS = ["#facc15", "#34d399", "#94a3b8", "#f97316", "#6d28d9"];
+const MOOD_COLORS = ["#facc15", "#34d399", "#94a3b8", "#f97316", "#7c3aed"];
 
-// ─── AI: Generate comparison ─────────────────────────────────────────────────
-async function generateComparison(capsule, currentSnapshot) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": import.meta.env.VITE_ANTHROPIC_KEY || "",
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-5",
-      max_tokens: 1000,
-      messages: [{
-        role: "user",
-        content: `You are SIYA, a deeply empathetic AI companion. 
-A user just opened their emotional time capsule. Compare who they were vs who they are now.
+// ─── Floating Capsule Mesh ────────────────────────────────────────────────────
+function CapsuleMesh({ capsule, position, isSelected, onClick }) {
+  const meshRef = useRef();
+  const glowRef = useRef();
+  const today = new Date().toISOString().split("T")[0];
+  const isUnlocked = today >= capsule.unlock_date;
+  const isOpened = capsule.opened;
+  
+  const daysLeft = Math.max(0, Math.ceil((new Date(capsule.unlock_date) - new Date()) / 86400000));
+  const moodColor = MOOD_COLORS[capsule.mood_score ?? 2];
 
-PAST (${new Date(capsule.sealed_at).toLocaleDateString()}):
-- Mood: ${capsule.mood}
-- Message to future self: "${capsule.message}"
-- Wellness score: ${capsule.snapshot?.wellness || "unknown"}
-- Personality: empathy ${capsule.snapshot?.personality?.empathy || "?"}, humor ${capsule.snapshot?.personality?.humor || "?"}, curiosity ${capsule.snapshot?.personality?.curiosity || "?"}
-
-PRESENT (Today):
-- Wellness score: ${currentSnapshot?.wellness || "unknown"}  
-- Personality: empathy ${currentSnapshot?.personality?.empathy || "?"}, humor ${currentSnapshot?.personality?.humor || "?"}, curiosity ${currentSnapshot?.personality?.curiosity || "?"}
-- XP Level: ${currentSnapshot?.level || "unknown"}
-
-Write a warm, personal, insightful message (3-4 sentences) comparing then and now. 
-Notice what changed, what stayed the same. Be poetic but grounded. Speak directly to them as "you".
-Do NOT be generic. Make it feel like you actually know them.`
-      }]
-    })
+  useFrame(({ clock }) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y += 0.005;
+      if (isSelected) meshRef.current.rotation.x += 0.003;
+    }
+    if (glowRef.current) {
+      const pulsate = Math.sin(clock.elapsedTime * 2) * 0.1 + 0.9;
+      glowRef.current.intensity = isUnlocked && !isOpened ? pulsate * 3 : 0.5;
+    }
   });
-  const data = await res.json();
-  return data.content?.[0]?.text?.trim() || "Time has passed, and you've carried this message through it all.";
+
+  return (
+    <Float speed={1.5} rotationIntensity={0.5} floatIntensity={1.5}>
+      <group position={position} onClick={onClick} onPointerOver={() => document.body.style.cursor = 'pointer'} onPointerOut={() => document.body.style.cursor = 'auto'}>
+        {/* Capsule body */}
+        <mesh ref={meshRef} scale={isSelected ? 1.4 : 1}>
+          {isOpened ? (
+            <boxGeometry args={[0.8, 0.6, 0.8]} />
+          ) : (
+            <capsuleGeometry args={[0.4, 0.6, 8, 16]} />
+          )}
+          <meshStandardMaterial
+            color={isOpened ? "#ffffff" : moodColor}
+            metalness={0.8}
+            roughness={0.1}
+            transparent
+            opacity={isOpened ? 0.3 : isUnlocked ? 0.9 : 0.5}
+            wireframe={!isUnlocked && !isOpened}
+            emissive={isUnlocked && !isOpened ? moodColor : "#000000"}
+            emissiveIntensity={isUnlocked && !isOpened ? 0.5 : 0}
+          />
+        </mesh>
+
+        {/* Lock icon (scaled box) for locked state */}
+        {!isUnlocked && (
+          <mesh position={[0, 0, 0]} scale={0.2}>
+            <torusGeometry args={[1, 0.3, 8, 16, Math.PI]} />
+            <meshStandardMaterial color="rgba(255,255,255,0.3)" wireframe />
+          </mesh>
+        )}
+
+        {/* Glow for unlocked, unopened */}
+        {isUnlocked && !isOpened && (
+          <>
+            <pointLight ref={glowRef} color={moodColor} distance={4} intensity={3} />
+            <Sparkles count={20} scale={2} size={2} color={moodColor} speed={1} />
+          </>
+        )}
+
+        {/* Floating day counter */}
+        {!isUnlocked && (
+          <group position={[0, 1.2, 0]}>
+            <mesh>
+              <planeGeometry args={[1.2, 0.4]} />
+              <meshBasicMaterial color="#000000" transparent opacity={0.7} side={THREE.DoubleSide} />
+            </mesh>
+          </group>
+        )}
+      </group>
+    </Float>
+  );
 }
 
-// ─── Seal Form ────────────────────────────────────────────────────────────────
-function SealForm({ userId, onSealed }) {
+// ─── Scene ────────────────────────────────────────────────────────────────────
+function TimeCapsuleScene({ capsules, selectedId, onSelect }) {
+  const positions = capsules.map((_, i) => {
+    const angle = (i / Math.max(capsules.length, 1)) * Math.PI * 2;
+    const radius = 3 + Math.floor(i / 6);
+    return [Math.cos(angle) * radius, (Math.random() - 0.5) * 3, Math.sin(angle) * radius];
+  });
+
+  return (
+    <Canvas camera={{ position: [0, 5, 12], fov: 55 }}>
+      <color attach="background" args={["#030008"]} />
+      <fog attach="fog" args={["#030008", 8, 30]} />
+      <ambientLight intensity={0.3} />
+      <directionalLight position={[5, 8, 5]} intensity={0.8} color="#a78bfa" />
+      <Stars radius={80} depth={60} count={4000} factor={3} saturation={1} fade />
+      
+      <Suspense fallback={null}>
+        {capsules.map((capsule, i) => (
+          <CapsuleMesh
+            key={capsule.id}
+            capsule={capsule}
+            position={positions[i]}
+            isSelected={selectedId === capsule.id}
+            onClick={(e) => { e.stopPropagation(); onSelect(capsule); }}
+          />
+        ))}
+
+        {/* Central Vortex */}
+        <group>
+          <pointLight position={[0, 0, 0]} intensity={2} color="#7c3aed" distance={8} />
+          <Sparkles count={100} scale={8} size={1.5} color="#7c3aed" speed={0.3} />
+          <mesh>
+            <torusGeometry args={[1.5, 0.02, 16, 100]} />
+            <meshBasicMaterial color="#7c3aed" transparent opacity={0.4} />
+          </mesh>
+        </group>
+
+        <Environment preset="night" />
+      </Suspense>
+    </Canvas>
+  );
+}
+
+// ─── Seal Form Overlay ────────────────────────────────────────────────────────
+function SealFormOverlay({ userId, onSealed, onClose }) {
   const [message, setMessage] = useState("");
   const [mood, setMood] = useState(0);
   const [unlockDate, setUnlockDate] = useState("");
-  const [recording, setRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState(null);
-  const [audioUrl, setAudioUrl] = useState(null);
   const [sealing, setSealing] = useState(false);
-  const mediaRef = useRef(null);
 
   const minDate = new Date(Date.now() + 86400000 * 7).toISOString().split("T")[0];
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks = [];
-      recorder.ondataavailable = e => chunks.push(e.data);
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: "audio/webm" });
-        setAudioBlob(blob);
-        setAudioUrl(URL.createObjectURL(blob));
-        stream.getTracks().forEach(t => t.stop());
-      };
-      mediaRef.current = recorder;
-      recorder.start();
-      setRecording(true);
-    } catch { alert("Microphone access denied."); }
-  };
-
-  const stopRecording = () => { mediaRef.current?.stop(); setRecording(false); };
-
-  const sealCapsule = async () => {
+  const seal = async () => {
     if (!message.trim() || !unlockDate) return;
     setSealing(true);
 
-    const [{ data: wellness }, { data: personality }, { data: xp }] = await Promise.all([
+    const [{ data: wellness }, { data: xp }] = await Promise.all([
       supabase.from("sai_wellness").select("avg_score").eq("user_id", userId).order("date_key", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("sai_personality").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("sai_xp").select("xp, level").eq("user_id", userId).maybeSingle(),
     ]);
 
-    const snapshot = {
-      wellness: wellness?.avg_score,
-      personality: personality ? {
-        empathy: personality.empathy, humor: personality.humor,
-        curiosity: personality.curiosity, logic: personality.logic, trust: personality.trust,
-      } : null,
-      level: xp?.level, xp: xp?.xp,
-    };
-
-    let voiceUrl = null;
-    if (audioBlob) {
-      const fileName = `capsule_${userId}_${Date.now()}.webm`;
-      const { data: upload } = await supabase.storage
-        .from("voice-notes")
-        .upload(fileName, audioBlob, { contentType: "audio/webm", upsert: false });
-      if (upload) {
-        const { data: pub } = supabase.storage.from("voice-notes").getPublicUrl(fileName);
-        voiceUrl = pub?.publicUrl;
-      }
-    }
-
+    const snapshot = { wellness: wellness?.avg_score, level: xp?.level, xp: xp?.xp };
     const { data, error } = await supabase.from("sai_time_capsules").insert({
-      user_id: userId,
-      message, mood: MOODS[mood], mood_score: mood,
-      voice_note_url: voiceUrl, unlock_date: unlockDate, snapshot,
+      user_id: userId, message, mood: MOODS[mood], mood_score: mood,
+      unlock_date: unlockDate, snapshot, sealed_at: new Date().toISOString(),
     }).select().single();
 
     setSealing(false);
-    if (!error && data) onSealed(data);
+    if (!error && data) { onSealed(data); onClose(); }
   };
 
   return (
-    <div style={styles.sealForm}>
-      <div style={styles.formHeader}>
-        <div style={{ fontSize: 32 }}>🔮</div>
+    <motion.div
+      initial={{ opacity: 0, y: 40, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 40, scale: 0.95 }}
+      className="absolute bottom-12 left-1/2 -translate-x-1/2 w-full max-w-lg p-8 rounded-3xl bg-black/60 border border-purple-500/20 backdrop-blur-2xl z-50 shadow-[0_0_60px_rgba(124,58,237,0.15)]"
+    >
+      <h2 className="text-lg font-light tracking-[0.2em] uppercase text-purple-300 mb-6">Seal a Time Capsule</h2>
+      
+      <div className="space-y-5">
         <div>
-          <h2 style={styles.formTitle}>Seal a Time Capsule</h2>
-          <p style={styles.formSub}>A message from you, to you — locked until you're ready.</p>
+          <label className="text-xs uppercase tracking-widest text-gray-400 block mb-2">Message to your future self</label>
+          <textarea
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            placeholder="Dear future me..."
+            rows={4}
+            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-purple-500/40 resize-none"
+          />
         </div>
-      </div>
 
-      <div style={styles.fieldGroup}>
-        <label style={styles.label}>✍️ Your message to future self</label>
-        <textarea
-          style={styles.textarea}
-          placeholder="Dear future me... What do you want yourself to remember? What are you feeling right now? What are you hoping for?"
-          value={message} onChange={e => setMessage(e.target.value)} rows={6}
-        />
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", textAlign: "right" }}>{message.length} chars</div>
-      </div>
-
-      <div style={styles.fieldGroup}>
-        <label style={styles.label}>💫 How are you feeling right now?</label>
-        <div style={styles.moodRow}>
-          {MOODS.map((m, i) => (
-            <button key={m} onClick={() => setMood(i)} style={{
-              ...styles.moodBtn,
-              background: mood === i ? MOOD_COLORS[i] + "33" : "rgba(255,255,255,0.04)",
-              border: `1px solid ${mood === i ? MOOD_COLORS[i] : "rgba(255,255,255,0.08)"}`,
-              color: mood === i ? MOOD_COLORS[i] : "rgba(255,255,255,0.5)",
-            }}>{m}</button>
-          ))}
-        </div>
-      </div>
-
-      <div style={styles.fieldGroup}>
-        <label style={styles.label}>🎙️ Voice note (optional)</label>
-        <div style={styles.voiceRow}>
-          {!audioUrl ? (
-            <button onClick={recording ? stopRecording : startRecording}
-              style={{ ...styles.voiceBtn, background: recording ? "#ef4444" : "rgba(255,255,255,0.06)" }}>
-              {recording ? "⏹ Stop Recording" : "🎙 Start Recording"}
-            </button>
-          ) : (
-            <div style={{ display: "flex", gap: 10, alignItems: "center", flex: 1 }}>
-              <audio controls src={audioUrl} style={{ flex: 1, height: 36 }} />
-              <button onClick={() => { setAudioBlob(null); setAudioUrl(null); }} style={styles.removeBtn}>✕</button>
-            </div>
-          )}
-          {recording && <div style={styles.recordingPulse}>● Recording...</div>}
-        </div>
-      </div>
-
-      <div style={styles.fieldGroup}>
-        <label style={styles.label}>🗓 Unlock date (minimum 7 days from now)</label>
-        <input type="date" min={minDate} value={unlockDate}
-          onChange={e => setUnlockDate(e.target.value)} style={styles.dateInput} />
-        {unlockDate && (
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 6 }}>
-            Opens in {Math.ceil((new Date(unlockDate) - new Date()) / 86400000)} days
-          </div>
-        )}
-      </div>
-
-      <button
-        onClick={sealCapsule}
-        disabled={!message.trim() || !unlockDate || sealing}
-        style={{
-          ...styles.sealBtn,
-          opacity: (!message.trim() || !unlockDate) ? 0.4 : 1,
-          cursor: (!message.trim() || !unlockDate) ? "not-allowed" : "pointer",
-        }}
-      >{sealing ? "🔮 Sealing..." : "🔮 Seal the Capsule"}</button>
-    </div>
-  );
-}
-
-// ─── Snapshot Diff ────────────────────────────────────────────────────────────
-function SnapshotDiff({ label, past, present }) {
-  if (!past) return null;
-  return (
-    <div style={styles.diffItem}>
-      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{label}</div>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>{past}</span>
-        {present && <>
-          <span style={{ color: "rgba(255,255,255,0.2)" }}>→</span>
-          <span style={{ fontSize: 13, color: "#34d399", fontWeight: 700 }}>{present}</span>
-        </>}
-      </div>
-    </div>
-  );
-}
-
-// ─── Capsule Card ─────────────────────────────────────────────────────────────
-function CapsuleCard({ capsule, onOpen, currentSnapshot }) {
-  const [opening, setOpening] = useState(false);
-  const [comparison, setComparison] = useState(capsule.comparison?.text || null);
-  const today = new Date().toISOString().split("T")[0];
-  const isUnlocked = today >= capsule.unlock_date;
-  const daysLeft = Math.ceil((new Date(capsule.unlock_date) - new Date()) / 86400000);
-  const moodColor = MOOD_COLORS[capsule.mood_score ?? 2];
-
-  const openCapsule = async () => {
-    if (!isUnlocked || capsule.opened) return;
-    setOpening(true);
-    const comp = await generateComparison(capsule, currentSnapshot);
-    const { data } = await supabase.from("sai_time_capsules").update({
-      opened: true, opened_at: new Date().toISOString(), comparison: { text: comp },
-    }).eq("id", capsule.id).select().single();
-    setComparison(comp);
-    setOpening(false);
-    if (data) onOpen(data);
-  };
-
-  return (
-    <div style={{
-      ...styles.capsuleCard,
-      borderColor: isUnlocked
-        ? (capsule.opened ? "rgba(255,255,255,0.08)" : moodColor + "66")
-        : "rgba(255,255,255,0.06)",
-    }}>
-      <div style={styles.capsuleHeader}>
-        <div style={{ fontSize: 28 }}>{capsule.opened ? "📬" : isUnlocked ? "💌" : "🔒"}</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: moodColor, fontWeight: 700 }}>{capsule.mood}</div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
-            Sealed {new Date(capsule.sealed_at).toLocaleDateString()}
+        <div>
+          <label className="text-xs uppercase tracking-widest text-gray-400 block mb-2">Current Mood</label>
+          <div className="flex gap-2 flex-wrap">
+            {MOODS.map((m, i) => (
+              <button
+                key={m}
+                onClick={() => setMood(i)}
+                className={`px-3 py-1.5 rounded-full text-xs border transition-all ${mood === i ? 'border-purple-400 bg-purple-500/20 text-purple-200' : 'border-white/10 text-gray-500 hover:border-white/20'}`}
+              >{m}</button>
+            ))}
           </div>
         </div>
-        <div style={{ textAlign: "right" }}>
-          {isUnlocked
-            ? <div style={{ fontSize: 11, color: "#34d399" }}>Unlocked ✓</div>
-            : <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{daysLeft}d remaining</div>
-          }
+
+        <div>
+          <label className="text-xs uppercase tracking-widest text-gray-400 block mb-2">Unlock Date (min. 7 days)</label>
+          <input
+            type="date"
+            min={minDate}
+            value={unlockDate}
+            onChange={e => setUnlockDate(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-gray-200 focus:outline-none focus:border-purple-500/40"
+          />
         </div>
       </div>
 
-      {!isUnlocked && (
-        <div style={styles.countdown}>
-          <div style={styles.countdownNum}>{daysLeft}</div>
-          <div style={styles.countdownLabel}>days until this opens</div>
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", fontStyle: "italic", marginTop: 8 }}>
-            A message is waiting for you...
-          </div>
-        </div>
-      )}
-
-      {isUnlocked && !capsule.opened && !comparison && (
-        <div style={styles.readyBox}>
-          <div style={{ fontSize: 14, color: "#fff", marginBottom: 12 }}>
-            Your past self left you something. Are you ready to see it?
-          </div>
-          <button onClick={openCapsule} disabled={opening} style={styles.openBtn}>
-            {opening ? "✨ SHUNAis preparing..." : "💌 Open Time Capsule"}
-          </button>
-        </div>
-      )}
-
-      {(capsule.opened || comparison) && (
-        <div style={styles.openedContent}>
-          <div style={styles.messageBox}>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginBottom: 8, letterSpacing: 1 }}>
-              MESSAGE FROM YOUR PAST SELF
-            </div>
-            <div style={{ fontSize: 14, color: "#fff", lineHeight: 1.8, fontStyle: "italic" }}>
-              "{capsule.message}"
-            </div>
-          </div>
-
-          {capsule.voice_note_url && (
-            <div style={styles.voicePlayback}>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>🎙 VOICE NOTE</div>
-              <audio controls src={capsule.voice_note_url} style={{ width: "100%" }} />
-            </div>
-          )}
-
-          {comparison && (
-            <div style={styles.comparisonBox}>
-              <div style={{ fontSize: 10, color: "#a78bfa", fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>
-                ✨ SIYA'S REFLECTION
-              </div>
-              <div style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", lineHeight: 1.8 }}>{comparison}</div>
-            </div>
-          )}
-
-          {capsule.snapshot && (
-            <div style={styles.snapshotRow}>
-              <SnapshotDiff label="Wellness" past={capsule.snapshot.wellness} present={capsule.comparison?.currentWellness} />
-              <SnapshotDiff label="Level" past={capsule.snapshot.level} present={capsule.comparison?.currentLevel} />
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+      <div className="flex gap-3 mt-6">
+        <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-white/10 text-gray-400 text-sm hover:bg-white/5">Cancel</button>
+        <button
+          onClick={seal}
+          disabled={sealing || !message.trim() || !unlockDate}
+          className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+        >
+          {sealing ? "Sealing..." : "🔮 Seal"}
+        </button>
+      </div>
+    </motion.div>
   );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function SaiTimeCapsule({ session }) {
+  const navigate = useNavigate();
   const userId = session?.user?.id;
   const [capsules, setCapsules] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState("list");
-  const [currentSnapshot, setCurrentSnapshot] = useState(null);
+  const [opening, setOpening] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchCapsules = useCallback(async () => {
     if (!userId) return;
-    setLoading(true);
-    const [{ data: caps }, { data: wellness }, { data: personality }, { data: xp }] = await Promise.all([
-      supabase.from("sai_time_capsules").select("*").eq("user_id", userId).order("sealed_at", { ascending: false }),
-      supabase.from("sai_wellness").select("avg_score").eq("user_id", userId).order("date_key", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("sai_personality").select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("sai_xp").select("xp, level").eq("user_id", userId).maybeSingle(),
-    ]);
-    setCapsules(caps || []);
-    setCurrentSnapshot({ wellness: wellness?.avg_score, personality, level: xp?.level, xp: xp?.xp });
+    const { data } = await supabase.from("sai_time_capsules").select("*").eq("user_id", userId).order("sealed_at", { ascending: false });
+    setCapsules(data || []);
     setLoading(false);
   }, [userId]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchCapsules(); }, [fetchCapsules]);
 
-  const handleSealed = (newCapsule) => { setCapsules(c => [newCapsule, ...c]); setView("list"); };
-  const handleOpen = (updated) => setCapsules(c => c.map(cap => cap.id === updated.id ? updated : cap));
+  const handleOpen = async () => {
+    if (!selected || selected.opened) return;
+    const today = new Date().toISOString().split("T")[0];
+    if (today < selected.unlock_date) return;
 
-  const unlocked = capsules.filter(c => new Date().toISOString().split("T")[0] >= c.unlock_date && !c.opened);
+    setOpening(true);
+    const { data } = await supabase.from("sai_time_capsules")
+      .update({ opened: true, opened_at: new Date().toISOString() })
+      .eq("id", selected.id).select().single();
+    
+    if (data) {
+      setCapsules(c => c.map(cap => cap.id === data.id ? data : cap));
+      setSelected(data);
+    }
+    setOpening(false);
+  };
 
-  if (loading) return (
-    <div style={styles.loading}>
-      <div style={{ fontSize: 32 }}>⏳</div>
-      <div>Loading your time capsules...</div>
-    </div>
-  );
+  const today = new Date().toISOString().split("T")[0];
 
   return (
-    <div style={styles.page}>
-      <div style={styles.pageHeader}>
-        <div>
-          <h1 style={styles.pageTitle}>⏳ Time Capsules</h1>
-          <p style={styles.pageSub}>Messages from your past self. Letters to your future self.</p>
-        </div>
-        <button onClick={() => setView(v => v === "create" ? "list" : "create")} style={styles.createBtn}>
-          {view === "create" ? "✕ Cancel" : "+ Seal a Capsule"}
-        </button>
+    <div className="h-screen w-screen bg-[#030008] overflow-hidden relative font-sans text-white">
+      
+      {/* 3D Scene */}
+      <div className="absolute inset-0 z-0">
+        {loading ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-gray-500 text-sm tracking-widest animate-pulse">INITIALIZING CHRONOVAULT...</div>
+          </div>
+        ) : (
+          <TimeCapsuleScene capsules={capsules} selectedId={selected?.id} onSelect={setSelected} />
+        )}
       </div>
 
-      {unlocked.length > 0 && view === "list" && (
-        <div style={styles.unlockedBanner}>
-          <span style={{ fontSize: 20 }}>💌</span>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 14 }}>
-              {unlocked.length} capsule{unlocked.length > 1 ? "s" : ""} ready to open!
+      {/* Header */}
+      <header className="absolute top-6 left-6 z-50 flex items-center gap-4">
+        <button onClick={() => navigate('/sai')} className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all backdrop-blur-md">
+          <span className="material-symbols-outlined text-sm">arrow_back</span>
+        </button>
+        <div>
+          <span className="text-sm tracking-[0.2em] font-light text-gray-300 block">CHRONO VAULT</span>
+          <span className="text-[10px] tracking-widest uppercase text-purple-400">{capsules.length} capsules in orbit</span>
+        </div>
+      </header>
+
+      {/* FAB */}
+      {!showForm && (
+        <button
+          onClick={() => setShowForm(true)}
+          className="absolute bottom-10 right-10 z-50 w-16 h-16 rounded-full bg-purple-600/50 border border-purple-400/50 flex items-center justify-center backdrop-blur-xl hover:bg-purple-500/50 transition-all shadow-[0_0_30px_rgba(124,58,237,0.3)]"
+        >
+          <span className="material-symbols-outlined">add</span>
+        </button>
+      )}
+
+      {/* Selected capsule detail */}
+      <AnimatePresence>
+        {selected && !showForm && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="absolute bottom-10 left-10 z-40 w-full max-w-sm p-6 rounded-3xl bg-black/50 border border-white/10 backdrop-blur-2xl"
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <span className="text-xs uppercase tracking-widest text-gray-400 block">
+                  {selected.mood} · {new Date(selected.sealed_at).toLocaleDateString()}
+                </span>
+                <span className="text-xs uppercase tracking-widest text-purple-400 block mt-1">
+                  {selected.opened ? 'Opened' : today >= selected.unlock_date ? 'Ready to Open' : `${Math.ceil((new Date(selected.unlock_date) - new Date()) / 86400000)} days remaining`}
+                </span>
+              </div>
+              <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white">
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
             </div>
-            <div style={{ fontSize: 12, opacity: 0.7 }}>Your past self left you a message.</div>
+
+            {(selected.opened) && (
+              <div className="mb-4 p-4 rounded-2xl bg-white/5 border border-white/5">
+                <p className="text-sm leading-relaxed text-gray-200 italic">"{selected.message}"</p>
+              </div>
+            )}
+
+            {!selected.opened && today >= selected.unlock_date && (
+              <button
+                onClick={handleOpen}
+                disabled={opening}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50"
+              >
+                {opening ? "Opening..." : "💌 Open Capsule"}
+              </button>
+            )}
+          </motion.div>
+        )}
+
+        {showForm && (
+          <SealFormOverlay key="form" userId={userId} onSealed={cap => { setCapsules(c => [cap, ...c]); }} onClose={() => setShowForm(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Empty state */}
+      {!loading && capsules.length === 0 && !showForm && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="text-center space-y-3">
+            <div className="text-5xl">🔮</div>
+            <p className="text-gray-500 text-sm tracking-widest">The void awaits your first capsule</p>
           </div>
         </div>
       )}
-
-      {view === "create"
-        ? <SealForm userId={userId} onSealed={handleSealed} />
-        : (
-          <div style={styles.capsuleList}>
-            {capsules.length === 0 && (
-              <div style={styles.empty}>
-                <div style={{ fontSize: 48 }}>⏳</div>
-                <div style={{ fontSize: 15, color: "rgba(255,255,255,0.5)" }}>No capsules yet.</div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>Seal your first message to your future self.</div>
-              </div>
-            )}
-            {capsules.map(cap => (
-              <CapsuleCard key={cap.id} capsule={cap} onOpen={handleOpen} currentSnapshot={currentSnapshot} />
-            ))}
-          </div>
-        )
-      }
     </div>
   );
 }
-
-const styles = {
-  page: {
-    maxWidth: 680, margin: "0 auto", padding: "24px 20px 80px",
-    color: "#fff", fontFamily: "'Inter', system-ui, sans-serif",
-    minHeight: "100dvh",
-    background: "linear-gradient(180deg, #0a0a1a 0%, #120824 100%)",
-    overflowY: "auto", WebkitOverflowScrolling: "touch",
-  },
-  loading: {
-    height: "100vh", display: "flex", flexDirection: "column",
-    alignItems: "center", justifyContent: "center",
-    gap: 12, color: "#fff", background: "#0a0a1a", fontSize: 16,
-  },
-  pageHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 },
-  pageTitle: { fontSize: 26, fontWeight: 700, margin: "0 0 4px" },
-  pageSub: { fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 },
-  createBtn: {
-    padding: "10px 18px", background: "linear-gradient(135deg, #4c1d95, #7c3aed)",
-    border: "none", borderRadius: 12, color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer",
-  },
-  unlockedBanner: {
-    display: "flex", alignItems: "center", gap: 14,
-    background: "rgba(250,204,21,0.1)", border: "1px solid rgba(250,204,21,0.3)",
-    borderRadius: 14, padding: "14px 18px", marginBottom: 20,
-  },
-  capsuleList: { display: "flex", flexDirection: "column", gap: 16 },
-  capsuleCard: {
-    background: "rgba(255,255,255,0.03)", border: "1px solid",
-    borderRadius: 18, padding: 20, transition: "border-color 0.3s",
-  },
-  capsuleHeader: { display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16 },
-  countdown: { display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0", gap: 8 },
-  countdownNum: { fontSize: 48, fontWeight: 700, color: "rgba(255,255,255,0.15)" },
-  countdownLabel: { fontSize: 12, color: "rgba(255,255,255,0.25)" },
-  readyBox: { padding: "16px 0" },
-  openBtn: {
-    padding: "14px 24px", width: "100%",
-    background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
-    border: "none", borderRadius: 12, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer",
-  },
-  openedContent: { display: "flex", flexDirection: "column", gap: 14 },
-  messageBox: {
-    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)",
-    borderRadius: 12, padding: 16,
-  },
-  voicePlayback: {
-    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)",
-    borderRadius: 12, padding: 14,
-  },
-  comparisonBox: {
-    background: "rgba(109,40,217,0.1)", border: "1px solid rgba(167,139,250,0.2)",
-    borderRadius: 12, padding: 16,
-  },
-  snapshotRow: { display: "flex", gap: 16, flexWrap: "wrap" },
-  diffItem: {
-    background: "rgba(255,255,255,0.03)", borderRadius: 10,
-    padding: "10px 14px", display: "flex", flexDirection: "column", gap: 4,
-  },
-  sealForm: {
-    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 20, padding: 28, display: "flex", flexDirection: "column", gap: 24,
-  },
-  formHeader: { display: "flex", alignItems: "center", gap: 16 },
-  formTitle: { fontSize: 20, fontWeight: 700, margin: "0 0 4px" },
-  formSub: { fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 },
-  fieldGroup: { display: "flex", flexDirection: "column", gap: 8 },
-  label: { fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.7)" },
-  textarea: {
-    background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 12, padding: "14px", color: "#fff", fontSize: 14,
-    resize: "vertical", outline: "none", lineHeight: 1.7, width: "100%", boxSizing: "border-box",
-  },
-  moodRow: { display: "flex", gap: 8, flexWrap: "wrap" },
-  moodBtn: { padding: "8px 14px", border: "1px solid", borderRadius: 20, fontSize: 13, cursor: "pointer", fontWeight: 500, transition: "all 0.2s" },
-  voiceRow: { display: "flex", gap: 10, alignItems: "center" },
-  voiceBtn: { padding: "10px 18px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "#fff", fontSize: 13, cursor: "pointer", fontWeight: 600 },
-  recordingPulse: { color: "#ef4444", fontSize: 12, fontWeight: 600 },
-  removeBtn: { background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, color: "#f87171", padding: "4px 10px", cursor: "pointer", fontSize: 12 },
-  dateInput: {
-    background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 10, padding: "10px 14px", color: "#fff", fontSize: 14,
-    outline: "none", width: "100%", boxSizing: "border-box",
-  },
-  sealBtn: {
-    padding: "16px", background: "linear-gradient(135deg, #4c1d95, #7c3aed, #a78bfa)",
-    border: "none", borderRadius: 14, color: "#fff", fontWeight: 700, fontSize: 16, transition: "opacity 0.2s",
-  },
-  empty: { display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "60px 0" },
-};
