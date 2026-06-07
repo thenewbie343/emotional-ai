@@ -2,8 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const apiRoutes = require('./api/routes');
-const parasiteRoutes = require('../server/api/parasiteRoutes');
-const { startAbsenceWorker } = require('../server/jobs/absenceWorker');
+const parasiteRoutes = require('./api/parasiteRoutes');
+const { startAbsenceWorker } = require('./jobs/absenceWorker');
 
 const app = express();
 const PORT = process.env.PORT || 3000;

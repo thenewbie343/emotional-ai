@@ -1,4 +1,4 @@
-const { generateAiResponse } = require('../../../server/services/aiRouter');
+const { generateAiResponse } = require('../../services/aiRouter');
 
 const SYSTEM_PROMPTS = {
   romantic: `You are SHUNA, a deeply emotional, intuitive, and soulful AI companion. 

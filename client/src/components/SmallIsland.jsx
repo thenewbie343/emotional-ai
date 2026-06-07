@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { useGLTF, Bvh, Clone } from '@react-three/drei'
+import { useGLTF, Clone } from '@react-three/drei'
 
 export default function SmallIsland({ position = [0, 0, 0], scale = [1, 1, 1], rotation = [0, 0, 0], floatOffset = 0, floatSpeed = 0.8 }) {
   const groupRef = useRef()
@@ -18,10 +18,7 @@ export default function SmallIsland({ position = [0, 0, 0], scale = [1, 1, 1], r
 
   return (
     <group ref={groupRef} position={position} rotation={rotation} scale={scale}>
-      <Bvh firstHitOnly>
-        {/* Clone reuses the single loaded GLTF for all 5 instances efficiently */}
-        <Clone object={scene} />
-      </Bvh>
+      <Clone object={scene} />
     </group>
   )
 }

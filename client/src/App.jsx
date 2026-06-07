@@ -89,7 +89,7 @@ export default function App() {
       <OnboardingTutorial userId={session?.user?.id} />
       <CompanionToggle session={session} onToggle={() => setCompanionKey(k => k + 1)} />
       <Routes>
-        <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/sai" />} />
+        <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/" />} />
         <Route path="/" element={session ? <HomeScene /> : <Navigate to="/auth" />} />
         <Route path="/chat" element={session ? <CompanionChat key={`siya-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
 

@@ -19,7 +19,7 @@ export default function Auth() {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-        navigate('/sai')
+        navigate('/')
       } else {
         const { error } = await supabase.auth.signUp({ email, password })
         if (error) throw error

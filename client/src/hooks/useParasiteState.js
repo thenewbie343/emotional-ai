@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
 
-const API_BASE = "https://emotional-ai-18zi.onrender.com";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 
 async function apiFetch(path, options = {}) {
   const { data: { session } } = await supabase.auth.getSession();
