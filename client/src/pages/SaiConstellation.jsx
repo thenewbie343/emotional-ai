@@ -250,7 +250,7 @@ export default function SaiConstellation({ session }) {
           Accessing your deep memory constellation is a Soul Link Premium feature. Upgrade to explore your interconnected memories in 3D.
         </div>
         <div style={{ display: "flex", gap: 12 }}>
-          <button onClick={() => navigate('/chat')} style={styles.backBtn} style={{ position: 'relative', top: 0, right: 0 }}>Back to Chat</button>
+          <button onClick={() => navigate('/chat')} style={{ ...styles.backBtn, position: 'relative', top: 0, right: 0 }}>Back to Chat</button>
           <button onClick={() => navigate('/billing')} style={styles.chatBtn}>Unlock Premium</button>
         </div>
       </div>
