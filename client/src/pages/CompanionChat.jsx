@@ -154,7 +154,13 @@ export default function CompanionChat({ session }) {
         const apiRes = await fetch(`${API_BASE}/api/ai/message`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: [...messages, newUserMsg].map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text })), emotion: emotionKey, mode: activeMode, userEmail: session?.user?.email })
+          body: JSON.stringify({
+            messages: [...messages, newUserMsg].map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text })),
+            emotion: emotionKey,
+            mode: activeMode,
+            userEmail: session?.user?.email,
+            userId: session?.user?.id
+          })
         });
         if (apiRes.ok) {
           const aiData = await apiRes.json();

@@ -72,13 +72,24 @@ export default function App() {
   const [companionKey, setCompanionKey] = useState(0)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setLoading(false)
-    })
+    const adminSess = localStorage.getItem('admin_session');
+    if (adminSess) {
+      setSession(JSON.parse(adminSess));
+      setLoading(false);
+    } else {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session)
+        setLoading(false)
+      })
+    }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        localStorage.removeItem('admin_session');
+        setSession(null);
+      } else if (!localStorage.getItem('admin_session')) {
+        setSession(session)
+      }
     })
 
     return () => subscription.unsubscribe()

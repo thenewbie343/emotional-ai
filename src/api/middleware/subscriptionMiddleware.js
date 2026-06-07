@@ -21,13 +21,19 @@ async function checkMessageLimit(req, res, next) {
       return next();
     }
 
-    // 1. Get user ID from email
-    const { data: users, error: userError } = await supabase.auth.admin.listUsers();
-    let userId = null;
+    // 1. Get user ID (check body first, fallback to email lookup)
+    let userId = req.body.userId;
     
-    if (!userError && users && users.users) {
-      const user = users.users.find(u => u.email === userEmail);
-      if (user) userId = user.id;
+    if (!userId && userEmail) {
+      try {
+        const { data: users, error: userError } = await supabase.auth.admin.listUsers();
+        if (!userError && users && users.users) {
+          const user = users.users.find(u => u.email === userEmail);
+          if (user) userId = user.id;
+        }
+      } catch (e) {
+        console.error('Failed to list users in subscription middleware:', e.message);
+      }
     }
 
     if (!userId) return next();

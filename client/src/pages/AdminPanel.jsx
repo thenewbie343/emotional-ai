@@ -152,8 +152,8 @@ export default function AdminPanel({ session }) {
                           <td className="p-4 text-sm text-gray-300">{new Date(req.created_at).toLocaleString()}</td>
                           <td className="p-4 text-sm">{req.user_email}</td>
                           <td className="p-4 text-sm font-mono text-cyan-400">{req.order_id}</td>
-                          <td className="p-4 text-sm font-mono text-fuchsia-400">{req.utr_number}</td>
-                          <td className="p-4 text-sm capitalize">{req.tier_requested}</td>
+                          <td className="p-4 text-sm font-mono text-fuchsia-400">{req.utr}</td>
+                          <td className="p-4 text-sm capitalize">Premium</td>
                           <td className="p-4 text-sm">
                             <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                               req.status === 'approved' ? 'bg-green-500/20 text-green-400' :
@@ -166,7 +166,7 @@ export default function AdminPanel({ session }) {
                           <td className="p-4 text-right flex justify-end gap-2">
                             {req.status === 'pending' && (
                               <>
-                                <button onClick={() => handleApprove(req.id, req.user_id, req.tier_requested)} className="px-3 py-1 bg-green-600/80 hover:bg-green-500 text-white rounded text-xs">Approve</button>
+                                <button onClick={() => handleApprove(req.id, req.user_id, 'premium')} className="px-3 py-1 bg-green-600/80 hover:bg-green-500 text-white rounded text-xs">Approve</button>
                                 <button onClick={() => handleReject(req.id)} className="px-3 py-1 bg-red-600/80 hover:bg-red-500 text-white rounded text-xs">Reject</button>
                               </>
                             )}
@@ -202,7 +202,7 @@ export default function AdminPanel({ session }) {
                           </span>
                         </td>
                         <td className="p-4 text-sm text-gray-400">
-                          {u.subscription?.valid_until ? new Date(u.subscription.valid_until).toLocaleDateString() : 'N/A'}
+                          {u.subscription?.ends_at ? new Date(u.subscription.ends_at).toLocaleDateString() : 'N/A'}
                         </td>
                         <td className="p-4 text-right">
                           <button 

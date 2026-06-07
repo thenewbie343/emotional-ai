@@ -22,15 +22,19 @@ exports.getRequests = async (req, res) => {
 
     if (error) throw error;
 
-    const { data: authData } = await supabase.auth.admin.listUsers();
-    const usersMap = {};
-    if (authData && authData.users) {
-      authData.users.forEach(u => usersMap[u.id] = u.email);
+    let usersMap = {};
+    try {
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      if (authData && authData.users) {
+        authData.users.forEach(u => usersMap[u.id] = u.email);
+      }
+    } catch (e) {
+      console.warn("Could not load users map from auth admin API:", e.message);
     }
 
     const enrichedRequests = requests.map(req => ({
       ...req,
-      user_email: usersMap[req.user_id] || 'Unknown'
+      user_email: usersMap[req.user_id] || req.email || 'Unknown'
     }));
 
     res.json(enrichedRequests);
@@ -49,14 +53,14 @@ exports.approveRequest = async (req, res) => {
     await supabase.from('subscription_requests').update({ status: 'approved' }).eq('id', requestId);
 
     // 2. Upsert user subscription (Premium is 14 days)
-    const validUntil = new Date();
-    validUntil.setDate(validUntil.getDate() + 14);
+    const endsAt = new Date();
+    endsAt.setDate(endsAt.getDate() + 14);
 
     const { error: subError } = await supabase.from('user_subscriptions').upsert({
       user_id: userId,
       tier: tier || 'premium',
       status: 'active',
-      valid_until: validUntil.toISOString(),
+      ends_at: endsAt.toISOString(),
       updated_at: new Date().toISOString()
     });
 
@@ -84,22 +88,55 @@ exports.getUsers = async (req, res) => {
   if (!isAdmin(req.body.userEmail)) return res.status(403).json({ error: 'Unauthorized' });
 
   try {
-    const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-    if (authError) throw authError;
-
     const { data: subs, error: subsError } = await supabase.from('user_subscriptions').select('*');
     if (subsError) throw subsError;
 
     const subsMap = {};
     subs.forEach(s => subsMap[s.user_id] = s);
 
-    const users = authData.users.map(u => ({
-      id: u.id,
-      email: u.email,
-      created_at: u.created_at,
-      subscription: subsMap[u.id] || { tier: 'free', status: 'active' },
-      is_blocked: u.user_metadata?.is_blocked || false
-    }));
+    let authUsers = [];
+    let usingFallback = false;
+    try {
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      if (authError) throw authError;
+      authUsers = authData.users;
+    } catch (authErr) {
+      console.warn('Fallback users list used in getUsers:', authErr.message);
+      usingFallback = true;
+    }
+
+    let users = [];
+    if (usingFallback) {
+      // Fallback: build user list from subscription and request records
+      const { data: reqs } = await supabase.from('subscription_requests').select('user_id, email, created_at');
+      const userIds = new Set([
+        ...subs.map(s => s.user_id),
+        ...(reqs ? reqs.map(r => r.user_id) : [])
+      ]);
+      
+      const emailMap = {};
+      if (reqs) {
+        reqs.forEach(r => {
+          if (r.user_id && r.email) emailMap[r.user_id] = r.email;
+        });
+      }
+      
+      users = Array.from(userIds).map(uid => ({
+        id: uid,
+        email: emailMap[uid] || 'Subscribed User',
+        created_at: subsMap[uid]?.created_at || new Date().toISOString(),
+        subscription: subsMap[uid] || { tier: 'free', status: 'active' },
+        is_blocked: false
+      }));
+    } else {
+      users = authUsers.map(u => ({
+        id: u.id,
+        email: u.email,
+        created_at: u.created_at,
+        subscription: subsMap[u.id] || { tier: 'free', status: 'active' },
+        is_blocked: u.user_metadata?.is_blocked || false
+      }));
+    }
 
     res.json(users);
   } catch (error) {

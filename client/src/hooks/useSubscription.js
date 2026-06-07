@@ -21,7 +21,7 @@ export function useSubscription(session) {
 
         const { data, error } = await supabase
           .from('user_subscriptions')
-          .select('tier, status, valid_until')
+          .select('tier, status, ends_at')
           .eq('user_id', session.user.id)
           .single();
 
@@ -29,7 +29,7 @@ export function useSubscription(session) {
         
         if (data && data.status === 'active' && data.tier === 'premium') {
           // Check if expired
-          if (new Date(data.valid_until) > new Date()) {
+          if (new Date(data.ends_at) > new Date()) {
             setTier('premium');
           } else {
             // Update status to expired

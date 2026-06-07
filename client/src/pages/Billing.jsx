@@ -43,10 +43,9 @@ export default function Billing({ session }) {
         .from('subscription_requests')
         .insert([{
           user_id: session?.user?.id,
+          email: session?.user?.email || 'unknown@user.com',
           order_id: orderId,
-          utr_number: utr,
-          amount_paid: amount,
-          tier_requested: 'premium',
+          utr: utr,
           status: 'pending'
         }]);
 
