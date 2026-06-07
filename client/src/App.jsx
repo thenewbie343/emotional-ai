@@ -18,6 +18,8 @@ import SaiTimeCapsule from './pages/SaiTimeCapsule'
 import SaiDashboard from './pages/SaiDashboard'
 import SiyaHub from './pages/SiyaHub'
 import OnboardingTutorial from './components/OnboardingTutorial'
+import Billing from './pages/Billing'
+import AdminPanel from './pages/AdminPanel'
 import './index.css'
 
 // ── SAI ↔ SHUNA Toggle Button ────────────────────────────────────────────────
@@ -109,6 +111,10 @@ export default function App() {
         <Route path="/sai/goals" element={session ? <SaiGoals session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/capsule" element={session ? <SaiTimeCapsule session={session} /> : <Navigate to="/auth" />} />
         <Route path="/dashboard" element={session ? <SaiDashboard session={session} /> : <Navigate to="/auth" />} />
+        
+        {/* Billing & Admin */}
+        <Route path="/billing" element={session ? <Billing session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/admin" element={session ? <AdminPanel session={session} /> : <Navigate to="/auth" />} />
       </Routes>
     </>
   )

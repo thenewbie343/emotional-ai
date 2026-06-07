@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const aiController = require('./controllers/aiController');
+const adminController = require('./controllers/adminController');
+const { checkMessageLimit } = require('./middleware/subscriptionMiddleware');
 
 // Health check — shows which keys are loaded (safe, no values exposed)
 router.get('/health', (req, res) => {
@@ -21,7 +23,14 @@ router.get('/health', (req, res) => {
 });
 
 // AI interaction routes
-router.post('/ai/message', aiController.processMessage);
+router.post('/ai/message', checkMessageLimit, aiController.processMessage);
 router.get('/ai/personality', aiController.getPersonality);
+
+// Admin routes
+router.post('/admin/requests', adminController.getRequests);
+router.post('/admin/approve', adminController.approveRequest);
+router.post('/admin/reject', adminController.rejectRequest);
+router.post('/admin/users', adminController.getUsers);
+router.post('/admin/block', adminController.toggleBlockUser);
 
 module.exports = router;

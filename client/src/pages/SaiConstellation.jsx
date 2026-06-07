@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from "react";
+import { useNavigate } from "react-router-dom";
+import { useSubscription } from "../hooks/useSubscription";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Stars, Line, Html, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -169,6 +171,9 @@ export default function SaiConstellation({ session }) {
   const [loading, setLoading]           = useState(true);
   const [flightTarget, setFlightTarget] = useState(null);
   const [isFlying, setIsFlying]         = useState(false);
+  const navigate = useNavigate();
+
+  const { isPremium, loading: subLoading } = useSubscription(session);
 
   useEffect(() => {
     if (!userId) return;
@@ -229,12 +234,28 @@ export default function SaiConstellation({ session }) {
     }
   }, [memories, starPositions]);
 
-  if (loading) return (
+  if (loading || subLoading) return (
     <div style={styles.loading}>
       <div style={{ fontSize: 32 }}>⭐</div>
       <div>Mapping your memory constellation...</div>
     </div>
   );
+
+  if (!isPremium) {
+    return (
+      <div style={{...styles.loading, justifyContent: "center", textAlign: "center", padding: 20}}>
+        <div style={{ fontSize: 52, marginBottom: 16 }}>🔒</div>
+        <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Shattered Sphere Locked</div>
+        <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.6)', maxWidth: 350, lineHeight: 1.6, marginBottom: 24 }}>
+          Accessing your deep memory constellation is a Soul Link Premium feature. Upgrade to explore your interconnected memories in 3D.
+        </div>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button onClick={() => navigate('/chat')} style={styles.backBtn} style={{ position: 'relative', top: 0, right: 0 }}>Back to Chat</button>
+          <button onClick={() => navigate('/billing')} style={styles.chatBtn}>Unlock Premium</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>

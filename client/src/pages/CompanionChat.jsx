@@ -150,7 +150,7 @@ export default function CompanionChat({ session }) {
       let generatedText = "Processing logic...";
       
       try {
-        const API_BASE = "https://emotional-ai-18zi.onrender.com";
+        const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
         const apiRes = await fetch(`${API_BASE}/api/ai/message`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

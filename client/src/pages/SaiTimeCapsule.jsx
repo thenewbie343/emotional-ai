@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSubscription } from "../hooks/useSubscription";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Float, Sparkles, Environment, Stars, SpotLight } from "@react-three/drei";
 import * as THREE from "three";
@@ -223,6 +224,8 @@ export default function SaiTimeCapsule({ session }) {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
+  
+  const { isPremium, loading: subLoading } = useSubscription(session);
 
   const fetchCapsules = useCallback(async () => {
     if (!userId) return;
@@ -251,6 +254,26 @@ export default function SaiTimeCapsule({ session }) {
   };
 
   const today = new Date().toISOString().split("T")[0];
+
+  if (subLoading) return <div className="h-screen w-screen bg-[#030008] flex items-center justify-center text-gray-500">Authenticating...</div>;
+
+  if (!isPremium) {
+    return (
+      <div className="h-screen w-screen bg-[#030008] flex flex-col items-center justify-center text-white relative font-sans">
+        <button onClick={() => navigate('/sai')} className="absolute top-6 left-6 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
+          <span className="material-symbols-outlined text-sm">arrow_back</span>
+        </button>
+        <div className="text-6xl mb-6">🔒</div>
+        <h1 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-400">Chrono Vault Locked</h1>
+        <p className="text-gray-400 max-w-md text-center mb-8">
+          The ability to seal and open Time Capsules is a Soul Link Premium feature.
+        </p>
+        <button onClick={() => navigate('/billing')} className="px-8 py-3 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold">
+          Unlock Premium
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-screen bg-[#030008] overflow-hidden relative font-sans text-white">
