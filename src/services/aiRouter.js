@@ -31,6 +31,35 @@ function markExhausted(provider) {
 // Model API Callers
 // ------------------------------------------------------------------
 
+async function callOpenRouterWithModel(modelName, messages, systemPrompt) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error(`Missing OPENROUTER_API_KEY for fallback to ${modelName}`);
+
+  console.log(`[AI Router] Attempting fallback to OpenRouter model '${modelName}'`);
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: modelName,
+      messages: [{ role: "system", content: systemPrompt }, ...messages],
+      max_tokens: 1024,
+      temperature: 0.7
+    })
+  });
+
+  if (res.status === 429) throw new Error("RATE_LIMIT");
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`OpenRouter Error calling ${modelName}: ${res.status} ${res.statusText} (${text})`);
+  }
+
+  const data = await res.json();
+  return data.choices[0].message.content;
+}
+
 async function callGroq(messages, systemPrompt) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("Missing GROQ_API_KEY");
@@ -82,7 +111,10 @@ async function callMistral(messages, systemPrompt) {
 
 async function callGemini(messages, systemPrompt) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("Missing GEMINI_API_KEY");
+  if (!apiKey) {
+    console.warn("[AI Router] Missing GEMINI_API_KEY. Falling back to OpenRouter.");
+    return await callOpenRouterWithModel("google/gemini-2.5-flash", messages, systemPrompt);
+  }
 
   // Format messages for Gemini
   const geminiMessages = messages.map(m => ({
@@ -96,76 +128,74 @@ async function callGemini(messages, systemPrompt) {
     generationConfig: { temperature: 0.7 }
   };
 
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
 
-  if (res.status === 429) throw new Error("RATE_LIMIT");
-  if (!res.ok) throw new Error(`Gemini Error: ${res.statusText}`);
+    if (res.status === 429) {
+      console.warn("[AI Router] Gemini API Quota Exceeded/Rate Limited. Falling back to OpenRouter.");
+      return await callOpenRouterWithModel("google/gemini-2.5-flash", messages, systemPrompt);
+    }
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Status ${res.status}: ${res.statusText} (${text})`);
+    }
 
-  const data = await res.json();
-  if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-      return data.candidates[0].content.parts[0].text;
+    const data = await res.json();
+    if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
+        return data.candidates[0].content.parts[0].text;
+    }
+    throw new Error("Empty response from Gemini");
+  } catch (error) {
+    console.error(`[AI Router] callGemini direct call failed (${error.message}). Falling back to OpenRouter.`);
+    return await callOpenRouterWithModel("google/gemini-2.5-flash", messages, systemPrompt);
   }
-  throw new Error("Empty response from Gemini");
 }
 
 async function callCohere(messages, systemPrompt) {
   const apiKey = process.env.COHERE_API_KEY;
-  if (!apiKey) throw new Error("Missing COHERE_API_KEY");
+  if (!apiKey) {
+    console.warn("[AI Router] Missing COHERE_API_KEY. Falling back to OpenRouter.");
+    return await callOpenRouterWithModel("cohere/command-r7b-12-2024", messages, systemPrompt);
+  }
 
-  // Format messages for Cohere
-  const chatHistory = messages.slice(0, -1).map(m => ({
-    role: m.role === 'assistant' || m.role === 'ai' ? 'CHATBOT' : 'USER',
-    message: m.content
-  }));
-  const lastMessage = messages[messages.length - 1].content;
+  try {
+    const res = await fetch("https://api.aimlapi.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "command-a",
+        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        temperature: 0.7,
+        max_tokens: 1024
+      })
+    });
 
-  const res = await fetch("https://api.cohere.com/v1/chat", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "command-r",
-      message: lastMessage,
-      chat_history: chatHistory,
-      preamble: systemPrompt,
-      temperature: 0.7
-    })
-  });
+    if (res.status === 429 || res.status === 403 || res.status === 401) {
+      console.warn(`[AI Router] Cohere AI/ML API failed with status ${res.status}. Falling back to OpenRouter.`);
+      return await callOpenRouterWithModel("cohere/command-r7b-12-2024", messages, systemPrompt);
+    }
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Status ${res.status}: ${res.statusText} (${text})`);
+    }
 
-  if (res.status === 429) throw new Error("RATE_LIMIT");
-  if (!res.ok) throw new Error(`Cohere Error: ${res.statusText}`);
-
-  const data = await res.json();
-  return data.text;
+    const data = await res.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error(`[AI Router] callCohere direct call failed (${error.message}). Falling back to OpenRouter.`);
+    return await callOpenRouterWithModel("cohere/command-r7b-12-2024", messages, systemPrompt);
+  }
 }
 
 async function callOpenRouter(messages, systemPrompt) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error("Missing OPENROUTER_API_KEY");
-
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "openai/gpt-3.5-turbo", // Fallback model via OpenRouter
-      messages: [{ role: "system", content: systemPrompt }, ...messages],
-    })
-  });
-
-  if (res.status === 429) throw new Error("RATE_LIMIT");
-  if (!res.ok) throw new Error(`OpenRouter Error: ${res.statusText}`);
-
-  const data = await res.json();
-  return data.choices[0].message.content;
+  return await callOpenRouterWithModel("openai/gpt-3.5-turbo", messages, systemPrompt);
 }
 
 const PROVIDERS = {
