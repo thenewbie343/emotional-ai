@@ -5,6 +5,7 @@ import { OrbitControls, Sparkles } from '@react-three/drei';
 import { motion } from 'framer-motion';
 import { SpiritFamiliar } from '../components/siya/SpiritFamiliar';
 import { supabase } from '../lib/supabaseClient';
+import { useSubscription } from '../hooks/useSubscription';
 import '../index.css';
 
 const QUICK_ACCESS = [
@@ -12,6 +13,7 @@ const QUICK_ACCESS = [
   { to: '/siya/journal',  icon: 'auto_stories',    title: 'Inner Diary',     desc: 'Private reflections',     color: 'text-rose-300',    bg: 'bg-rose-500/20' },
   { to: '/siya/wellness', icon: 'self_improvement',title: 'Wellness Radar',  desc: 'Emotional balance',       color: 'text-indigo-300',  bg: 'bg-indigo-500/20' },
   { to: '/siya/insights', icon: 'bubble_chart',    title: 'Resonance',       desc: 'Emotional insights',      color: 'text-violet-300',  bg: 'bg-violet-500/20' },
+  { to: '/billing',       icon: 'payments',        title: 'Upgrade / Plan',  desc: 'Manage subscription',     color: 'text-amber-300',   bg: 'bg-amber-500/20' },
   { to: '/',              icon: 'public',          title: '3D Island',       desc: 'Return to the world',     color: 'text-sky-300',     bg: 'bg-sky-500/20' },
 ];
 
@@ -39,6 +41,7 @@ const itemVariant = {
 
 export default function SiyaHub({ session }) {
   const navigate = useNavigate();
+  const { isPremium } = useSubscription(session);
   const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
@@ -78,6 +81,16 @@ export default function SiyaHub({ session }) {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {!isPremium && (
+              <motion.button 
+                whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(192, 38, 211, 0.4)" }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/billing')} 
+                className="px-4 py-2 rounded-full bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-xs font-semibold text-white hover:opacity-90 transition-all border border-fuchsia-500/30"
+              >
+                Go Premium
+              </motion.button>
+            )}
             <motion.button 
               whileHover={{ scale: 1.1, rotate: 5 }}
               whileTap={{ scale: 0.9 }}

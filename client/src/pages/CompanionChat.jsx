@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, memo, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { useSubscription } from '../hooks/useSubscription';
 import Companion3D from '../components/Companion3D';
 import { detectSiyaEmotion } from '../components/siya/PersonalityResponses';
 import ParasiteSIYA, { useSIYATierBehavior } from '../components/siya/ParasiteSIYA';
@@ -99,6 +100,7 @@ const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isG
 
 export default function CompanionChat({ session }) {
   const navigate = useNavigate();
+  const { isPremium } = useSubscription(session);
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
@@ -136,6 +138,25 @@ export default function CompanionChat({ session }) {
 
   const handleSend = async (text) => {
     window.speechSynthesis.cancel();
+
+    if (session?.user?.id && !isPremium) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const { count, error } = await supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', session.user.id)
+        .eq('sender', 'user')
+        .gte('created_at', today.toISOString());
+
+      if (!error && count >= 10) {
+        alert("You have reached your daily limit of 10 messages on the Free tier. Upgrade to Premium for unlimited access.");
+        navigate('/billing');
+        return;
+      }
+    }
+
     const newUserMsg = { id: Date.now(), text, sender: 'user' };
     setMessages(prev => [...prev, newUserMsg]);
 
@@ -165,6 +186,14 @@ export default function CompanionChat({ session }) {
         if (apiRes.ok) {
           const aiData = await apiRes.json();
           generatedText = aiData.text;
+        } else {
+          if (apiRes.status === 403) {
+            const errData = await apiRes.json();
+            alert(errData.message || "You have reached your free daily message limit. Please upgrade to Premium!");
+            navigate('/billing');
+            setIsTyping(false);
+            return;
+          }
         }
       } catch (err) {
         console.error("Failed to connect to AI Router:", err);

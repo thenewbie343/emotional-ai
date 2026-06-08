@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { useSubscription } from '../hooks/useSubscription';
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Float, MeshTransmissionMaterial, Sparkles, Html, SpotLight, Text } from '@react-three/drei';
@@ -193,6 +194,8 @@ const FluidText = ({ text, className }) => {
 };
 
 export default function SaiMemories({ session }) {
+  const navigate = useNavigate();
+  const { isPremium, loading: subLoading } = useSubscription(session);
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMemory, setSelectedMemory] = useState(null);
@@ -200,6 +203,26 @@ export default function SaiMemories({ session }) {
   // Setup Framer Motion Scroll
   const { scrollYProgress } = useScroll();
   const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+
+  if (subLoading) return <div className="h-screen w-screen bg-[#05010a] flex items-center justify-center text-gray-500">Authenticating...</div>;
+
+  if (!isPremium) {
+    return (
+      <div className="h-screen w-screen bg-[#05010a] flex flex-col items-center justify-center text-white relative font-sans">
+        <button onClick={() => navigate('/sai')} className="absolute top-6 left-6 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
+          <span className="material-symbols-outlined text-sm">arrow_back</span>
+        </button>
+        <div className="text-6xl mb-6">🔒</div>
+        <h1 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-400">Memory Vault Locked</h1>
+        <p className="text-gray-400 max-w-md text-center mb-8">
+          Accessing your detailed Memory Vault history is a Soul Link Premium feature.
+        </p>
+        <button onClick={() => navigate('/billing')} className="px-8 py-3 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold">
+          Unlock Premium
+        </button>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (!session?.user?.id) return;

@@ -107,23 +107,27 @@ exports.getUsers = async (req, res) => {
 
     let users = [];
     if (usingFallback) {
-      // Fallback: build user list from subscription and request records
-      const { data: reqs } = await supabase.from('subscription_requests').select('user_id, email, created_at');
-      const userIds = new Set([
-        ...subs.map(s => s.user_id),
-        ...(reqs ? reqs.map(r => r.user_id) : [])
-      ]);
-      
+      // Fallback: build user list from subscription, request, messages, and XP records
+      const { data: reqs } = await supabase.from('subscription_requests').select('user_id, email');
+      const { data: msgs } = await supabase.from('messages').select('user_id');
+      const { data: xp } = await supabase.from('sai_xp').select('user_id');
+
+      const userIds = new Set();
+      subs.forEach(s => { if (s.user_id) userIds.add(s.user_id); });
+      if (reqs) reqs.forEach(r => { if (r.user_id) userIds.add(r.user_id); });
+      if (msgs) msgs.forEach(m => { if (m.user_id) userIds.add(m.user_id); });
+      if (xp) xp.forEach(x => { if (x.user_id) userIds.add(x.user_id); });
+
       const emailMap = {};
       if (reqs) {
         reqs.forEach(r => {
           if (r.user_id && r.email) emailMap[r.user_id] = r.email;
         });
       }
-      
+
       users = Array.from(userIds).map(uid => ({
         id: uid,
-        email: emailMap[uid] || 'Subscribed User',
+        email: emailMap[uid] || `User (${uid.substring(0, 8)})`,
         created_at: subsMap[uid]?.created_at || new Date().toISOString(),
         subscription: subsMap[uid] || { tier: 'free', status: 'active' },
         is_blocked: false

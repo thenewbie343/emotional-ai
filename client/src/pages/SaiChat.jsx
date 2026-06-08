@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, memo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { useSubscription } from '../hooks/useSubscription';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Sparkles, Html, PerspectiveCamera } from '@react-three/drei';
@@ -77,6 +78,8 @@ function TunnelCamera({ messageCount }) {
 }
 
 export default function SaiChat({ session }) {
+  const navigate = useNavigate();
+  const { isPremium } = useSubscription(session);
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -94,6 +97,24 @@ export default function SaiChat({ session }) {
   const processMessage = async (e) => {
     e.preventDefault();
     if (!inputText.trim()) return;
+
+    if (session?.user?.id && !isPremium) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const { count, error } = await supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', session.user.id)
+        .eq('sender', 'user')
+        .gte('created_at', today.toISOString());
+
+      if (!error && count >= 10) {
+        alert("You have reached your daily limit of 10 messages on the Free tier. Upgrade to Premium for unlimited access.");
+        navigate('/billing');
+        return;
+      }
+    }
     
     const userMsg = { id: Date.now(), text: inputText, sender: 'user' };
     setMessages(prev => [...prev, userMsg]);

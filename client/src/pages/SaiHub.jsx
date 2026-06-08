@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei'
 import { supabase } from '../lib/supabaseClient'
+import { useSubscription } from '../hooks/useSubscription'
 import CompanionCharacter from '../components/CompanionCharacter'
 import { XpBar, fetchXp } from '../components/XpSystem'
 import PersonalityRadar from '../components/PersonalityRadar'
@@ -27,11 +28,13 @@ const QUICK_ACCESS = [
   { to: '/sai/dreams',   icon: 'nights_stay',     title: 'Dream Vault',  desc: 'Visualize your dreams',        color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
   { to: '/sai/capsule',  icon: 'hourglass_empty', title: 'Time Capsules',desc: 'Messages to future self',      color: 'text-amber-400', bg: 'bg-amber-500/10' },
   { to: '/sai/goals',    icon: 'track_changes',   title: 'Goals',        desc: 'Daily challenges',             color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+  { to: '/billing',      icon: 'payments',        title: 'Billing & Plan',desc: 'Manage subscription',        color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10' },
   { to: '/',             icon: 'public',          title: '3D Island',    desc: 'Enter the open world',         color: 'text-rose-400', bg: 'bg-rose-500/10' },
 ]
 
 export default function SaiHub({ session }) {
   const navigate = useNavigate()
+  const { isPremium } = useSubscription(session)
   const [xpData, setXpData] = useState(null)
   
   useEffect(() => {
@@ -55,6 +58,11 @@ export default function SaiHub({ session }) {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {!isPremium && (
+              <button onClick={() => navigate('/billing')} className="px-4 py-2 rounded-full bg-gradient-to-r from-fuchsia-600 to-cyan-600 text-xs font-semibold text-white hover:opacity-90 transition-all shadow-[0_0_15px_rgba(217,70,239,0.3)]">
+                Go Premium
+              </button>
+            )}
             <button className="w-11 h-11 rounded-full bg-white/[0.02] border border-white/5 flex items-center justify-center hover:bg-white/10 transition-colors backdrop-blur-md">
               <span className="material-symbols-outlined text-[20px] text-gray-300">notifications</span>
             </button>
