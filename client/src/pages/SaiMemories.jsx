@@ -313,7 +313,7 @@ export default function SaiMemories({ session }) {
 
               <div className="flex justify-between items-end border-t border-white/10 pt-6 relative z-10">
                 <div className="flex gap-2">
-                  {selectedMemory.tags?.map(tag => (
+                  {Array.isArray(selectedMemory.tags) && selectedMemory.tags.map(tag => (
                     <span key={tag} className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm text-purple-200 font-mono tracking-wider">
                       #{tag}
                     </span>

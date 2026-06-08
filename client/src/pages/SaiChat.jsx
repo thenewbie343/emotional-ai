@@ -162,22 +162,20 @@ const RoadmapWidget = ({ topic, userId, onRoadmapCreated }) => {
       </div>
       <div className="space-y-4 max-h-64 overflow-y-auto no-scrollbar pr-2 relative">
         <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-purple-500/20"></div>
-        {roadmap.syllabus?.map((stage, idx) => (
+        {Array.isArray(roadmap.syllabus) ? roadmap.syllabus.map((stage, idx) => (
           <div key={idx} className="relative pl-6">
-            <div className="absolute w-4 h-4 bg-[#1a0b2e] border-2 border-purple-500 rounded-full -left-0 top-0.5 z-10 flex items-center justify-center shadow-[0_0_10px_rgba(168,85,247,0.5)]">
-               <div className="w-1.5 h-1.5 bg-purple-300 rounded-full"></div>
-            </div>
-            <h4 className="text-purple-200 font-semibold text-sm mb-2 drop-shadow-md">{stage.stage}</h4>
-            <ul className="space-y-1.5 mt-1">
-              {stage.lessons?.map((l, i) => (
-                <li key={i} className="text-gray-300 text-xs flex items-center gap-2 bg-white/5 p-2 rounded-lg border border-white/5 hover:bg-white/10 transition-colors">
-                  <span className="material-symbols-outlined text-[14px] text-purple-400">play_circle</span>
-                  {l.name}
-                </li>
+            <div className="absolute left-[3px] top-1.5 w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.8)]"></div>
+            <h4 className="text-sm font-bold text-white mb-2">{stage.stage}</h4>
+            <div className="space-y-2">
+              {Array.isArray(stage.lessons) && stage.lessons.map((lesson, lIdx) => (
+                <div key={lIdx} className="bg-white/5 border border-white/10 rounded-lg p-2 text-xs flex justify-between items-center group">
+                  <span className={lesson.completed ? "text-gray-500 line-through" : "text-gray-300"}>{lesson.name}</span>
+                  {lesson.completed && <span className="material-symbols-outlined text-green-400 text-[14px]">check_circle</span>}
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
-        ))}
+        )) : <div className="text-red-400 text-sm">Invalid syllabus format. Please generate again.</div>}
       </div>
       <div className="mt-5 pt-3 border-t border-white/5 flex justify-between items-center">
         <span className="text-[10px] text-gray-500 tracking-wider uppercase">Saved to Study Portal</span>

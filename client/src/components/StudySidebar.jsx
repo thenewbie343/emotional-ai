@@ -132,7 +132,11 @@ export default function StudySidebar({ session, onClose, onStartQuiz, onStartLes
         body: JSON.stringify({ userId })
       });
       const data = await res.json();
-      setTasks(data);
+      if (Array.isArray(data)) {
+        setTasks(data);
+      } else {
+        setTasks([]);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -239,7 +243,9 @@ export default function StudySidebar({ session, onClose, onStartQuiz, onStartLes
         })
       });
       const data = await res.json();
-      setActiveRoadmap(data);
+      if (data && !data.error) {
+        setActiveRoadmap(data);
+      }
       fetchRoadmaps();
       if (completed) {
         alert("📚 Lesson completed! 20 XP earned.");
@@ -342,19 +348,19 @@ export default function StudySidebar({ session, onClose, onStartQuiz, onStartLes
 
                   {/* Syllabus Tree */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 24, position: 'relative', borderLeft: '1px solid rgba(168,85,247,0.2)', marginLeft: 10, paddingLeft: 20 }}>
-                    {activeRoadmap.syllabus.map((stage, sIdx) => (
+                    {Array.isArray(activeRoadmap.syllabus) ? activeRoadmap.syllabus.map((stage, sIdx) => (
                       <div key={sIdx} style={{ position: 'relative' }}>
                         {/* Dot indicator */}
                         <div style={{ position: 'absolute', left: -26, top: 4, width: 11, height: 11, borderRadius: '50%', background: '#a855f7', border: '2px solid #0a0a12' }} />
                         <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f3e8ff', marginBottom: 10 }}>{stage.stage}</h4>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          {stage.lessons.map((lesson, lIdx) => (
+                          {Array.isArray(stage.lessons) && stage.lessons.map((lesson, lIdx) => (
                             <div key={lIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <input 
                                   type="checkbox" 
-                                  checked={lesson.completed}
+                                  checked={lesson.completed || false}
                                   onChange={(e) => handleToggleLesson(sIdx, lIdx, e.target.checked)}
                                   style={{ cursor: 'pointer', accentColor: '#a855f7' }}
                                 />
@@ -384,7 +390,7 @@ export default function StudySidebar({ session, onClose, onStartQuiz, onStartLes
                           ))}
                         </div>
                       </div>
-                    ))}
+                    )) : <div style={{ color: '#ef4444', fontSize: '0.8rem' }}>Invalid roadmap data format. Please generate a new one.</div>}
                   </div>
                 </div>
               ) : (
@@ -533,7 +539,7 @@ export default function StudySidebar({ session, onClose, onStartQuiz, onStartLes
                     }}
                   >
                     <option value="">General Session</option>
-                    {tasks.filter(t => !t.completed).map(task => (
+                    {Array.isArray(tasks) && tasks.filter(t => !t.completed).map(task => (
                       <option key={task.id} value={task.task_name}>{task.task_name}</option>
                     ))}
                   </select>
@@ -570,7 +576,7 @@ export default function StudySidebar({ session, onClose, onStartQuiz, onStartLes
 
                 {/* Tasks List */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {tasks.length === 0 ? (
+                  {!Array.isArray(tasks) || tasks.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '20px 0', fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)' }}>
                       No tasks scheduled. Add one above!
                     </div>
