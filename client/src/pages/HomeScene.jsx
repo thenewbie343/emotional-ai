@@ -52,7 +52,18 @@ export default function HomeScene() {
   return (
     <>
       <div style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
-        <Canvas dpr={1} performance={{ min: 0.5 }}>
+        <Canvas 
+          dpr={[1, 1.2]} 
+          performance={{ min: 0.6 }}
+          gl={{ 
+            antialias: false, 
+            powerPreference: "high-performance",
+            precision: "mediump",
+            alpha: false,
+            stencil: false,
+            depth: true
+          }}
+        >
           <Suspense fallback={null}>
             <PerspectiveCamera makeDefault position={[0, 3, cameraZ]} fov={cameraFov} />
             <Sky distance={450000} sunPosition={[5, 1, 8]} inclination={0} azimuth={0.25} />
@@ -61,28 +72,30 @@ export default function HomeScene() {
             <directionalLight position={[5, 10, 5]} intensity={1.5} />
             <pointLight position={[-5, 5, -5]} intensity={0.5} color="#b0c4de" />
 
-            <Sparkles count={isMobile ? 50 : 150} scale={30} size={2} speed={0.4} opacity={0.2} color="#aaddff" position={[0, -2, 0]} />
+            <Sparkles count={isMobile ? 15 : 45} scale={30} size={2} speed={0.4} opacity={0.2} color="#aaddff" position={[0, -2, 0]} />
             <ShootingStars />
 
-            <Clouds material={THREE.MeshBasicMaterial}>
-              <Cloud segments={isMobile ? 5 : 12} bounds={[10, 2, 2]} volume={10} color="#eeddff" position={[-20, 10, -30]} speed={0.2} opacity={0.25} />
-              <Cloud segments={isMobile ? 5 : 12} bounds={[10, 2, 2]} volume={10} color="#ffeedd" position={[20, 15, -40]} speed={0.2} opacity={0.25} />
-              {!isMobile && (
-                <>
-                  <MovingCloud moveSpeed={1.5} xRange={[-35, 35]} segments={15} bounds={[15, 3, 3]} volume={15} color="#ffffff" position={[-35, 5, 12]} speed={0.3} opacity={0.2} />
-                  <MovingCloud moveSpeed={-1.4} xRange={[-30, 30]} segments={12} bounds={[10, 3, 4]} volume={12} color="#e6e6fa" position={[-30, -0.5, 2]} speed={0.35} opacity={0.25} />
-                </>
-              )}
-            </Clouds>
+            {!isMobile && (
+              <Clouds material={THREE.MeshBasicMaterial}>
+                <Cloud segments={4} bounds={[10, 2, 2]} volume={10} color="#eeddff" position={[-20, 10, -30]} speed={0.2} opacity={0.25} />
+                <Cloud segments={4} bounds={[10, 2, 2]} volume={10} color="#ffeedd" position={[20, 15, -40]} speed={0.2} opacity={0.25} />
+                <MovingCloud moveSpeed={1.5} xRange={[-35, 35]} segments={6} bounds={[15, 3, 3]} volume={15} color="#ffffff" position={[-35, 5, 12]} speed={0.3} opacity={0.2} />
+                <MovingCloud moveSpeed={-1.4} xRange={[-30, 30]} segments={5} bounds={[10, 3, 4]} volume={12} color="#e6e6fa" position={[-30, -0.5, 2]} speed={0.35} opacity={0.25} />
+              </Clouds>
+            )}
 
-            <FlockOfBirds count={isMobile ? 10 : 20} isAudioEnabled={hasEntered} radius={12} height={10} heightVariance={5} centerOffset={modelPosition} speed={0.15} />
+            <FlockOfBirds count={isMobile ? 6 : 12} isAudioEnabled={hasEntered} radius={12} height={10} heightVariance={5} centerOffset={modelPosition} speed={0.15} />
             <FloatingIsland position={modelPosition} scale={modelScale} rotation={modelRotation} />
             
-            <SmallIsland position={[-28, 8, -12]} scale={[2.8, 2.8, 2.8]} rotation={[0, 1.1, 0]} floatOffset={0} floatSpeed={0.7} />
-            <SmallIsland position={[30, 2, -18]} scale={[2.2, 2.2, 2.2]} rotation={[0.1, -0.6, 0]} floatOffset={1.8} floatSpeed={1.0} />
-            <SmallIsland position={[-22, -10, 14]} scale={[3.2, 3.2, 3.2]} rotation={[0, 0.4, -0.05]} floatOffset={3.2} floatSpeed={0.85} />
-            <SmallIsland position={[24, -6, 16]} scale={[2.5, 2.5, 2.5]} rotation={[-0.05, -0.9, 0]} floatOffset={4.7} floatSpeed={0.95} />
-            <SmallIsland position={[3, 14, -30]} scale={[3.5, 3.5, 3.5]} rotation={[0.1, 0.2, 0.05]} floatOffset={2.4} floatSpeed={0.65} />
+            {isMobile ? (
+              <SmallIsland position={[24, -6, 16]} scale={[2.5, 2.5, 2.5]} rotation={[-0.05, -0.9, 0]} floatOffset={4.7} floatSpeed={0.95} />
+            ) : (
+              <>
+                <SmallIsland position={[-28, 8, -12]} scale={[2.8, 2.8, 2.8]} rotation={[0, 1.1, 0]} floatOffset={0} floatSpeed={0.7} />
+                <SmallIsland position={[30, 2, -18]} scale={[2.2, 2.2, 2.2]} rotation={[0.1, -0.6, 0]} floatOffset={1.8} floatSpeed={1.0} />
+                <SmallIsland position={[24, -6, 16]} scale={[2.5, 2.5, 2.5]} rotation={[-0.05, -0.9, 0]} floatOffset={4.7} floatSpeed={0.95} />
+              </>
+            )}
 
             <ParasiteIslandModifier portalRef={portalRef} />
           </Suspense>
