@@ -93,6 +93,44 @@ export default function AdminPanel({ session }) {
     }
   };
 
+  const handleUpdateTier = async (userId, currentTier) => {
+    const targetTier = currentTier === 'premium' ? 'free' : 'premium';
+    if (!window.confirm(`Change user's tier to ${targetTier.toUpperCase()}?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/update-tier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userEmail, userId, tier: targetTier })
+      });
+      if (res.ok) fetchData();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleChangePassword = async (userId) => {
+    const newPassword = window.prompt("Enter new password for this user:");
+    if (!newPassword) return;
+    if (newPassword.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/change-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userEmail, userId, newPassword })
+      });
+      if (res.ok) {
+        alert("Password updated successfully!");
+      } else {
+        alert("Failed to update password.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   if (userEmail !== 'sns@mayhere.com') return null;
 
   return (
@@ -204,7 +242,19 @@ export default function AdminPanel({ session }) {
                         <td className="p-4 text-sm text-gray-400">
                           {u.subscription?.ends_at ? new Date(u.subscription.ends_at).toLocaleDateString() : 'N/A'}
                         </td>
-                        <td className="p-4 text-right">
+                        <td className="p-4 text-right flex justify-end gap-2">
+                          <button 
+                            onClick={() => handleUpdateTier(u.id, u.subscription?.tier)} 
+                            className={`px-3 py-1 rounded text-xs font-semibold ${u.subscription?.tier === 'premium' && u.subscription?.status === 'active' ? 'bg-amber-600/80 hover:bg-amber-500' : 'bg-fuchsia-600/80 hover:bg-fuchsia-500'} text-white`}
+                          >
+                            {u.subscription?.tier === 'premium' && u.subscription?.status === 'active' ? 'Set Free' : 'Set Premium'}
+                          </button>
+                          <button 
+                            onClick={() => handleChangePassword(u.id)} 
+                            className="px-3 py-1 bg-blue-600/80 hover:bg-blue-500 rounded text-xs text-white"
+                          >
+                            Reset Pass
+                          </button>
                           <button 
                             onClick={() => handleToggleBlock(u.id, u.is_blocked)} 
                             className={`px-3 py-1 rounded text-xs ${u.is_blocked ? 'bg-gray-600 hover:bg-gray-500' : 'bg-red-600/80 hover:bg-red-500'} text-white`}

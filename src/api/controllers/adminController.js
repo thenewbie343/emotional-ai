@@ -165,3 +165,54 @@ exports.toggleBlockUser = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.changeUserPassword = async (req, res) => {
+  if (!isAdmin(req.body.userEmail)) return res.status(403).json({ error: 'Unauthorized' });
+
+  try {
+    const { userId, newPassword } = req.body;
+    const { error } = await supabase.auth.admin.updateUserById(userId, {
+      password: newPassword
+    });
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.updateUserTier = async (req, res) => {
+  if (!isAdmin(req.body.userEmail)) return res.status(403).json({ error: 'Unauthorized' });
+
+  try {
+    const { userId, tier } = req.body;
+    
+    if (tier === 'premium') {
+      const endsAt = new Date();
+      endsAt.setDate(endsAt.getDate() + 14); // 14 days
+
+      const { error } = await supabase.from('user_subscriptions').upsert({
+        user_id: userId,
+        tier: 'premium',
+        status: 'active',
+        ends_at: endsAt.toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from('user_subscriptions').upsert({
+        user_id: userId,
+        tier: 'free',
+        status: 'expired',
+        ends_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      if (error) throw error;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

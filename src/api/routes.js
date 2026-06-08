@@ -32,5 +32,7 @@ router.post('/admin/approve', adminController.approveRequest);
 router.post('/admin/reject', adminController.rejectRequest);
 router.post('/admin/users', adminController.getUsers);
 router.post('/admin/block', adminController.toggleBlockUser);
+router.post('/admin/change-password', adminController.changeUserPassword);
+router.post('/admin/update-tier', adminController.updateUserTier);
 
 module.exports = router;

@@ -19,28 +19,10 @@ export default function Auth() {
 
     try {
       if (isLogin) {
-        if (formattedEmail === 'sns@mayhere.com' && password === 'wetgetsns') {
-          const mockSession = {
-            user: {
-              id: 'admin-id-sns-mayhere',
-              email: 'sns@mayhere.com',
-              user_metadata: { is_admin: true }
-            }
-          };
-          localStorage.setItem('admin_session', JSON.stringify(mockSession));
-          window.location.href = '/';
-          return;
-        }
-
         const { error } = await supabase.auth.signInWithPassword({ email: formattedEmail, password })
         if (error) throw error
         navigate('/')
       } else {
-        if (formattedEmail === 'sns@mayhere.com') {
-          setMessage('The admin account is pre-configured. Please log in directly.');
-          setLoading(false);
-          return;
-        }
         const { error } = await supabase.auth.signUp({ email: formattedEmail, password })
         if (error) throw error
         setMessage('Check your email for the login link! Or if you disabled email confirmation, try logging in now.')
