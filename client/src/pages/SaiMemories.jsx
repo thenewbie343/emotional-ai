@@ -155,8 +155,8 @@ function MemorySphere({ memories, selectedId, onSelect, scrollYProgress }) {
     const phi = Math.PI * (3 - Math.sqrt(5)); 
     const radius = 5; 
     for (let i = 0; i < memories.length; i++) {
-      const y = 1 - (i / (memories.length - 1)) * 2;
-      const r = Math.sqrt(1 - y * y);
+      const y = memories.length > 1 ? 1 - (i / (memories.length - 1)) * 2 : 0;
+      const r = Math.sqrt(Math.max(0, 1 - y * y));
       const theta = phi * i;
       points.push(new THREE.Vector3(Math.cos(theta) * r * radius, y * radius, Math.sin(theta) * r * radius));
     }
