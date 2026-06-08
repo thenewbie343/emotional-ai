@@ -21,19 +21,40 @@ async function checkMessageLimit(req, res, next) {
       return next();
     }
 
-    // 1. Get user ID (check body first, fallback to email lookup)
+    // 1. Get user ID and check if blocked
     let userId = req.body.userId;
+    let isBlocked = false;
     
-    if (!userId && userEmail) {
+    if (userId) {
+      try {
+        const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+        if (!userError && userData && userData.user) {
+          isBlocked = userData.user.user_metadata?.is_blocked || false;
+        }
+      } catch (e) {
+        console.error('Failed to get user in subscription middleware:', e.message);
+      }
+    } else if (userEmail) {
       try {
         const { data: users, error: userError } = await supabase.auth.admin.listUsers();
         if (!userError && users && users.users) {
           const user = users.users.find(u => u.email === userEmail);
-          if (user) userId = user.id;
+          if (user) {
+            userId = user.id;
+            isBlocked = user.user_metadata?.is_blocked || false;
+          }
         }
       } catch (e) {
         console.error('Failed to list users in subscription middleware:', e.message);
       }
+    }
+
+    if (isBlocked) {
+      return res.status(403).json({ 
+        error: 'Forbidden', 
+        message: 'Your account has been blocked by the admin.',
+        blocked: true
+      });
     }
 
     if (!userId) return next();

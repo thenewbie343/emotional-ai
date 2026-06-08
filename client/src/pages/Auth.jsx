@@ -19,8 +19,14 @@ export default function Auth() {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email: formattedEmail, password })
+        const { data, error } = await supabase.auth.signInWithPassword({ email: formattedEmail, password })
         if (error) throw error
+
+        if (data.user?.user_metadata?.is_blocked) {
+          await supabase.auth.signOut()
+          throw new Error('Your account has been blocked by the admin.')
+        }
+
         navigate('/')
       } else {
         const { error } = await supabase.auth.signUp({ email: formattedEmail, password })

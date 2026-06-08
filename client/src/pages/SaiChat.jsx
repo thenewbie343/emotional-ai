@@ -98,6 +98,13 @@ export default function SaiChat({ session }) {
     e.preventDefault();
     if (!inputText.trim()) return;
 
+    if (session?.user?.user_metadata?.is_blocked) {
+      alert("Your account has been blocked by the admin.");
+      await supabase.auth.signOut();
+      navigate('/auth');
+      return;
+    }
+
     if (session?.user?.id && !isPremium) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);

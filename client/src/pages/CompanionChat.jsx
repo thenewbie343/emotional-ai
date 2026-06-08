@@ -139,6 +139,13 @@ export default function CompanionChat({ session }) {
   const handleSend = async (text) => {
     window.speechSynthesis.cancel();
 
+    if (session?.user?.user_metadata?.is_blocked) {
+      alert("Your account has been blocked by the admin.");
+      await supabase.auth.signOut();
+      navigate('/auth');
+      return;
+    }
+
     if (session?.user?.id && !isPremium) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -190,7 +197,12 @@ export default function CompanionChat({ session }) {
           if (apiRes.status === 403) {
             const errData = await apiRes.json();
             alert(errData.message || "You have reached your free daily message limit. Please upgrade to Premium!");
-            navigate('/billing');
+            if (errData.blocked) {
+              await supabase.auth.signOut();
+              navigate('/auth');
+            } else {
+              navigate('/billing');
+            }
             setIsTyping(false);
             return;
           }

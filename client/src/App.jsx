@@ -88,13 +88,23 @@ export default function App() {
   const [companionKey, setCompanionKey] = useState(0)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user?.user_metadata?.is_blocked) {
+        await supabase.auth.signOut()
+        setSession(null)
+      } else {
+        setSession(session)
+      }
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user?.user_metadata?.is_blocked) {
+        await supabase.auth.signOut()
+        setSession(null)
+      } else {
+        setSession(session)
+      }
     })
 
     return () => subscription.unsubscribe()
