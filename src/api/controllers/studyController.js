@@ -63,7 +63,7 @@ Each item in the array must be an object representing a stage:
 Generate exactly 4-5 stages with 2-3 lessons each. Make the lessons progressive, clear, and comprehensive.`;
 
     const messages = [{ role: "user", content: `Generate a syllabus for: ${topic}` }];
-    const aiText = await generateAiResponse("curious", messages, systemPrompt);
+    const aiText = await generateAiResponse("curious", messages, systemPrompt, "sai");
     
     // Clean response of potential markdown wrapping
     let cleanedText = aiText.trim();
@@ -326,7 +326,7 @@ The JSON object must have this structure:
 }`;
 
     const messages = [{ role: "user", content: `Generate a quiz for the lesson: ${topic}` }];
-    const aiText = await generateAiResponse("curious", messages, systemPrompt);
+    const aiText = await generateAiResponse("curious", messages, systemPrompt, "sai");
 
     let cleanedText = aiText.trim();
     if (cleanedText.startsWith("```")) {
@@ -356,7 +356,7 @@ Analyze the explanation for:
 Provide constructive feedback. Explain where their understanding is strong and pinpoint exactly where the logic gaps are. Ask 1 follow-up question to help them clarify the concept.`;
 
     const messages = [{ role: "user", content: `Here is my explanation: ${explanation}` }];
-    const feedback = await generateAiResponse("curious", messages, systemPrompt);
+    const feedback = await generateAiResponse("curious", messages, systemPrompt, "sai");
 
     // Award 25 XP for completing an active recall Feynman session
     await addXpBackend(userId, 25);

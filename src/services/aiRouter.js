@@ -62,8 +62,8 @@ async function callOpenRouterWithModel(modelName, messages, systemPrompt) {
   return data.choices[0].message.content;
 }
 
-async function callGroq(messages, systemPrompt) {
-  const apiKey = process.env.GROQ_API_KEY;
+async function callGroq(messages, systemPrompt, isSai) {
+  const apiKey = isSai ? process.env.SAI_GROQ_API_KEY : process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("Missing GROQ_API_KEY");
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -87,8 +87,8 @@ async function callGroq(messages, systemPrompt) {
   return data.choices[0].message.content;
 }
 
-async function callMistral(messages, systemPrompt) {
-  const apiKey = process.env.MISTRAL_API_KEY;
+async function callMistral(messages, systemPrompt, isSai) {
+  const apiKey = isSai ? process.env.SAI_MISTRAL_API_KEY : process.env.MISTRAL_API_KEY;
   if (!apiKey) throw new Error("Missing MISTRAL_API_KEY");
 
   const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
@@ -277,8 +277,10 @@ const EMOTION_TO_PROVIDERS = {
  * @param {string} emotion - The detected emotion from user input
  * @param {Array} messages - Chat history array [{role, content}]
  * @param {string} systemPrompt - Base system instructions
+ * @param {string} companion - The companion identifier ('sai' or 'shuna')
  */
-async function generateAiResponse(emotion, messages, systemPrompt) {
+async function generateAiResponse(emotion, messages, systemPrompt, companion) {
+  const isSai = (companion === 'sai');
   const priorityList = EMOTION_TO_PROVIDERS[emotion] || EMOTION_TO_PROVIDERS.default;
 
   for (const providerName of priorityList) {
@@ -288,8 +290,8 @@ async function generateAiResponse(emotion, messages, systemPrompt) {
     }
 
     try {
-      console.log(`[AI Router] Attempting to generate with ${providerName} for emotion '${emotion}'`);
-      const response = await PROVIDERS[providerName](messages, systemPrompt);
+      console.log(`[AI Router] Attempting to generate with ${providerName} for emotion '${emotion}' (SAI: ${isSai})`);
+      const response = await PROVIDERS[providerName](messages, systemPrompt, isSai);
       console.log(`[AI Router] SUCCESS with ${providerName}`);
       return response;
     } catch (error) {

@@ -27,7 +27,7 @@ exports.processMessage = async (req, res) => {
       systemPrompt = SYSTEM_PROMPTS.sai;
     }
 
-    const responseText = await generateAiResponse(detectedEmotion, messages, systemPrompt);
+    const responseText = await generateAiResponse(detectedEmotion, messages, systemPrompt, companion);
 
     res.json({
       text: responseText,
