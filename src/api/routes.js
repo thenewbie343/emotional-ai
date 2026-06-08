@@ -35,4 +35,18 @@ router.post('/admin/block', adminController.toggleBlockUser);
 router.post('/admin/change-password', adminController.changeUserPassword);
 router.post('/admin/update-tier', adminController.updateUserTier);
 
+// Study Companion routes
+const studyController = require('./controllers/studyController');
+router.post('/study/roadmap/generate', studyController.generateCustomRoadmap);
+router.post('/study/roadmap/save', studyController.saveRoadmap);
+router.post('/study/roadmap/list', studyController.listRoadmaps);
+router.post('/study/roadmap/update-lesson', studyController.updateLessonStatus);
+router.post('/study/tasks/create', studyController.createTask);
+router.post('/study/tasks/list', studyController.listTasks);
+router.post('/study/tasks/toggle-completed', studyController.toggleTaskCompleted);
+router.post('/study/logs/log-session', studyController.logStudySession);
+router.post('/study/logs/heatmap', studyController.getHeatmapData);
+router.post('/study/quiz/generate', studyController.generateQuiz);
+router.post('/study/quiz/evaluate', studyController.evaluateQuizAnswer);
+
 module.exports = router;
