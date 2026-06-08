@@ -49,7 +49,8 @@ async function callOpenRouterWithModel(modelName, messages, systemPrompt) {
       messages: [{ role: "system", content: systemPrompt }, ...messages],
       max_tokens: 1024,
       temperature: 0.7
-    })
+    }),
+    signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined
   });
 
   if (res.status === 429) throw new Error("RATE_LIMIT");
@@ -77,7 +78,8 @@ async function callGroq(messages, systemPrompt, isSai) {
       messages: [{ role: "system", content: systemPrompt }, ...messages],
       temperature: 0.7,
       max_tokens: 1024
-    })
+    }),
+    signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined
   });
 
   if (res.status === 429) throw new Error("RATE_LIMIT");
@@ -101,7 +103,8 @@ async function callMistral(messages, systemPrompt, isSai) {
       model: "mistral-small-latest",
       messages: [{ role: "system", content: systemPrompt }, ...messages],
       temperature: 0.8,
-    })
+    }),
+    signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined
   });
 
   if (res.status === 429) throw new Error("RATE_LIMIT");
@@ -134,7 +137,8 @@ async function callGemini(messages, systemPrompt) {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined
     });
 
     if (res.status === 429) {
@@ -176,7 +180,8 @@ async function callCohere(messages, systemPrompt) {
         messages: [{ role: "system", content: systemPrompt }, ...messages],
         temperature: 0.7,
         max_tokens: 1024
-      })
+      }),
+      signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined
     });
 
     if (res.status === 429 || res.status === 403 || res.status === 401) {
@@ -218,7 +223,8 @@ async function callNvidia(messages, systemPrompt) {
         messages: [{ role: "system", content: systemPrompt }, ...messages],
         temperature: 0.7,
         max_tokens: 1024
-      })
+      }),
+      signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined
     });
 
     if (res.status === 429 || res.status === 403 || res.status === 401) {

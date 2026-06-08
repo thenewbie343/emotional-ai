@@ -335,7 +335,8 @@ export default function SaiChat({ session }) {
           companion: 'sai',
           userEmail: session?.user?.email,
           userId: userId
-        })
+        }),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(45000) : undefined
       });
       
       if (apiRes.ok) {
