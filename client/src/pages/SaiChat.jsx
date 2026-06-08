@@ -152,7 +152,14 @@ const RoadmapWidget = ({ topic, userId, onRoadmapCreated }) => {
     </div>
   );
 
-  if (!roadmap || roadmap.error) return <div className="bg-[#1a0b2e] p-4 rounded-xl border border-red-500/30 text-red-400 text-sm my-2">Failed to generate roadmap.</div>;
+  if (!roadmap || roadmap.error) return (
+    <div className="bg-[#1a0b2e] border border-red-500/30 rounded-2xl p-4 shadow-xl my-2">
+      <span className="text-red-400 text-sm flex items-center gap-2">
+        <span className="material-symbols-outlined">error</span> 
+        {typeof roadmap?.error === 'string' ? roadmap.error : "Failed to generate roadmap."}
+      </span>
+    </div>
+  );
 
   return (
     <div className="bg-[#1a0b2e] border border-purple-500/30 rounded-2xl p-5 shadow-2xl max-w-md w-full my-2">

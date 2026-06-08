@@ -50,7 +50,7 @@ exports.generateCustomRoadmap = async (req, res) => {
   if (!userId || !topic) return res.status(400).json({ error: "Missing userId or topic" });
 
   try {
-    const systemPrompt = `You are SAI, a logical study assistant and curriculum planner. Generate a highly structured, logical, multi-stage learning roadmap/syllabus for the topic requested by the user. 
+    const systemPrompt = `You are SAI, a PREMIUM, STRICT, and HIGHLY DEMANDING study coach and curriculum planner. Generate a highly structured, logical, multi-stage learning roadmap/syllabus for the topic requested by the user. 
 You MUST respond with a raw JSON array of stages only. Do not wrap in markdown code blocks like \`\`\`json. Your response must be parsed directly with JSON.parse.
 Each item in the array must be an object representing a stage:
 {
@@ -60,11 +60,15 @@ Each item in the array must be an object representing a stage:
     {"name": "Lesson title (e.g. Friction and Gravity)", "completed": false}
   ]
 }
-Generate exactly 4-5 stages with 2-3 lessons each. Make the lessons progressive, clear, and comprehensive.`;
+Generate exactly 4-5 stages with 2-3 lessons each. Make the lessons progressive, clear, and comprehensive. Hold the student to the highest standard.`;
 
     const messages = [{ role: "user", content: `Generate a syllabus for: ${topic}` }];
     const aiText = await generateAiResponse("curious", messages, systemPrompt, "sai");
     
+    if (!aiText) {
+      throw new Error("AI providers are currently unavailable or rate limited. Please check your API keys or try again later.");
+    }
+
     // Clean response of potential markdown wrapping
     let cleanedText = aiText.trim();
     if (cleanedText.startsWith("```")) {
