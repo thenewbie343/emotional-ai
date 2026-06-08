@@ -6,8 +6,10 @@ const providerStatus = {
   gemini: { isExhausted: false, exhaustedAt: null },
   mistral: { isExhausted: false, exhaustedAt: null },
   cohere: { isExhausted: false, exhaustedAt: null },
+  nvidia: { isExhausted: false, exhaustedAt: null },
   openrouter: { isExhausted: false, exhaustedAt: null },
 };
+
 
 const EXHAUST_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
 
@@ -113,7 +115,7 @@ async function callGemini(messages, systemPrompt) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.warn("[AI Router] Missing GEMINI_API_KEY. Falling back to OpenRouter.");
-    return await callOpenRouterWithModel("google/gemini-2.5-flash", messages, systemPrompt);
+    return await callOpenRouterWithModel("google/gemma-4-31b-it:free", messages, systemPrompt);
   }
 
   // Format messages for Gemini
@@ -137,7 +139,7 @@ async function callGemini(messages, systemPrompt) {
 
     if (res.status === 429) {
       console.warn("[AI Router] Gemini API Quota Exceeded/Rate Limited. Falling back to OpenRouter.");
-      return await callOpenRouterWithModel("google/gemini-2.5-flash", messages, systemPrompt);
+      return await callOpenRouterWithModel("google/gemma-4-31b-it:free", messages, systemPrompt);
     }
     if (!res.ok) {
       const text = await res.text();
@@ -151,7 +153,7 @@ async function callGemini(messages, systemPrompt) {
     throw new Error("Empty response from Gemini");
   } catch (error) {
     console.error(`[AI Router] callGemini direct call failed (${error.message}). Falling back to OpenRouter.`);
-    return await callOpenRouterWithModel("google/gemini-2.5-flash", messages, systemPrompt);
+    return await callOpenRouterWithModel("google/gemma-4-31b-it:free", messages, systemPrompt);
   }
 }
 
@@ -159,7 +161,7 @@ async function callCohere(messages, systemPrompt) {
   const apiKey = process.env.COHERE_API_KEY;
   if (!apiKey) {
     console.warn("[AI Router] Missing COHERE_API_KEY. Falling back to OpenRouter.");
-    return await callOpenRouterWithModel("cohere/command-r7b-12-2024", messages, systemPrompt);
+    return await callOpenRouterWithModel("google/gemma-4-31b-it:free", messages, systemPrompt);
   }
 
   try {
@@ -179,7 +181,7 @@ async function callCohere(messages, systemPrompt) {
 
     if (res.status === 429 || res.status === 403 || res.status === 401) {
       console.warn(`[AI Router] Cohere AI/ML API failed with status ${res.status}. Falling back to OpenRouter.`);
-      return await callOpenRouterWithModel("cohere/command-r7b-12-2024", messages, systemPrompt);
+      return await callOpenRouterWithModel("google/gemma-4-31b-it:free", messages, systemPrompt);
     }
     if (!res.ok) {
       const text = await res.text();
@@ -190,12 +192,59 @@ async function callCohere(messages, systemPrompt) {
     return data.choices[0].message.content;
   } catch (error) {
     console.error(`[AI Router] callCohere direct call failed (${error.message}). Falling back to OpenRouter.`);
-    return await callOpenRouterWithModel("cohere/command-r7b-12-2024", messages, systemPrompt);
+    return await callOpenRouterWithModel("google/gemma-4-31b-it:free", messages, systemPrompt);
+  }
+}
+
+async function callNvidia(messages, systemPrompt) {
+  const apiKey = process.env.NVIDIA_API_KEY;
+  if (!apiKey) {
+    console.warn("[AI Router] Missing NVIDIA_API_KEY. Falling back to OpenRouter.");
+    return await callOpenRouter(messages, systemPrompt);
+  }
+
+  // Ensure the nvapi- prefix is present
+  const formattedKey = apiKey.startsWith("nvapi-") ? apiKey : `nvapi-${apiKey}`;
+
+  try {
+    const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${formattedKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "meta/llama-3.1-8b-instruct", // Fast and lightweight NIM model
+        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        temperature: 0.7,
+        max_tokens: 1024
+      })
+    });
+
+    if (res.status === 429 || res.status === 403 || res.status === 401) {
+      console.warn(`[AI Router] NVIDIA NIM API failed with status ${res.status}. Falling back to OpenRouter.`);
+      return await callOpenRouter(messages, systemPrompt);
+    }
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Status ${res.status}: ${res.statusText} (${text})`);
+    }
+
+    const data = await res.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error(`[AI Router] callNvidia direct call failed (${error.message}). Falling back to OpenRouter.`);
+    return await callOpenRouter(messages, systemPrompt);
   }
 }
 
 async function callOpenRouter(messages, systemPrompt) {
-  return await callOpenRouterWithModel("openai/gpt-3.5-turbo", messages, systemPrompt);
+  try {
+    return await callOpenRouterWithModel("google/gemma-4-31b-it:free", messages, systemPrompt);
+  } catch (error) {
+    console.warn(`[AI Router] OpenRouter google/gemma-4-31b-it:free failed (${error.message}). Falling back to openai/gpt-oss-120b:free.`);
+    return await callOpenRouterWithModel("openai/gpt-oss-120b:free", messages, systemPrompt);
+  }
 }
 
 const PROVIDERS = {
@@ -203,6 +252,7 @@ const PROVIDERS = {
   gemini: callGemini,
   mistral: callMistral,
   cohere: callCohere,
+  nvidia: callNvidia,
   openrouter: callOpenRouter
 };
 
@@ -212,14 +262,14 @@ const PROVIDERS = {
 
 // Map emotions to a priority list of providers
 const EMOTION_TO_PROVIDERS = {
-  default: ['groq', 'gemini', 'mistral', 'cohere', 'openrouter'], // Groq priority for analytical/default
-  greetings: ['groq', 'gemini', 'mistral', 'cohere', 'openrouter'], 
-  sad: ['gemini', 'groq', 'mistral', 'cohere', 'openrouter'],      // Gemini priority for empathy
-  love: ['gemini', 'groq', 'mistral', 'cohere', 'openrouter'],
-  angry: ['mistral', 'gemini', 'groq', 'cohere', 'openrouter'],    // Mistral priority for unhinged/angry
-  playful: ['mistral', 'gemini', 'groq', 'cohere', 'openrouter'],
-  unhinged: ['mistral', 'gemini', 'groq', 'cohere', 'openrouter'],
-  curious: ['cohere', 'groq', 'gemini', 'mistral', 'openrouter'],  // Cohere priority for research/questions
+  default: ['groq', 'gemini', 'mistral', 'cohere', 'nvidia', 'openrouter'], // Groq priority for analytical/default
+  greetings: ['groq', 'gemini', 'mistral', 'cohere', 'nvidia', 'openrouter'], 
+  sad: ['gemini', 'groq', 'mistral', 'cohere', 'nvidia', 'openrouter'],      // Gemini priority for empathy
+  love: ['gemini', 'groq', 'mistral', 'cohere', 'nvidia', 'openrouter'],
+  angry: ['mistral', 'gemini', 'groq', 'cohere', 'nvidia', 'openrouter'],    // Mistral priority for unhinged/angry
+  playful: ['mistral', 'gemini', 'groq', 'cohere', 'nvidia', 'openrouter'],
+  unhinged: ['mistral', 'gemini', 'groq', 'cohere', 'nvidia', 'openrouter'],
+  curious: ['cohere', 'groq', 'gemini', 'mistral', 'nvidia', 'openrouter'],  // Cohere priority for research/questions
 };
 
 /**
