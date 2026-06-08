@@ -20,6 +20,7 @@ import SiyaHub from './pages/SiyaHub'
 import OnboardingTutorial from './components/OnboardingTutorial'
 import Billing from './pages/Billing'
 import AdminPanel from './pages/AdminPanel'
+import { useSubscription } from './hooks/useSubscription'
 import './index.css'
 
 // ── SAI ↔ SHUNA Toggle Button ────────────────────────────────────────────────
@@ -66,6 +67,21 @@ function CompanionToggle({ session, onToggle }) {
   )
 }
 
+function PremiumRoute({ session, children }) {
+  const { isPremium, loading } = useSubscription(session)
+  const navigate = useNavigate();
+
+  if (loading) {
+    return <div style={{ width: '100vw', height: '100vh', background: '#0a0e1a' }} />
+  }
+
+  if (!isPremium) {
+    return <Navigate to="/billing" replace />
+  }
+
+  return children
+}
+
 export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -97,19 +113,19 @@ export default function App() {
 
         {/* SHUNA features */}
         <Route path="/siya" element={session ? <SiyaHub key={`siyahub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/siya/journal" element={session ? <SaiJournal session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/siya/wellness" element={session ? <SaiWellness session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/siya/insights" element={session ? <SaiInsights session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/siya/diary" element={session ? <SaiDiary session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/siya/memory" element={session ? <SaiConstellation session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/siya/journal" element={session ? <PremiumRoute session={session}><SaiJournal session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+        <Route path="/siya/wellness" element={session ? <PremiumRoute session={session}><SaiWellness session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+        <Route path="/siya/insights" element={session ? <PremiumRoute session={session}><SaiInsights session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+        <Route path="/siya/diary" element={session ? <PremiumRoute session={session}><SaiDiary session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+        <Route path="/siya/memory" element={session ? <PremiumRoute session={session}><SaiConstellation session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
 
         {/* SAI routes */}
         <Route path="/sai" element={session ? <SaiHub key={`saihub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/chat" element={session ? <SaiChat key={`saichat-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/dreams" element={session ? <SaiDreams session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/memories" element={session ? <SaiMemories session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/sai/dreams" element={session ? <PremiumRoute session={session}><SaiDreams session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+        <Route path="/sai/memories" element={session ? <PremiumRoute session={session}><SaiMemories session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
         <Route path="/sai/goals" element={session ? <SaiGoals session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/capsule" element={session ? <SaiTimeCapsule session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/sai/capsule" element={session ? <PremiumRoute session={session}><SaiTimeCapsule session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
         <Route path="/dashboard" element={session ? <SaiDashboard session={session} /> : <Navigate to="/auth" />} />
         
         {/* Billing & Admin */}
