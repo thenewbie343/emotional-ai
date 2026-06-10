@@ -60,12 +60,12 @@ export default function HomeScene() {
           gl={{ 
             antialias: false, 
             powerPreference: "high-performance",
-            precision: "mediump",
             alpha: false,
             stencil: false,
             depth: true
           }}
         >
+          <color attach="background" args={['#0a081d']} />
           <Suspense fallback={null}>
             <PerspectiveCamera makeDefault position={[0, 3, cameraZ]} fov={cameraFov} />
             <Sky distance={450000} sunPosition={[5, 1, 8]} inclination={0} azimuth={0.25} />
