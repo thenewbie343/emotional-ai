@@ -290,6 +290,46 @@ exports.logStudySession = async (req, res) => {
   }
 };
 
+// 6.5 Save Forest-style Pomodoro Session
+exports.savePomodoroSession = async (req, res) => {
+  const { userId, subject, durationMins, completed, plantType } = req.body;
+  if (!userId || !subject || !durationMins) return res.status(400).json({ error: "Missing fields" });
+
+  try {
+    const { data, error } = await supabase
+      .from("sai_pomodoro_sessions")
+      .insert([{
+        user_id: userId,
+        subject,
+        duration_minutes: durationMins,
+        completed,
+        plant_type: plantType,
+        completed_at: completed ? new Date().toISOString() : null
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Award XP based on duration if completed
+    let xpEarned = 0;
+    if (completed) {
+      if (durationMins >= 60) xpEarned = 150;
+      else if (durationMins >= 45) xpEarned = 100;
+      else if (durationMins >= 25) xpEarned = 50;
+
+      if (xpEarned > 0) {
+        await addXpBackend(userId, xpEarned);
+      }
+    }
+
+    res.json({ success: true, session: data, xpEarned });
+  } catch (err) {
+    console.error("Error saving pomodoro session:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // 7. Get Heatmap Calendar Data
 exports.getHeatmapData = async (req, res) => {
   const { userId } = req.body;

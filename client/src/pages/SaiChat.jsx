@@ -5,6 +5,7 @@ import { useSubscription } from '../hooks/useSubscription';
 import { motion, AnimatePresence } from 'framer-motion';
 import StudySidebar from '../components/StudySidebar';
 import QuizModal from '../components/QuizModal';
+import ForestPomodoro from '../components/ForestPomodoro';
 import ReactMarkdown from 'react-markdown';
 import './SaiChat.css';
 
@@ -14,49 +15,6 @@ const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onr
 // WIDGETS
 // ============================================
 
-const PomodoroWidget = ({ onComplete }) => {
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
-  const [isActive, setIsActive] = useState(false);
-  const [isDone, setIsDone] = useState(false);
-
-  useEffect(() => {
-    let interval;
-    if (isActive && timeLeft > 0) {
-      interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-    } else if (timeLeft === 0 && !isDone) {
-      setIsActive(false);
-      setIsDone(true);
-      if (onComplete) onComplete(25);
-    }
-    return () => clearInterval(interval);
-  }, [isActive, timeLeft, isDone, onComplete]);
-
-  const toggle = () => setIsActive(!isActive);
-  const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-  const secs = (timeLeft % 60).toString().padStart(2, '0');
-
-  return (
-    <div className="sai-widget" style={{ width: 260, textAlign: 'center' }}>
-      <div style={{ fontSize: '0.7rem', color: '#c084fc', textTransform: 'uppercase', letterSpacing: 3, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-        <span className="material-symbols-outlined" style={{ fontSize: 15 }}>timer</span>
-        Focus Session
-      </div>
-      <div style={{ fontSize: '2.8rem', fontWeight: 300, color: 'white', fontFamily: 'monospace', letterSpacing: 4, marginBottom: 20 }}>
-        {mins}:{secs}
-      </div>
-      {isDone ? (
-        <div style={{ color: '#22c55e', fontSize: '0.82rem', fontWeight: 600, background: 'rgba(34,197,94,0.1)', padding: '8px 16px', borderRadius: 20, border: '1px solid rgba(34,197,94,0.2)' }}>
-          Session Complete! +15 XP
-        </div>
-      ) : (
-        <button onClick={toggle} style={{ width: '100%', padding: '12px 0', borderRadius: 20, background: 'linear-gradient(135deg, #7c5cfc, #5a3fd6)', border: 'none', color: 'white', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(124,92,252,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 17 }}>{isActive ? 'pause' : 'play_arrow'}</span>
-          {isActive ? 'Pause' : 'Start Focus'}
-        </button>
-      )}
-    </div>
-  );
-};
 
 const HeatmapWidget = ({ userId }) => {
   const [data, setData] = useState(null);
@@ -464,7 +422,9 @@ export default function SaiChat({ session }) {
             )}
             <div>
               {msg.type === 'pomodoro' ? (
-                <PomodoroWidget onComplete={handleLogPomodoro} />
+                <ForestPomodoro userId={userId} onComplete={(duration) => {
+                  setMessages(prev => [...prev, { id: Date.now(), text: `Awesome! I just completed a ${duration}-minute focus session.`, sender: 'user' }]);
+                }} />
               ) : msg.type === 'roadmap' ? (
                 <RoadmapWidget topic={msg.topic} userId={userId} onRoadmapCreated={(r) => { fetchRoadmaps(); setActiveRoadmap(r); }} />
               ) : msg.type === 'heatmap' ? (
