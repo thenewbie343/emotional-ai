@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF, useCursor } from '@react-three/drei'
+import { useEffect } from 'react'
 
 // Pure 3D component — no HTML inside here
 export default function FloatingIsland({ position = [0, -2, 0], scale = [8, 6, 11], rotation = [0, 0, 0] }) {
@@ -10,8 +11,19 @@ export default function FloatingIsland({ position = [0, -2, 0], scale = [8, 6, 1
 
   useCursor(hovered)
 
-  // Original main island art model
-  const { scene } = useGLTF('/1st art work.glb')
+  // Original main island art model (now compressed)
+  const { scene } = useGLTF('/island-compressed.glb')
+
+  useEffect(() => {
+    if (scene) {
+      scene.traverse((node) => {
+        if (node.isMesh) {
+          node.castShadow = true
+          node.receiveShadow = true
+        }
+      })
+    }
+  }, [scene])
 
   // Base Y stored once — no array allocation every frame
   const baseY = position[1]
@@ -56,4 +68,4 @@ export default function FloatingIsland({ position = [0, -2, 0], scale = [8, 6, 1
   )
 }
 
-useGLTF.preload('/1st art work.glb')
+useGLTF.preload('/island-compressed.glb')

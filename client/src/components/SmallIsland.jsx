@@ -6,7 +6,7 @@ export default function SmallIsland({ position = [0, 0, 0], scale = [1, 1, 1], r
   const groupRef = useRef()
 
   // Use the small islands GLB from public/
-  const { scene } = useGLTF('/small islands.glb')
+  const { scene } = useGLTF('/small-island-compressed.glb')
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime()
@@ -18,10 +18,10 @@ export default function SmallIsland({ position = [0, 0, 0], scale = [1, 1, 1], r
 
   return (
     <group ref={groupRef} position={position} rotation={rotation} scale={scale}>
-      <Clone object={scene} />
+      <Clone object={scene} castShadow={false} receiveShadow={false} />
     </group>
   )
 }
 
 // Preload once — shared across all 5 instances
-useGLTF.preload('/small islands.glb')
+useGLTF.preload('/small-island-compressed.glb')

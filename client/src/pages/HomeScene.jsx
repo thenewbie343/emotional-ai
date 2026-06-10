@@ -1,17 +1,18 @@
-import { Suspense, useState, useEffect, useRef } from 'react'
+import { Suspense, useState, useEffect, useRef, lazy } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Sky, Environment, PerspectiveCamera, Clouds, Cloud, Sparkles } from '@react-three/drei'
+import { OrbitControls, Sky, Environment, PerspectiveCamera, Clouds, Cloud, Sparkles, Stats } from '@react-three/drei'
 import * as THREE from 'three'
 import FloatingIsland from '../components/FloatingIsland'
-import SmallIsland from '../components/SmallIsland'
-import FlockOfBirds from '../components/FlockOfBirds'
-import FloatingDebris from '../components/FloatingDebris'
-import ShootingStars from '../components/ShootingStars'
-import MagicDrip from '../components/MagicDrip'
-import MovingCloud from '../components/MovingCloud'
-import { ParasiteIslandModifier } from '../components/ParasiteLayer'
 import { initAudio, setAudioVolume, stopAudio } from '../utils/audioSynth'
+
+const SmallIsland = lazy(() => import('../components/SmallIsland'))
+const FlockOfBirds = lazy(() => import('../components/FlockOfBirds'))
+const FloatingDebris = lazy(() => import('../components/FloatingDebris'))
+const ShootingStars = lazy(() => import('../components/ShootingStars'))
+const MagicDrip = lazy(() => import('../components/MagicDrip'))
+const MovingCloud = lazy(() => import('../components/MovingCloud'))
+const ParasiteIslandModifier = lazy(() => import('../components/ParasiteLayer').then(module => ({ default: module.ParasiteIslandModifier })))
 
 export default function HomeScene() {
   const navigate = useNavigate()
@@ -53,7 +54,8 @@ export default function HomeScene() {
     <>
       <div style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
         <Canvas 
-          dpr={[1, 1.2]} 
+          shadows
+          dpr={[1, 1.5]} 
           performance={{ min: 0.6 }}
           gl={{ 
             antialias: false, 
@@ -69,7 +71,7 @@ export default function HomeScene() {
             <Sky distance={450000} sunPosition={[5, 1, 8]} inclination={0} azimuth={0.25} />
             <Environment preset="sunset" />
             <ambientLight intensity={0.4} />
-            <directionalLight position={[5, 10, 5]} intensity={1.5} />
+            <directionalLight position={[5, 10, 5]} intensity={1.5} castShadow />
             <pointLight position={[-5, 5, -5]} intensity={0.5} color="#b0c4de" />
 
             <Sparkles count={isMobile ? 15 : 45} scale={30} size={2} speed={0.4} opacity={0.2} color="#aaddff" position={[0, -2, 0]} />
@@ -100,6 +102,7 @@ export default function HomeScene() {
             <ParasiteIslandModifier portalRef={portalRef} />
           </Suspense>
           <OrbitControls enableDamping dampingFactor={0.05} minDistance={2} maxDistance={50} maxPolarAngle={Math.PI / 1.5} />
+          <Stats />
         </Canvas>
 
         {!hasEntered ? (
