@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import ForestPomodoro from '../components/ForestPomodoro';
+import RankUpModal from '../components/RankUpModal';
 import '../index.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
@@ -30,6 +31,8 @@ export default function SaiDashboard({ session }) {
     }
   });
   const [activeSlot, setActiveSlot] = useState(null); // Slot selected for Pomodoro
+  const [rankUpData, setRankUpData] = useState(null);
+  const [dailyChallenge, setDailyChallenge] = useState(null);
 
   // ── 2. MISSION BOARD STATE ──────────────────────────────────────────────
   const [missions, setMissions] = useState([]);
@@ -58,7 +61,22 @@ export default function SaiDashboard({ session }) {
     fetchTimetables();
     fetchMissions();
     fetchMastery();
+    fetchDailyChallenge();
   }, [userId]);
+
+  const fetchDailyChallenge = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/study/challenges/daily`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      const data = await res.json();
+      if (res.ok && !data.error) setDailyChallenge(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Sync active countdown stats when active timetable changes
   useEffect(() => {
@@ -70,6 +88,22 @@ export default function SaiDashboard({ session }) {
   }, [activeTimetable]);
 
   // ── API CALLS ───────────────────────────────────────────────────────────
+  const handlePotentialRankUp = async (result) => {
+    if (result.leveledUp && result.newRank) {
+      try {
+        const res = await fetch(`${API_BASE}/api/study/rank/message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, rank: result.newRank })
+        });
+        const msgData = await res.json();
+        setRankUpData({ rank: result.newRank, message: msgData.message });
+      } catch (err) {
+        setRankUpData({ rank: result.newRank, message: "Congratulations on reaching a new rank! Keep pushing your limits." });
+      }
+    }
+  };
+
 
   // -- Timetable APIs
   const fetchTimetables = async () => {
@@ -211,6 +245,8 @@ export default function SaiDashboard({ session }) {
         body: JSON.stringify({ userId, missionId })
       });
       if (!res.ok) throw new Error('Failed to complete mission');
+      const data = await res.json();
+      handlePotentialRankUp(data);
       fetchMissions();
     } catch (err) {
       console.error(err);
@@ -231,6 +267,25 @@ export default function SaiDashboard({ session }) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  
+  const handleCompleteDailyChallenge = async () => {
+    if (!dailyChallenge) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/study/challenges/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, challengeId: dailyChallenge.id })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setDailyChallenge({ ...dailyChallenge, completed: true });
+        handlePotentialRankUp(data);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -514,6 +569,35 @@ export default function SaiDashboard({ session }) {
             <div className="lg:col-span-8 space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-light text-white">Active Missions</h2>
+
+              {/* Daily Challenge Highlight */}
+              {dailyChallenge && (
+                <div className={`p-6 rounded-3xl border shadow-xl flex items-center justify-between transition-all ${dailyChallenge.completed ? 'bg-emerald-950/20 border-emerald-500/20 opacity-70' : 'bg-gradient-to-r from-[#121214] to-purple-950/20 border-purple-500/30'}`}>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-amber-400">star</span>
+                      <span className="text-[10px] font-bold tracking-widest text-amber-400 uppercase">Daily SAI Challenge</span>
+                    </div>
+                    <h3 className={`text-lg font-bold ${dailyChallenge.completed ? 'text-gray-400 line-through' : 'text-white'}`}>
+                      {dailyChallenge.challenge_text}
+                    </h3>
+                  </div>
+                  <div className="flex flex-col items-end gap-3">
+                    <div className="text-right">
+                      <div className="text-[10px] text-gray-500 font-bold uppercase">2x XP Bonus</div>
+                      <div className="text-base font-bold text-amber-400">+{dailyChallenge.xp_reward} XP</div>
+                    </div>
+                    {!dailyChallenge.completed ? (
+                      <button onClick={handleCompleteDailyChallenge} className="px-5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-400 font-bold text-xs transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(251,191,36,0.15)]">
+                        <span className="material-symbols-outlined text-[16px]">done</span> Complete
+                      </button>
+                    ) : (
+                      <span className="text-emerald-400 text-xs font-bold flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">verified</span> Completed</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
                 <button
                   onClick={handleGenerateDailyMissions}
                   className="px-4 py-2 rounded-full text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-md"
@@ -822,6 +906,8 @@ export default function SaiDashboard({ session }) {
           </div>
         )}
       </div>
+
+      {rankUpData && <RankUpModal rank={rankUpData.rank} message={rankUpData.message} onClose={() => setRankUpData(null)} />}
 
       {/* ── 5. POMODORO OVERLAY MODAL ─────────────────────────────────────── */}
       {activeSlot && (

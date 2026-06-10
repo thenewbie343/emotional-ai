@@ -1,16 +1,12 @@
 import { supabase } from '../lib/supabaseClient'
 
 const XP_LEVELS = [
-  { level: 1, xpNeeded: 0, title: 'Stranger' },
-  { level: 2, xpNeeded: 25, title: 'Acquaintance' },
-  { level: 3, xpNeeded: 75, title: 'Companion' },
-  { level: 4, xpNeeded: 150, title: 'Friend' },
-  { level: 5, xpNeeded: 250, title: 'Close Friend' },
-  { level: 6, xpNeeded: 375, title: 'Best Friend' },
-  { level: 7, xpNeeded: 550, title: 'Confidant' },
-  { level: 8, xpNeeded: 750, title: 'Kindred Spirit' },
-  { level: 9, xpNeeded: 1000, title: 'Soulmate' },
-  { level: 10, xpNeeded: 1500, title: 'Eternal Bond' }
+  { level: 1, xpNeeded: 0, title: 'Rookie' },
+  { level: 2, xpNeeded: 500, title: 'Scholar' },
+  { level: 3, xpNeeded: 1500, title: 'Strategist' },
+  { level: 4, xpNeeded: 3500, title: 'Architect' },
+  { level: 5, xpNeeded: 7500, title: 'Mastermind' },
+  { level: 6, xpNeeded: 15000, title: 'Legend' }
 ]
 
 export function getLevelInfo(xp) {

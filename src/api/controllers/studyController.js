@@ -6,6 +6,22 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const XP_RANKS = [
+  { xpNeeded: 15000, rank: 'Legend' },
+  { xpNeeded: 7500, rank: 'Mastermind' },
+  { xpNeeded: 3500, rank: 'Architect' },
+  { xpNeeded: 1500, rank: 'Strategist' },
+  { xpNeeded: 500, rank: 'Scholar' },
+  { xpNeeded: 0, rank: 'Rookie' }
+];
+
+function getRank(xp) {
+  for (const r of XP_RANKS) {
+    if (xp >= r.xpNeeded) return r.rank;
+  }
+  return 'Rookie';
+}
+
 // Helper to award XP
 async function addXpBackend(userId, amount) {
   try {
@@ -16,31 +32,34 @@ async function addXpBackend(userId, amount) {
       .maybeSingle();
 
     if (!currentData) {
-      await supabase.from('sai_xp').insert([{ user_id: userId, xp: amount, level: 1, last_active: new Date().toISOString() }]);
-      return;
+      const initXp = amount;
+      const initRank = getRank(initXp);
+      await supabase.from('sai_xp').insert([{ user_id: userId, xp: initXp, level: initRank, last_active: new Date().toISOString() }]);
+      return { leveledUp: initRank !== 'Rookie', newRank: initRank };
     }
 
     const newXp = currentData.xp + amount;
-    let level = 1;
-    const XP_LEVELS = [0, 25, 75, 150, 250, 375, 550, 750, 1000, 1500];
-    for (let i = 0; i < XP_LEVELS.length; i++) {
-      if (newXp >= XP_LEVELS[i]) {
-        level = i + 1;
-      } else {
-        break;
-      }
-    }
+    const newRank = getRank(newXp);
+    const oldRank = currentData.level || 'Rookie';
+    // If oldRank is a number (legacy), consider it a rank up if the new rank isn't Rookie
+    const leveledUp = oldRank !== newRank && isNaN(oldRank); 
+    // Wait, if oldRank is '1', isNaN('1') is false. So leveledUp will be false. 
+    // Let's just do oldRank !== newRank.
+    // If it's a number, they get a free rank up screen to their new rank!
 
     await supabase
       .from('sai_xp')
       .update({ 
         xp: newXp, 
-        level, 
+        level: newRank, 
         last_active: new Date().toISOString() 
       })
       .eq('user_id', userId);
+      
+    return { leveledUp: oldRank !== newRank, newRank };
   } catch (err) {
     console.error("Failed to update XP on backend:", err.message);
+    return { leveledUp: false, newRank: 'Rookie' };
   }
 }
 
@@ -282,9 +301,8 @@ exports.logStudySession = async (req, res) => {
     }
 
     // 3. Award 15 XP for completing a Pomodoro session
-    await addXpBackend(userId, 15);
-
-    res.json({ success: true, xpEarned: 15 });
+    const xpRes = await addXpBackend(userId, 15);
+    res.json({ success: true, xpEarned: 15, ...xpRes });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -440,9 +458,8 @@ Provide constructive feedback. Explain where their understanding is strong and p
     const feedback = await generateAiResponse("curious", messages, systemPrompt, "sai");
 
     // Award 25 XP for completing an active recall Feynman session
-    await addXpBackend(userId, 25);
-
-    res.json({ feedback, xpEarned: 25 });
+    const xpRes = await addXpBackend(userId, 25);
+    res.json({ feedback, xpEarned: 25, ...xpRes });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -634,9 +651,8 @@ exports.completeMission = async (req, res) => {
     if (updateErr) throw updateErr;
 
     // Award XP
-    await addXpBackend(userId, data.xp_reward || 50);
-
-    res.json({ success: true, mission: data, xpEarned: data.xp_reward || 50 });
+    const xpRes = await addXpBackend(userId, data.xp_reward || 50);
+    res.json({ success: true, mission: data, xpEarned: data.xp_reward || 50, ...xpRes });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -874,6 +890,99 @@ Provide a concise, direct evaluation (1-2 sentences) of their pacing. Advise whe
       completedTopics,
       comment: aiText ? aiText.trim() : "Ensure you keep studying consistently to cover all topics before your exam."
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 14. RANK & DAILY CHALLENGE CONTROLLERS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+exports.getRankUpMessage = async (req, res) => {
+  const { userId, rank } = req.body;
+  if (!userId || !rank) return res.status(400).json({ error: "Missing required fields" });
+  try {
+    const systemPrompt = `You are SAI, a demanding study coach. The user just reached the new rank: "${rank}". Write a short (2 sentences), hard-hitting, motivational message acknowledging their new rank. Be proud but remind them the journey isn't over.`;
+    const messages = [{ role: "user", content: `I just ranked up to ${rank}` }];
+    const aiText = await generateAiResponse("curious", messages, systemPrompt, "sai");
+    res.json({ message: aiText || `Congratulations on reaching ${rank}. Now get back to work.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.generateDailyChallenge = async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // Check if challenge already exists today
+    const { data: existing } = await supabase
+      .from("sai_challenges")
+      .select("*")
+      .eq("user_id", userId)
+      .gte("created_at", todayStr)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      return res.json(existing);
+    }
+
+    // Fetch context
+    const { data: missions } = await supabase.from("sai_missions").select("title, subject").eq("user_id", userId).eq("status", "pending").limit(5);
+    const { data: timetables } = await supabase.from("sai_timetables").select("subject, exam_date").eq("user_id", userId).limit(3);
+
+    let contextText = "";
+    if (missions && missions.length > 0) contextText += `Missions: ${missions.map(m => m.title).join(', ')}. `;
+    if (timetables && timetables.length > 0) contextText += `Exams: ${timetables.map(t => t.subject).join(', ')}. `;
+    if (!contextText) contextText = "General academic improvement.";
+
+    const systemPrompt = `You are SAI, an elite study coach. Based on this context: [${contextText}], generate 1 single, highly specific, brutal daily challenge for today. It should be a single actionable sentence. No markdown formatting, just the sentence.`;
+    const messages = [{ role: "user", content: "Give me today's challenge." }];
+    const challengeText = await generateAiResponse("curious", messages, systemPrompt, "sai");
+
+    const { data, error } = await supabase
+      .from("sai_challenges")
+      .insert([{
+        user_id: userId,
+        challenge_text: challengeText || "Complete 2 hours of deep work focusing on your weakest subject.",
+        xp_reward: 100,
+        completed: false,
+        created_at: todayStr
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.completeDailyChallenge = async (req, res) => {
+  const { userId, challengeId } = req.body;
+  if (!userId || !challengeId) return res.status(400).json({ error: "Missing fields" });
+  try {
+    const { data: challenge } = await supabase.from("sai_challenges").select("*").eq("id", challengeId).single();
+    if (!challenge || challenge.completed) return res.json(challenge);
+
+    const { data, error } = await supabase
+      .from("sai_challenges")
+      .update({ completed: true })
+      .eq("id", challengeId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    // 2x XP reward
+    const xpRes = await addXpBackend(userId, data.xp_reward || 100);
+
+    res.json({ success: true, challenge: data, xpEarned: data.xp_reward || 100, ...xpRes });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

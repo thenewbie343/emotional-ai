@@ -8,7 +8,11 @@ const { startAbsenceWorker } = require('./jobs/absenceWorker');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+const corsOptions = {
+  origin: process.env.CLIENT_URL || '*',
+  credentials: true
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

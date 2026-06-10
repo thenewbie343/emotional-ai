@@ -73,4 +73,9 @@ router.post('/study/mastery/suggest', studyController.suggestMasteryTopic);
 // Exam Countdown
 router.post('/study/countdown/comment', studyController.getCountdownComment);
 
+// Phase 5: Ranks & Daily Challenges
+router.post('/study/rank/message', studyController.getRankUpMessage);
+router.post('/study/challenges/daily', studyController.generateDailyChallenge);
+router.post('/study/challenges/complete', studyController.completeDailyChallenge);
+
 module.exports = router;
