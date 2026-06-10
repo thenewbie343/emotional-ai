@@ -15,6 +15,8 @@ router.get('/health', (req, res) => {
       MISTRAL_API_KEY:     !!process.env.MISTRAL_API_KEY,
       COHERE_API_KEY:      !!process.env.COHERE_API_KEY,
       OPENROUTER_API_KEY:  !!process.env.OPENROUTER_API_KEY,
+      SAI_GROQ_API_KEY:    !!process.env.SAI_GROQ_API_KEY,
+      SAI_MISTRAL_API_KEY: !!process.env.SAI_MISTRAL_API_KEY,
       SUPABASE_URL:        !!process.env.SUPABASE_URL,
       SUPABASE_ANON_KEY:   !!process.env.SUPABASE_ANON_KEY,
       SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
