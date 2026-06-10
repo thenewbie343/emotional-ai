@@ -53,4 +53,24 @@ router.post('/study/logs/heatmap', studyController.getHeatmapData);
 router.post('/study/quiz/generate', studyController.generateQuiz);
 router.post('/study/quiz/evaluate', studyController.evaluateQuizAnswer);
 
+// Timetable Builder
+router.post('/study/timetable/generate', studyController.generateTimetable);
+router.post('/study/timetable/save', studyController.saveTimetable);
+router.post('/study/timetable/list', studyController.getTimetables);
+router.post('/study/timetable/update-schedule', studyController.updateTimetableSchedule);
+
+// Mission Board
+router.post('/study/missions/list', studyController.listMissions);
+router.post('/study/missions/create', studyController.createMission);
+router.post('/study/missions/complete', studyController.completeMission);
+router.post('/study/missions/generate-daily', studyController.generateDailyMissions);
+
+// Subject Mastery Tracker
+router.post('/study/mastery/update', studyController.updateMastery);
+router.post('/study/mastery/list', studyController.listMastery);
+router.post('/study/mastery/suggest', studyController.suggestMasteryTopic);
+
+// Exam Countdown
+router.post('/study/countdown/comment', studyController.getCountdownComment);
+
 module.exports = router;

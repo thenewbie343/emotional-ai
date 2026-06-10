@@ -24,6 +24,7 @@ function getGreeting() {
 
 const QUICK_ACCESS = [
   { to: '/sai/chat',     icon: 'forum',           title: 'SAI Chat',     desc: 'Engage with your assistant',   color: 'text-blue-400', bg: 'bg-blue-500/10' },
+  { to: '/sai/study',    icon: 'dashboard',       title: 'Study Hub',    desc: 'Timetables, missions, tracker',color: 'text-teal-400', bg: 'bg-teal-500/10' },
   { to: '/sai/memories', icon: 'memory',          title: 'Memory Vault', desc: 'Review stored context',        color: 'text-purple-400', bg: 'bg-purple-500/10' },
   { to: '/sai/dreams',   icon: 'nights_stay',     title: 'Dream Vault',  desc: 'Visualize your dreams',        color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
   { to: '/sai/capsule',  icon: 'hourglass_empty', title: 'Time Capsules',desc: 'Messages to future self',      color: 'text-amber-400', bg: 'bg-amber-500/10' },

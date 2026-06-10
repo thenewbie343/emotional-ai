@@ -447,3 +447,434 @@ Provide constructive feedback. Explain where their understanding is strong and p
     res.status(500).json({ error: err.message });
   }
 };
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 10. TIMETABLE BUILDER CONTROLLERS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+exports.generateTimetable = async (req, res) => {
+  const { userId, subject, examDate, hoursPerDay } = req.body;
+  if (!userId || !subject || !examDate || !hoursPerDay) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const systemPrompt = `You are SAI, a demanding study coach. Generate a day-by-day study schedule from today until the exam date (${examDate}) for the subject: "${subject}".
+The user has these available study hours per day of the week: ${JSON.stringify(hoursPerDay)}.
+Generate a structured, logical sequence of topics leading up to the exam.
+CRITICAL: Respond ONLY with a raw JSON array. No markdown code blocks, no explanations.
+The JSON array structure must be exactly:
+[
+  {
+    "date": "YYYY-MM-DD",
+    "dayOfWeek": "Monday",
+    "topic": "Topic Name",
+    "suggestedDurationMinutes": 120,
+    "completed": false
+  },
+  ...
+]`;
+
+    const messages = [{ role: "user", content: `Generate a timetable for subject: ${subject} with exam date: ${examDate}` }];
+    const aiText = await generateAiResponse("curious", messages, systemPrompt, "sai");
+    
+    if (!aiText) {
+      return res.status(503).json({ error: "AI provider failed to generate schedule." });
+    }
+
+    let cleanedText = aiText.trim();
+    cleanedText = cleanedText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+    const firstBracket = cleanedText.indexOf('[');
+    const lastBracket = cleanedText.lastIndexOf(']');
+    if (firstBracket >= 0 && lastBracket >= 0) {
+      cleanedText = cleanedText.substring(firstBracket, lastBracket + 1);
+    }
+
+    const schedule = JSON.parse(cleanedText);
+    res.json({ schedule });
+  } catch (err) {
+    console.error("Timetable generation error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.saveTimetable = async (req, res) => {
+  const { userId, subject, examDate, schedule } = req.body;
+  if (!userId || !subject || !examDate || !schedule) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("sai_timetables")
+      .insert([{ user_id: userId, subject, exam_date: examDate, schedule }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error("Save timetable error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getTimetables = async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+  try {
+    const { data, error } = await supabase
+      .from("sai_timetables")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error("Get timetables error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateTimetableSchedule = async (req, res) => {
+  const { userId, timetableId, schedule } = req.body;
+  if (!userId || !timetableId || !schedule) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("sai_timetables")
+      .update({ schedule })
+      .eq("id", timetableId)
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 11. MISSION BOARD CONTROLLERS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+exports.listMissions = async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+  try {
+    const { data, error } = await supabase
+      .from("sai_missions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createMission = async (req, res) => {
+  const { userId, title, subject, xpReward, dueDate } = req.body;
+  if (!userId || !title || !subject) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("sai_missions")
+      .insert([{
+        user_id: userId,
+        title,
+        subject,
+        xp_reward: xpReward || 50,
+        due_date: dueDate || null
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.completeMission = async (req, res) => {
+  const { userId, missionId } = req.body;
+  if (!userId || !missionId) return res.status(400).json({ error: "Missing fields" });
+
+  try {
+    const { data: currentMission, error: fetchErr } = await supabase
+      .from("sai_missions")
+      .select("*")
+      .eq("id", missionId)
+      .eq("user_id", userId)
+      .single();
+
+    if (fetchErr) throw fetchErr;
+    if (currentMission.status === 'completed') {
+      return res.json(currentMission);
+    }
+
+    const { data, error: updateErr } = await supabase
+      .from("sai_missions")
+      .update({ status: 'completed' })
+      .eq("id", missionId)
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    if (updateErr) throw updateErr;
+
+    // Award XP
+    await addXpBackend(userId, data.xp_reward || 50);
+
+    res.json({ success: true, mission: data, xpEarned: data.xp_reward || 50 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.generateDailyMissions = async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const { data: existingToday } = await supabase
+      .from("sai_missions")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("auto_generated", true)
+      .gte("created_at", todayStart.toISOString());
+
+    if (existingToday && existingToday.length > 0) {
+      return res.json(existingToday);
+    }
+
+    const { data: activeGoals } = await supabase
+      .from("study_tasks")
+      .select("task_name")
+      .eq("user_id", userId)
+      .eq("completed", false)
+      .limit(5);
+
+    const goalsStr = activeGoals && activeGoals.length > 0
+      ? activeGoals.map(g => g.task_name).join(", ")
+      : "general study progress";
+
+    const systemPrompt = `You are SAI, a logical study planner. Based on the user's active goals: [${goalsStr}], generate exactly 3 daily missions for today.
+Each mission must have a short, actionable title, a subject, and an XP reward (choose 25 for quick tasks, 50 for normal, 75 for challenging).
+CRITICAL: Respond ONLY with a raw JSON array. No explanations, no markdown.
+Structure:
+[
+  {
+    "title": "Solve 5 calculus practice problems",
+    "subject": "Math",
+    "xp_reward": 50
+  },
+  ...
+]`;
+
+    const messages = [{ role: "user", content: "Generate 3 daily missions" }];
+    const aiText = await generateAiResponse("curious", messages, systemPrompt, "sai");
+
+    if (!aiText) {
+      return res.status(503).json({ error: "AI failed to generate daily missions" });
+    }
+
+    let cleanedText = aiText.trim();
+    cleanedText = cleanedText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+    const firstBracket = cleanedText.indexOf('[');
+    const lastBracket = cleanedText.lastIndexOf(']');
+    if (firstBracket >= 0 && lastBracket >= 0) {
+      cleanedText = cleanedText.substring(firstBracket, lastBracket + 1);
+    }
+
+    const missionsList = JSON.parse(cleanedText);
+
+    const missionsPayload = missionsList.map(m => ({
+      user_id: userId,
+      title: m.title,
+      subject: m.subject,
+      xp_reward: m.xp_reward || 50,
+      auto_generated: true,
+      due_date: new Date().toISOString()
+    }));
+
+    const { data, error } = await supabase
+      .from("sai_missions")
+      .insert(missionsPayload)
+      .select();
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error("Daily missions generation error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 12. SUBJECT MASTERY CONTROLLERS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+exports.updateMastery = async (req, res) => {
+  const { userId, subject, topic, confidence } = req.body;
+  if (!userId || !subject || !topic || confidence === undefined) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const { data: existing } = await supabase
+      .from("sai_subject_mastery")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("subject", subject)
+      .eq("topic", topic)
+      .maybeSingle();
+
+    let data, error;
+    if (existing) {
+      const res = await supabase
+        .from("sai_subject_mastery")
+        .update({ confidence, last_studied: new Date().toISOString().split('T')[0] })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      data = res.data;
+      error = res.error;
+    } else {
+      const res = await supabase
+        .from("sai_subject_mastery")
+        .insert([{
+          user_id: userId,
+          subject,
+          topic,
+          confidence,
+          last_studied: new Date().toISOString().split('T')[0]
+        }])
+        .select()
+        .single();
+      data = res.data;
+      error = res.error;
+    }
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.listMastery = async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+  try {
+    const { data, error } = await supabase
+      .from("sai_subject_mastery")
+      .select("*")
+      .eq("user_id", userId)
+      .order("last_studied", { ascending: false });
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.suggestMasteryTopic = async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+  try {
+    const { data: masteryList, error } = await supabase
+      .from("sai_subject_mastery")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (error) throw error;
+
+    if (!masteryList || masteryList.length === 0) {
+      return res.json({ suggestion: "No topics logged in your mastery tracker yet. Complete a Pomodoro session and rate your confidence to see daily coaching tips." });
+    }
+
+    const sorted = [...masteryList].sort((a, b) => {
+      if (a.confidence !== b.confidence) return a.confidence - b.confidence;
+      return new Date(a.last_studied) - new Date(b.last_studied);
+    });
+
+    const weakest = sorted[0];
+
+    const systemPrompt = `You are SAI, a strict study coach. The user has a weak topic: "${weakest.topic}" in subject: "${weakest.subject}" (confidence: ${weakest.confidence}/5).
+Write a very brief, direct study recommendation (exactly 1-2 sentences) on how they should approach reviewing this topic today. Be direct, coaching, and actionable.`;
+
+    const messages = [{ role: "user", content: "Write a study tip" }];
+    const aiText = await generateAiResponse("curious", messages, systemPrompt, "sai");
+
+    res.json({
+      weakestTopic: weakest,
+      suggestion: aiText ? aiText.trim() : `You should review ${weakest.topic} in ${weakest.subject} today. Focus on active recall.`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 13. EXAM COUNTDOWN CONTROLLERS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+exports.getCountdownComment = async (req, res) => {
+  const { userId, timetableId } = req.body;
+  if (!userId || !timetableId) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const { data: timetable, error } = await supabase
+      .from("sai_timetables")
+      .select("*")
+      .eq("id", timetableId)
+      .eq("user_id", userId)
+      .single();
+
+    if (error) throw error;
+
+    const examDate = new Date(timetable.exam_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const msDiff = examDate - today;
+    const daysRemaining = Math.max(0, Math.ceil(msDiff / (1000 * 60 * 60 * 24)));
+
+    const schedule = Array.isArray(timetable.schedule) ? timetable.schedule : [];
+    const totalTopics = schedule.length;
+    const completedTopics = schedule.filter(item => item.completed).length;
+
+    const systemPrompt = `You are SAI, a strict and highly analytical study coach.
+The user has an exam for subject: "${timetable.subject}" in exactly ${daysRemaining} days.
+Their study plan has a total of ${totalTopics} topics. So far, they have completed ${completedTopics} of them.
+Provide a concise, direct evaluation (1-2 sentences) of their pacing. Advise whether they are on track, or if they need to increase study hours to cover all topics in time. Be motivating but brutally honest.`;
+
+    const messages = [{ role: "user", content: "Evaluate study pace" }];
+    const aiText = await generateAiResponse("curious", messages, systemPrompt, "sai");
+
+    res.json({
+      daysRemaining,
+      totalTopics,
+      completedTopics,
+      comment: aiText ? aiText.trim() : "Ensure you keep studying consistently to cover all topics before your exam."
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

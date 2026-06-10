@@ -136,7 +136,8 @@ export default function App() {
         <Route path="/sai/memories" element={session ? <PremiumRoute session={session}><SaiMemories session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
         <Route path="/sai/goals" element={session ? <SaiGoals session={session} /> : <Navigate to="/auth" />} />
         <Route path="/sai/capsule" element={session ? <PremiumRoute session={session}><SaiTimeCapsule session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/dashboard" element={session ? <SaiDashboard session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/sai/study" element={session ? <SaiDashboard session={session} /> : <Navigate to="/auth" />} />
+        <Route path="/dashboard" element={session ? <Navigate to="/sai/study" replace /> : <Navigate to="/auth" />} />
         
         {/* Billing & Admin */}
         <Route path="/billing" element={session ? <Billing session={session} /> : <Navigate to="/auth" />} />

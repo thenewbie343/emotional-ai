@@ -79,13 +79,21 @@ const WiltingPlant = ({ children }) => {
   return <group ref={groupRef}>{children}</group>;
 };
 
-export default function ForestPomodoro({ userId, onComplete }) {
-  const [subject, setSubject] = useState('General');
-  const [durationStr, setDurationStr] = useState('25');
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
+export default function ForestPomodoro({ userId, onComplete, presetSubject, presetDuration }) {
+  const [subject, setSubject] = useState(presetSubject || 'General');
+  const [durationStr, setDurationStr] = useState(presetDuration ? String(presetDuration) : '25');
+  const [timeLeft, setTimeLeft] = useState((presetDuration || 25) * 60);
   const [status, setStatus] = useState('idle'); // idle, running, completed, wilted
   const [debugMode, setDebugMode] = useState(false);
   const [showGarden, setShowGarden] = useState(false);
+
+  useEffect(() => {
+    if (presetSubject) setSubject(presetSubject);
+    if (presetDuration) {
+      setDurationStr(String(presetDuration));
+      setTimeLeft(debugMode ? presetDuration : presetDuration * 60);
+    }
+  }, [presetSubject, presetDuration, debugMode]);
 
   const durationMins = parseInt(durationStr, 10);
   const durationSecs = debugMode ? durationMins : durationMins * 60; // In debug mode, 1 min = 1 sec
