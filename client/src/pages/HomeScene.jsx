@@ -5,6 +5,9 @@ import { OrbitControls, Sky, Environment, PerspectiveCamera, Clouds, Cloud, Spar
 import * as THREE from 'three'
 import FloatingIsland from '../components/FloatingIsland'
 import { initAudio, setAudioVolume, stopAudio } from '../utils/audioSynth'
+import { supabase } from '../lib/supabaseClient'
+import { useIslandAchievements } from '../hooks/useIslandAchievements'
+import IslandAchievements from '../components/island/IslandAchievements'
 
 const SmallIsland = lazy(() => import('../components/SmallIsland'))
 const FlockOfBirds = lazy(() => import('../components/FlockOfBirds'))
@@ -20,16 +23,30 @@ export default function HomeScene() {
   const [isMuted, setIsMuted] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   const [showPicker, setShowPicker] = useState(false)
+  const [userId, setUserId] = useState(null)
+  const [showFireworks, setShowFireworks] = useState(false)
   const portalRef = useRef()
+
+  const { achievements } = useIslandAchievements(userId)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id)
+    })
+  }, [])
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768)
     window.addEventListener('resize', handleResize)
     const handlePortalClick = () => setShowPicker(true)
     window.addEventListener('portal-click', handlePortalClick)
+    const handleTriggerFireworks = () => setShowFireworks(true)
+    window.addEventListener('trigger-fireworks', handleTriggerFireworks)
+
     return () => {
       window.removeEventListener('resize', handleResize)
       window.removeEventListener('portal-click', handlePortalClick)
+      window.removeEventListener('trigger-fireworks', handleTriggerFireworks)
       stopAudio()
     }
   }, [])
@@ -88,6 +105,7 @@ export default function HomeScene() {
 
             <FlockOfBirds count={isMobile ? 6 : 12} isAudioEnabled={hasEntered} radius={12} height={10} heightVariance={5} centerOffset={modelPosition} speed={0.15} />
             <FloatingIsland position={modelPosition} scale={modelScale} rotation={modelRotation} />
+            <IslandAchievements achievements={achievements} showFireworks={showFireworks} onFireworksComplete={() => setShowFireworks(false)} />
             
             {isMobile ? (
               <SmallIsland position={[24, -6, 16]} scale={[2.5, 2.5, 2.5]} rotation={[-0.05, -0.9, 0]} floatOffset={4.7} floatSpeed={0.95} />
