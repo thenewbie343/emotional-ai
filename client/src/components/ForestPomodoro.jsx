@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, Float, Sphere, Cylinder, Octahedron, Box } from '@react-three/drei';
 import * as THREE from 'three';
+import PomodoroGarden from './PomodoroGarden';
 
 const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
 
@@ -84,6 +85,7 @@ export default function ForestPomodoro({ userId, onComplete }) {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [status, setStatus] = useState('idle'); // idle, running, completed, wilted
   const [debugMode, setDebugMode] = useState(false);
+  const [showGarden, setShowGarden] = useState(false);
 
   const durationMins = parseInt(durationStr, 10);
   const durationSecs = debugMode ? durationMins : durationMins * 60; // In debug mode, 1 min = 1 sec
@@ -200,6 +202,14 @@ export default function ForestPomodoro({ userId, onComplete }) {
           </button>
         </div>
 
+        <button 
+          onClick={() => setShowGarden(true)}
+          style={{ width: '100%', padding: '8px 0', marginBottom: 15, borderRadius: 12, background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>park</span>
+          View My Garden
+        </button>
+
         {status === 'idle' && (
           <div style={{ display: 'flex', gap: 10, marginBottom: 15 }}>
             <select 
@@ -277,6 +287,8 @@ export default function ForestPomodoro({ userId, onComplete }) {
           </button>
         )}
       </div>
+
+      {showGarden && <PomodoroGarden userId={userId} onClose={() => setShowGarden(false)} />}
     </div>
   );
 }

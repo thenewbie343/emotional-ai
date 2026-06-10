@@ -330,6 +330,27 @@ exports.savePomodoroSession = async (req, res) => {
   }
 };
 
+// 6.6 Get Forest-style Pomodoro Sessions
+exports.getPomodoroSessions = async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+  try {
+    const { data, error } = await supabase
+      .from("sai_pomodoro_sessions")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("completed", true)
+      .order("completed_at", { ascending: false });
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error("Error fetching pomodoro sessions:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // 7. Get Heatmap Calendar Data
 exports.getHeatmapData = async (req, res) => {
   const { userId } = req.body;
