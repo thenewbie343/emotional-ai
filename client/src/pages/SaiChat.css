@@ -1,3 +1,10 @@
+/* ============================================
+   SAI CHAT — Premium Dark Glass Theme
+   Matches SIYA's design: #0a0e1a → #131830
+   Glass: rgba(255,255,255,0.06) + blur(20px)
+   Accent: #7c5cfc / #a855f7
+   ============================================ */
+
 .sai-chat-page {
   width: 100vw;
   height: 100vh;
@@ -5,262 +12,598 @@
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, #0a0e1a 0%, #131830 100%);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Outfit', system-ui, sans-serif;
   color: white;
   overflow: hidden;
   position: relative;
 }
 
-/* Top header */
-.sai-chat-header {
+/* Ambient background glow */
+.sai-chat-page::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(ellipse, rgba(124,92,252,0.12) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---- HEADER ---- */
+.sai-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16px 24px;
   background: rgba(0,0,0,0.3);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   z-index: 20;
-}
-
-.sai-chat-header .back-link {
-  color: rgba(255,255,255,0.6);
-  text-decoration: none;
-  font-size: 1.2rem;
-  padding: 6px 12px;
-  border-radius: 10px;
-  transition: all 0.2s;
-}
-
-.sai-chat-header .back-link:hover {
-  color: white;
-  background: rgba(255,255,255,0.06);
-}
-
-.sai-chat-header .center-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.sai-chat-header .center-info .name {
-  font-weight: 600;
-  font-size: 1.1rem;
-  letter-spacing: 1px;
-}
-
-.sai-chat-header .center-info .status-dot {
-  width: 8px;
-  height: 8px;
-  background: #00ffaa;
-  border-radius: 50%;
-  box-shadow: 0 0 8px #00ffaa;
-}
-
-.sai-chat-header .voice-toggle {
-  padding: 8px 14px;
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.04);
-  color: white;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.3s;
-}
-
-.sai-chat-header .voice-toggle.active {
-  background: rgba(0, 255, 128, 0.12);
-  border-color: rgba(0, 255, 128, 0.25);
-}
-
-/* 3D avatar section (top portion) */
-.sai-chat-avatar {
-  height: 40vh;
-  width: 100%;
-  position: relative;
   flex-shrink: 0;
 }
 
-.sai-chat-avatar::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 80px;
-  background: linear-gradient(to top, #131830, transparent);
-  pointer-events: none;
-  z-index: 5;
-}
-
-/* Chat area (bottom portion) */
-.sai-chat-area {
-  flex: 1;
+.sai-header-left {
   display: flex;
-  flex-direction: column;
-  min-height: 0;
+  align-items: center;
+  gap: 14px;
 }
 
+.sai-back-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.sai-back-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
+}
+
+.sai-header-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #e0d4ff, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sai-header-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.65rem;
+  color: rgba(168,85,247,0.7);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 500;
+}
+
+.sai-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a855f7;
+  box-shadow: 0 0 8px rgba(168,85,247,0.8);
+  animation: sai-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sai-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(168,85,247,0.8); }
+  50% { opacity: 0.5; box-shadow: 0 0 4px rgba(168,85,247,0.4); }
+}
+
+.sai-sidebar-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(124,92,252,0.12);
+  border: 1px solid rgba(124,92,252,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c084fc;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.sai-sidebar-btn:hover {
+  background: rgba(124,92,252,0.25);
+  box-shadow: 0 0 20px rgba(124,92,252,0.2);
+}
+
+/* ---- MESSAGES AREA ---- */
 .sai-messages {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 20px 24px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+  z-index: 1;
+  scroll-behavior: smooth;
 }
 
-.sai-messages::-webkit-scrollbar { width: 4px; }
+.sai-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sai-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .sai-messages::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.08);
-  border-radius: 2px;
+  background: rgba(124,92,252,0.2);
+  border-radius: 4px;
 }
 
-/* Message bubbles */
-.sai-msg {
-  max-width: 80%;
-  animation: msgFadeIn 0.35s ease forwards;
+.sai-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(124,92,252,0.4);
+}
+
+/* ---- MESSAGE ROW ---- */
+.sai-msg-row {
+  display: flex;
+  gap: 12px;
+  max-width: 85%;
+  animation: sai-msg-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   opacity: 0;
 }
 
-@keyframes msgFadeIn {
+@keyframes sai-msg-enter {
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.sai-msg.ai {
-  align-self: flex-start;
-  transform: translateY(8px);
-}
-
-.sai-msg.user {
+.sai-msg-row.user {
   align-self: flex-end;
-  transform: translateY(8px);
+  flex-direction: row-reverse;
 }
 
-.sai-msg .bubble {
-  padding: 14px 20px;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  word-wrap: break-word;
+.sai-msg-row.ai {
+  align-self: flex-start;
 }
 
-.sai-msg.ai .bubble {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 4px 20px 20px 20px;
-  color: #e0e0e0;
-}
-
-.sai-msg.user .bubble {
-  background: linear-gradient(135deg, #7c5cfc, #5a3fd6);
-  border-radius: 20px 4px 20px 20px;
-  color: white;
-  box-shadow: 0 4px 15px rgba(124,92,252,0.3);
-}
-
-/* Memory badge */
-.sai-msg .memory-badge {
-  display: inline-block;
-  margin-top: 6px;
-  padding: 4px 10px;
-  background: rgba(0,212,255,0.1);
-  border: 1px solid rgba(0,212,255,0.2);
-  border-radius: 12px;
-  font-size: 0.7rem;
-  color: #00d4ff;
-  letter-spacing: 0.5px;
-}
-
-/* Typing indicator */
-.sai-typing {
-  display: flex;
-  gap: 5px;
-  padding: 16px 20px;
-  align-items: center;
-}
-
-.sai-typing .tdot {
-  width: 6px;
-  height: 6px;
-  background: rgba(255,255,255,0.3);
+/* Avatar */
+.sai-avatar {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  animation: sai-bounce 1.4s infinite ease-in-out both;
-}
-
-.sai-typing .tdot:nth-child(1) { animation-delay: -0.32s; }
-.sai-typing .tdot:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes sai-bounce {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
-  40% { transform: scale(1); opacity: 1; }
-}
-
-/* Input area */
-.sai-input-area {
-  padding: 16px 24px 24px;
-  background: rgba(0,0,0,0.4);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255,255,255,0.04);
-  display: flex;
-  gap: 12px;
-}
-
-.sai-input-area input {
-  flex: 1;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
-  padding: 14px 20px;
-  border-radius: 25px;
-  color: white;
-  font-size: 0.95rem;
-  outline: none;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-
-.sai-input-area input:focus {
-  border-color: rgba(124,92,252,0.4);
-  background: rgba(255,255,255,0.07);
-  box-shadow: 0 0 12px rgba(124,92,252,0.15);
-}
-
-.sai-input-area input::placeholder {
-  color: rgba(255,255,255,0.25);
-}
-
-.sai-input-area .sai-send-btn {
   background: linear-gradient(135deg, #7c5cfc, #5a3fd6);
-  color: white;
-  border: none;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  font-size: 1.2rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 4px 15px rgba(124,92,252,0.3);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 15px rgba(124,92,252,0.4);
+  border: 1px solid rgba(124,92,252,0.5);
+  margin-top: 2px;
+}
+
+.sai-avatar .material-symbols-outlined {
+  font-size: 18px;
+  color: white;
+}
+
+/* Bubble */
+.sai-bubble {
+  padding: 14px 18px;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  word-wrap: break-word;
+  border-radius: 4px 18px 18px 18px;
+}
+
+.sai-bubble.ai {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #e2e8f0;
+  border-radius: 4px 18px 18px 18px;
+}
+
+.sai-bubble.user {
+  background: linear-gradient(135deg, rgba(124,92,252,0.35), rgba(90,63,214,0.3));
+  border: 1px solid rgba(124,92,252,0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #f0ecff;
+  border-radius: 18px 4px 18px 18px;
+  box-shadow: 0 4px 20px rgba(124,92,252,0.15);
+}
+
+/* Prose styling inside AI bubbles */
+.sai-bubble .sai-prose {
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.sai-bubble .sai-prose p {
+  margin: 0 0 8px 0;
+}
+
+.sai-bubble .sai-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.sai-bubble .sai-prose code {
+  background: rgba(0,0,0,0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.sai-bubble .sai-prose pre {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.sai-bubble .sai-prose pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.sai-bubble .sai-prose ul,
+.sai-bubble .sai-prose ol {
+  padding-left: 18px;
+  margin: 6px 0;
+}
+
+.sai-bubble .sai-prose strong {
+  color: #c084fc;
+}
+
+/* ---- TYPING INDICATOR ---- */
+.sai-typing-row {
+  display: flex;
+  gap: 12px;
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.sai-typing-bubble {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 22px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  border-radius: 4px 18px 18px 18px;
+}
+
+.sai-typing-bubble .tdot {
+  width: 7px;
+  height: 7px;
+  background: #a855f7;
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(168,85,247,0.6);
+  animation: sai-bounce 1.4s infinite ease-in-out both;
+}
+
+.sai-typing-bubble .tdot:nth-child(1) { animation-delay: -0.32s; }
+.sai-typing-bubble .tdot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes sai-bounce {
+  0%, 80%, 100% { transform: scale(0.5); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Slow response warning */
+.sai-slow-warning {
+  font-size: 0.7rem;
+  color: rgba(168,85,247,0.6);
+  padding-left: 48px;
+  margin-top: -8px;
+  animation: sai-msg-enter 0.3s ease forwards;
+}
+
+/* ---- INPUT AREA ---- */
+.sai-input-area {
+  padding: 16px 24px 24px;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  z-index: 20;
+  flex-shrink: 0;
+}
+
+.sai-input-wrapper {
+  position: relative;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* Outer glow */
+.sai-input-glow {
+  position: absolute;
+  inset: -3px;
+  border-radius: 30px;
+  background: linear-gradient(90deg, rgba(124,92,252,0.15), rgba(168,85,247,0.1), rgba(124,92,252,0.15));
+  filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+
+.sai-input-wrapper:focus-within .sai-input-glow {
+  opacity: 1;
+}
+
+.sai-input-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 28px;
+  padding: 6px 6px 6px 22px;
+  position: relative;
+  transition: border-color 0.3s;
+}
+
+.sai-input-inner:focus-within {
+  border-color: rgba(124,92,252,0.4);
+}
+
+.sai-input-inner input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 0.92rem;
+  font-family: 'Outfit', sans-serif;
+  outline: none;
+  letter-spacing: 0.3px;
+}
+
+.sai-input-inner input::placeholder {
+  color: rgba(255,255,255,0.2);
+}
+
+.sai-send-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c5cfc, #5a3fd6);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  transition: all 0.25s;
+  box-shadow: 0 4px 15px rgba(124,92,252,0.3);
+  flex-shrink: 0;
 }
 
 .sai-send-btn:hover:not(:disabled) {
-  transform: translateY(-2px) scale(1.05);
+  transform: translateY(-1px) scale(1.05);
   box-shadow: 0 6px 20px rgba(124,92,252,0.5);
 }
 
 .sai-send-btn:disabled {
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.15);
   box-shadow: none;
   cursor: not-allowed;
   transform: none;
 }
 
-/* Mobile */
+/* ---- ROADMAP WIDGET ---- */
+.sai-roadmap-widget {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 380px;
+  width: 100%;
+}
+
+.sai-roadmap-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 16px;
+}
+
+.sai-roadmap-header .icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(124,92,252,0.3), rgba(168,85,247,0.2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sai-roadmap-header .icon .material-symbols-outlined {
+  font-size: 18px;
+  color: #c084fc;
+}
+
+.sai-roadmap-header h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f0ecff;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Timeline */
+.sai-roadmap-timeline {
+  position: relative;
+  padding-left: 20px;
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124,92,252,0.2) transparent;
+}
+
+.sai-roadmap-timeline::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(124,92,252,0.4), rgba(124,92,252,0.05));
+  border-radius: 1px;
+}
+
+.sai-roadmap-stage {
+  position: relative;
+  margin-bottom: 18px;
+}
+
+.sai-roadmap-stage:last-child {
+  margin-bottom: 0;
+}
+
+.sai-roadmap-stage .dot {
+  position: absolute;
+  left: -18px;
+  top: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #a855f7;
+  box-shadow: 0 0 8px rgba(168,85,247,0.6);
+}
+
+.sai-roadmap-stage .stage-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #e0d4ff;
+  margin-bottom: 8px;
+}
+
+.sai-roadmap-lesson {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  color: #c8c8d0;
+  transition: all 0.2s;
+}
+
+.sai-roadmap-lesson:hover {
+  background: rgba(124,92,252,0.08);
+  border-color: rgba(124,92,252,0.15);
+}
+
+.sai-roadmap-lesson.completed {
+  color: rgba(255,255,255,0.35);
+  text-decoration: line-through;
+}
+
+.sai-roadmap-lesson .check-icon {
+  font-size: 14px;
+  color: #22c55e;
+}
+
+.sai-roadmap-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin-top: 16px;
+}
+
+.sai-roadmap-footer span {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Error state */
+.sai-roadmap-error {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 16px 20px;
+  max-width: 380px;
+}
+
+.sai-roadmap-error .error-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #f87171;
+  margin-bottom: 12px;
+}
+
+.sai-retry-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(124,92,252,0.15);
+  border: 1px solid rgba(124,92,252,0.3);
+  color: #c084fc;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sai-retry-btn:hover {
+  background: rgba(124,92,252,0.25);
+}
+
+/* ---- WIDGET SHARED ---- */
+.sai-widget {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+/* ---- MOBILE ---- */
 @media (max-width: 768px) {
-  .sai-chat-avatar { height: 28vh; }
+  .sai-header { padding: 12px 16px; }
+  .sai-messages { padding: 16px; gap: 14px; }
+  .sai-msg-row { max-width: 92%; }
   .sai-input-area { padding: 12px 16px 20px; }
-  .sai-messages { padding: 16px; }
+  .sai-avatar { width: 30px; height: 30px; }
+  .sai-avatar .material-symbols-outlined { font-size: 15px; }
+  .sai-bubble { padding: 12px 14px; font-size: 0.87rem; }
+  .sai-roadmap-widget { max-width: 100%; }
 }

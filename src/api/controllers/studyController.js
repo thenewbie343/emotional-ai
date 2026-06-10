@@ -50,32 +50,48 @@ exports.generateCustomRoadmap = async (req, res) => {
   if (!userId || !topic) return res.status(400).json({ error: "Missing userId or topic" });
 
   try {
-    const systemPrompt = `You are SAI, a PREMIUM, STRICT, and HIGHLY DEMANDING study coach and curriculum planner. Generate a highly structured, logical, multi-stage learning roadmap/syllabus for the topic requested by the user. 
-You MUST respond with a raw JSON array of stages only. Do not wrap in markdown code blocks like \`\`\`json. Your response must be parsed directly with JSON.parse.
-Each item in the array must be an object representing a stage:
-{
-  "stage": "Stage name (e.g. 1. Fundamentals of Physics)",
-  "lessons": [
-    {"name": "Lesson title (e.g. Newton's First Law)", "completed": false},
-    {"name": "Lesson title (e.g. Friction and Gravity)", "completed": false}
-  ]
-}
-Generate exactly 4-5 stages with 2-3 lessons each. Make the lessons progressive, clear, and comprehensive. Hold the student to the highest standard.`;
+    const systemPrompt = `You are SAI, a strict and demanding study coach. Generate a structured learning roadmap for the requested topic.
+CRITICAL: Respond ONLY with a raw JSON array. No markdown, no code blocks, no explanation text before or after the JSON.
+Each item must be: {"stage": "Stage Name", "lessons": [{"name": "Lesson Name", "completed": false}]}
+Generate exactly 4-5 stages with 2-3 lessons each. Make lessons progressive and comprehensive.`;
 
     const messages = [{ role: "user", content: `Generate a syllabus for: ${topic}` }];
     const aiText = await generateAiResponse("curious", messages, systemPrompt, "sai");
     
     if (!aiText) {
-      throw new Error("AI providers are currently unavailable or rate limited. Please check your API keys or try again later.");
+      return res.status(503).json({ error: "AI providers are currently unavailable. Please check your API keys on the server." });
     }
 
-    // Clean response of potential markdown wrapping
+    // Robust JSON extraction — handle all common AI output formats
+    let syllabus = null;
     let cleanedText = aiText.trim();
-    if (cleanedText.startsWith("```")) {
-      cleanedText = cleanedText.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
+
+    // Strip markdown code fences (```json ... ``` or ``` ... ```)
+    cleanedText = cleanedText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+
+    // Strip any leading text before the first [
+    const firstBracket = cleanedText.indexOf('[');
+    if (firstBracket > 0) {
+      cleanedText = cleanedText.substring(firstBracket);
     }
 
-    const syllabus = JSON.parse(cleanedText);
+    // Strip any trailing text after the last ]
+    const lastBracket = cleanedText.lastIndexOf(']');
+    if (lastBracket > 0 && lastBracket < cleanedText.length - 1) {
+      cleanedText = cleanedText.substring(0, lastBracket + 1);
+    }
+
+    try {
+      syllabus = JSON.parse(cleanedText);
+    } catch (parseErr) {
+      console.error("[Roadmap] JSON parse failed. Raw text:", aiText.substring(0, 500));
+      return res.status(500).json({ error: "AI returned an invalid format. Please try again — the model sometimes adds extra text." });
+    }
+
+    // Validate structure
+    if (!Array.isArray(syllabus) || syllabus.length === 0) {
+      return res.status(500).json({ error: "AI returned an empty or non-array roadmap. Please try again." });
+    }
 
     // Save to DB
     const { data, error } = await supabase

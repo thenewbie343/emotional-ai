@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, memo } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useSubscription } from '../hooks/useSubscription';
@@ -6,10 +6,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import StudySidebar from '../components/StudySidebar';
 import QuizModal from '../components/QuizModal';
 import ReactMarkdown from 'react-markdown';
+import './SaiChat.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
 
-// --- WIDGETS ---
+// ============================================
+// WIDGETS
+// ============================================
 
 const PomodoroWidget = ({ onComplete }) => {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -19,9 +22,7 @@ const PomodoroWidget = ({ onComplete }) => {
   useEffect(() => {
     let interval;
     if (isActive && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
+      interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
     } else if (timeLeft === 0 && !isDone) {
       setIsActive(false);
       setIsDone(true);
@@ -35,19 +36,21 @@ const PomodoroWidget = ({ onComplete }) => {
   const secs = (timeLeft % 60).toString().padStart(2, '0');
 
   return (
-    <div className="bg-[#1a0b2e] border border-purple-500/30 rounded-2xl p-6 w-64 shadow-2xl flex flex-col items-center my-2">
-      <div className="text-purple-300 text-xs font-semibold uppercase tracking-widest mb-2 flex items-center gap-2">
-        <span className="material-symbols-outlined text-[16px]">timer</span>
+    <div className="sai-widget" style={{ width: 260, textAlign: 'center' }}>
+      <div style={{ fontSize: '0.7rem', color: '#c084fc', textTransform: 'uppercase', letterSpacing: 3, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 15 }}>timer</span>
         Focus Session
       </div>
-      <div className="text-5xl font-light text-white mb-6 font-mono tracking-wider">
+      <div style={{ fontSize: '2.8rem', fontWeight: 300, color: 'white', fontFamily: 'monospace', letterSpacing: 4, marginBottom: 20 }}>
         {mins}:{secs}
       </div>
       {isDone ? (
-        <div className="text-green-400 text-sm font-bold bg-green-400/10 px-4 py-2 rounded-full border border-green-500/30 shadow-[0_0_10px_rgba(74,222,128,0.2)]">Session Complete! +15 XP</div>
+        <div style={{ color: '#22c55e', fontSize: '0.82rem', fontWeight: 600, background: 'rgba(34,197,94,0.1)', padding: '8px 16px', borderRadius: 20, border: '1px solid rgba(34,197,94,0.2)' }}>
+          Session Complete! +15 XP
+        </div>
       ) : (
-        <button onClick={toggle} className="w-full py-3 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold transition-all shadow-[0_0_15px_rgba(168,85,247,0.4)] flex items-center justify-center gap-2">
-          <span className="material-symbols-outlined text-[18px]">{isActive ? 'pause' : 'play_arrow'}</span>
+        <button onClick={toggle} style={{ width: '100%', padding: '12px 0', borderRadius: 20, background: 'linear-gradient(135deg, #7c5cfc, #5a3fd6)', border: 'none', color: 'white', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(124,92,252,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 17 }}>{isActive ? 'pause' : 'play_arrow'}</span>
           {isActive ? 'Pause' : 'Start Focus'}
         </button>
       )}
@@ -79,43 +82,43 @@ const HeatmapWidget = ({ userId }) => {
   }, [userId]);
 
   if (loading) return (
-    <div className="bg-[#1a0b2e] border border-purple-500/30 rounded-2xl p-6 shadow-2xl flex items-center gap-4 my-2">
-       <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-       <span className="text-purple-300 text-sm">Loading activity data...</span>
+    <div className="sai-widget" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ width: 18, height: 18, border: '2px solid #7c5cfc', borderTopColor: 'transparent', borderRadius: '50%', animation: 'sai-bounce 1s linear infinite' }} />
+      <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>Loading activity data...</span>
     </div>
   );
 
-  const days = Array.from({length: 28}).map((_, i) => {
+  const days = Array.from({ length: 28 }).map((_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (27 - i));
     return d.toISOString().split('T')[0];
   });
 
   return (
-    <div className="bg-[#1a0b2e] border border-purple-500/30 rounded-2xl p-5 w-full max-w-sm shadow-2xl my-2">
-      <div className="flex items-center gap-2 mb-4 border-b border-white/5 pb-2">
-        <span className="material-symbols-outlined text-purple-400 text-[18px]">calendar_month</span>
-        <div className="text-gray-200 text-sm font-semibold tracking-wide">Activity Heatmap (28 Days)</div>
+    <div className="sai-widget" style={{ maxWidth: 340 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 17, color: '#c084fc' }}>calendar_month</span>
+        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#e2e8f0' }}>Activity Heatmap (28 Days)</span>
       </div>
-      <div className="grid grid-cols-7 gap-1.5">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
         {days.map(date => {
           const val = data?.[date] || 0;
-          let color = 'bg-white/5 border-white/5';
-          if (val > 0) color = 'bg-purple-900/60 border-purple-800/50';
-          if (val >= 25) color = 'bg-purple-700/80 border-purple-600/50';
-          if (val >= 60) color = 'bg-purple-500 border-purple-400/50 shadow-[0_0_10px_rgba(168,85,247,0.5)]';
+          let bg = 'rgba(255,255,255,0.03)';
+          if (val > 0) bg = 'rgba(168,85,247,0.2)';
+          if (val >= 25) bg = 'rgba(168,85,247,0.5)';
+          if (val >= 60) bg = 'rgba(168,85,247,0.8)';
           return (
-            <div key={date} className="flex flex-col items-center">
-              <div className={`w-full aspect-square rounded-[4px] border ${color} transition-all hover:scale-110`} title={`${date}: ${val} mins`} />
-            </div>
+            <div key={date} style={{ aspectRatio: 1, borderRadius: 3, background: bg, transition: 'all 0.2s', cursor: 'default' }} title={`${date}: ${val} mins`} />
           );
         })}
       </div>
-      <div className="flex items-center justify-end gap-2 mt-4 text-[10px] text-gray-400">
-        Less <div className="w-2.5 h-2.5 rounded-[2px] bg-white/5"></div>
-        <div className="w-2.5 h-2.5 rounded-[2px] bg-purple-900/60"></div>
-        <div className="w-2.5 h-2.5 rounded-[2px] bg-purple-700/80"></div>
-        <div className="w-2.5 h-2.5 rounded-[2px] bg-purple-500"></div> More
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginTop: 12, fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)' }}>
+        Less
+        <div style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(255,255,255,0.03)' }} />
+        <div style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(168,85,247,0.2)' }} />
+        <div style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(168,85,247,0.5)' }} />
+        <div style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(168,85,247,0.8)' }} />
+        More
       </div>
     </div>
   );
@@ -124,117 +127,145 @@ const HeatmapWidget = ({ userId }) => {
 const RoadmapWidget = ({ topic, userId, onRoadmapCreated }) => {
   const [roadmap, setRoadmap] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const generate = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/study/roadmap/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, topic })
-        });
-        const data = await res.json();
+  const generate = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/study/roadmap/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, topic }),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined
+      });
+      const data = await res.json();
+      if (data.error) {
+        setError(data.error);
+      } else {
+        // Handle syllabus as string edge case
+        if (data.syllabus && typeof data.syllabus === 'string') {
+          try { data.syllabus = JSON.parse(data.syllabus); } catch(e) { /* keep as-is */ }
+        }
         setRoadmap(data);
         if (onRoadmapCreated) onRoadmapCreated(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
       }
-    };
-    generate();
-  }, [topic, userId]);
+    } catch (err) {
+      setError(err.name === 'TimeoutError' ? 'Request timed out. SAI API keys may not be configured on the server.' : err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [topic, userId, onRoadmapCreated]);
+
+  useEffect(() => { generate(); }, [generate]);
 
   if (loading) return (
-    <div className="bg-[#1a0b2e] border border-purple-500/30 rounded-2xl p-6 shadow-2xl flex items-center gap-4 my-2">
-      <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-      <span className="text-purple-300 text-sm">SAI is designing a curriculum for "{topic}"...</span>
+    <div className="sai-widget" style={{ display: 'flex', alignItems: 'center', gap: 12, maxWidth: 380 }}>
+      <div style={{ width: 20, height: 20, border: '2px solid #7c5cfc', borderTopColor: 'transparent', borderRadius: '50%', animation: 'sai-bounce 1s linear infinite', flexShrink: 0 }} />
+      <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>SAI is designing a curriculum for "{topic}"...</span>
     </div>
   );
 
-  if (!roadmap || roadmap.error) return (
-    <div className="bg-[#1a0b2e] border border-red-500/30 rounded-2xl p-4 shadow-xl my-2">
-      <span className="text-red-400 text-sm flex items-center gap-2">
-        <span className="material-symbols-outlined">error</span> 
-        {typeof roadmap?.error === 'string' ? roadmap.error : "Failed to generate roadmap."}
-      </span>
+  if (error || !roadmap) return (
+    <div className="sai-roadmap-error">
+      <div className="error-text">
+        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>error</span>
+        {error || "Failed to generate roadmap."}
+      </div>
+      <button className="sai-retry-btn" onClick={generate}>
+        <span className="material-symbols-outlined" style={{ fontSize: 14, verticalAlign: -2 }}>refresh</span> Retry
+      </button>
     </div>
   );
+
+  const syllabus = Array.isArray(roadmap.syllabus) ? roadmap.syllabus : [];
 
   return (
-    <div className="bg-[#1a0b2e] border border-purple-500/30 rounded-2xl p-5 shadow-2xl max-w-md w-full my-2">
-      <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-3">
-        <span className="material-symbols-outlined text-purple-400">account_tree</span>
-        <h3 className="text-white font-semibold text-lg truncate" title={roadmap.topic}>{roadmap.topic} Syllabus</h3>
+    <div className="sai-roadmap-widget">
+      <div className="sai-roadmap-header">
+        <div className="icon">
+          <span className="material-symbols-outlined">account_tree</span>
+        </div>
+        <h3 title={roadmap.topic}>{roadmap.topic} Syllabus</h3>
       </div>
-      <div className="space-y-4 max-h-64 overflow-y-auto no-scrollbar pr-2 relative">
-        <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-purple-500/20"></div>
-        {Array.isArray(roadmap.syllabus) ? roadmap.syllabus.map((stage, idx) => (
-          <div key={idx} className="relative pl-6">
-            <div className="absolute left-[3px] top-1.5 w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.8)]"></div>
-            <h4 className="text-sm font-bold text-white mb-2">{stage.stage}</h4>
-            <div className="space-y-2">
+
+      {syllabus.length > 0 ? (
+        <div className="sai-roadmap-timeline">
+          {syllabus.map((stage, idx) => (
+            <div key={idx} className="sai-roadmap-stage">
+              <div className="dot" />
+              <div className="stage-title">{stage.stage}</div>
               {Array.isArray(stage.lessons) && stage.lessons.map((lesson, lIdx) => (
-                <div key={lIdx} className="bg-white/5 border border-white/10 rounded-lg p-2 text-xs flex justify-between items-center group">
-                  <span className={lesson.completed ? "text-gray-500 line-through" : "text-gray-300"}>{lesson.name}</span>
-                  {lesson.completed && <span className="material-symbols-outlined text-green-400 text-[14px]">check_circle</span>}
+                <div key={lIdx} className={`sai-roadmap-lesson ${lesson.completed ? 'completed' : ''}`}>
+                  {lesson.completed && <span className="material-symbols-outlined check-icon">check_circle</span>}
+                  <span>{lesson.name}</span>
                 </div>
               ))}
             </div>
-          </div>
-        )) : <div className="text-red-400 text-sm">Invalid syllabus format. Please generate again.</div>}
-      </div>
-      <div className="mt-5 pt-3 border-t border-white/5 flex justify-between items-center">
-        <span className="text-[10px] text-gray-500 tracking-wider uppercase">Saved to Study Portal</span>
-        <button className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold transition-colors shadow-[0_0_10px_rgba(168,85,247,0.3)]">
-          View Details
-        </button>
+          ))}
+        </div>
+      ) : (
+        <div style={{ color: '#f87171', fontSize: '0.82rem', padding: '8px 0' }}>
+          Invalid syllabus format.
+          <button className="sai-retry-btn" onClick={generate} style={{ marginLeft: 10 }}>Regenerate</button>
+        </div>
+      )}
+
+      <div className="sai-roadmap-footer">
+        <span>Saved to Study Portal</span>
       </div>
     </div>
   );
 };
+
+// ============================================
+// MAIN CHAT COMPONENT
+// ============================================
 
 export default function SaiChat({ session }) {
   const navigate = useNavigate();
   const { isPremium } = useSubscription(session);
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [slowWarning, setSlowWarning] = useState(false);
   const [inputText, setInputText] = useState('');
-  
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeRoadmap, setActiveRoadmap] = useState(null);
   const [roadmaps, setRoadmaps] = useState([]);
   const [activeQuizLesson, setActiveQuizLesson] = useState(null);
-  
+
   const messagesEndRef = useRef(null);
+  const slowTimerRef = useRef(null);
   const userId = session?.user?.id;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
+  useEffect(() => { scrollToBottom(); }, [messages, isTyping]);
 
   useEffect(() => {
     if (!userId) return;
     const loadData = async () => {
       const { data: msgs } = await supabase.from('messages').select('*').eq('user_id', userId).eq('source', 'sai').order('created_at', { ascending: true });
       if (msgs && msgs.length > 0) {
-        // Parse complex messages if any
         const parsedMsgs = msgs.map(m => {
           try {
             if (m.text.startsWith('WIDGET:')) {
               const widgetData = JSON.parse(m.text.replace('WIDGET:', ''));
               return { ...m, ...widgetData };
             }
-          } catch(e) {}
+          } catch (e) { /* ignore */ }
           return m;
         });
         setMessages(parsedMsgs);
       } else {
-        setMessages([{ id: 'initial', text: "Welcome to your study hub. I'm SAI. Tell me what you want to learn, or say 'start pomodoro' to begin a focus session.", sender: 'ai' }]);
+        setMessages([{
+          id: 'initial',
+          text: "Welcome to your study hub. I'm SAI — your strict, no-nonsense study coach.\n\nTry these commands:\n- **\"make a roadmap of [topic]\"** — I'll build a full curriculum\n- **\"start pomodoro\"** — launch a 25-min focus timer\n- **\"show my activity\"** — see your study heatmap\n\nOr just ask me anything. Let's get to work.",
+          sender: 'ai'
+        }]);
       }
     };
     loadData();
@@ -250,9 +281,9 @@ export default function SaiChat({ session }) {
         body: JSON.stringify({ userId })
       });
       const data = await res.json();
-      setRoadmaps(data);
-      if (data && data.length > 0 && !activeRoadmap) {
-        setActiveRoadmap(data[0]);
+      if (Array.isArray(data)) {
+        setRoadmaps(data);
+        if (data.length > 0 && !activeRoadmap) setActiveRoadmap(data[0]);
       }
     } catch (err) {
       console.error(err);
@@ -267,7 +298,7 @@ export default function SaiChat({ session }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, durationMins })
       });
-    } catch(err) {
+    } catch (err) {
       console.error(err);
     }
   };
@@ -297,79 +328,97 @@ export default function SaiChat({ session }) {
     const text = inputText;
     const lowerText = text.toLowerCase();
     setInputText('');
-    
+
     const userMsg = { id: Date.now(), text, sender: 'user' };
     setMessages(prev => [...prev, userMsg]);
     supabase.from('messages').insert([{ user_id: userId, text, sender: 'user', source: 'sai' }]).then();
 
-    // WIDGET INTERCEPTORS
-    if (lowerText.includes('roadmap of') || lowerText.match(/make.*roadmap.*for/)) {
+    // WIDGET INTERCEPTORS — no setIsTyping needed here
+    if (lowerText.includes('roadmap of') || lowerText.match(/make.*roadmap.*for/) || lowerText.match(/roadmap.*for/)) {
       let topic = 'Unknown Topic';
       const m1 = lowerText.match(/roadmap of\s+(.+)/);
       const m2 = lowerText.match(/roadmap for\s+(.+)/);
+      const m3 = lowerText.match(/roadmap\s+(.+)/);
       if (m1) topic = m1[1];
       else if (m2) topic = m2[1];
-      
+      else if (m3) topic = m3[1];
+      // Capitalize first letter
+      topic = topic.charAt(0).toUpperCase() + topic.slice(1);
+
       const widgetMsg = { id: Date.now() + 1, type: 'roadmap', topic, sender: 'ai' };
       setMessages(prev => [...prev, widgetMsg]);
-      supabase.from('messages').insert([{ user_id: userId, text: `WIDGET:${JSON.stringify({type:'roadmap', topic})}`, sender: 'ai', source: 'sai' }]).then();
-      return;
-    }
-    
-    if (lowerText.includes('start pomodoro') || lowerText.includes('start timer')) {
-      const widgetMsg = { id: Date.now() + 1, type: 'pomodoro', sender: 'ai' };
-      setMessages(prev => [...prev, widgetMsg]);
-      supabase.from('messages').insert([{ user_id: userId, text: `WIDGET:${JSON.stringify({type:'pomodoro'})}`, sender: 'ai', source: 'sai' }]).then();
+      supabase.from('messages').insert([{ user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'roadmap', topic })}`, sender: 'ai', source: 'sai' }]).then();
       return;
     }
 
-    if (lowerText.includes('heatmap') || lowerText.includes('less studied') || lowerText.includes('my activity') || lowerText.includes('my work')) {
+    if (lowerText.includes('start pomodoro') || lowerText.includes('start timer') || lowerText.includes('focus session')) {
+      const widgetMsg = { id: Date.now() + 1, type: 'pomodoro', sender: 'ai' };
+      setMessages(prev => [...prev, widgetMsg]);
+      supabase.from('messages').insert([{ user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'pomodoro' })}`, sender: 'ai', source: 'sai' }]).then();
+      return;
+    }
+
+    if (lowerText.includes('heatmap') || lowerText.includes('less studied') || lowerText.includes('my activity') || lowerText.includes('my work') || lowerText.includes('show activity')) {
       const widgetMsg = { id: Date.now() + 1, type: 'heatmap', sender: 'ai' };
       setMessages(prev => [...prev, widgetMsg]);
-      supabase.from('messages').insert([{ user_id: userId, text: `WIDGET:${JSON.stringify({type:'heatmap'})}`, sender: 'ai', source: 'sai' }]).then();
+      supabase.from('messages').insert([{ user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'heatmap' })}`, sender: 'ai', source: 'sai' }]).then();
       return;
     }
 
     // NORMAL AI RESPONSE
     setIsTyping(true);
+    setSlowWarning(false);
+
+    // Show "taking longer than usual" after 8 seconds
+    slowTimerRef.current = setTimeout(() => setSlowWarning(true), 8000);
+
     try {
       const apiRes = await fetch(`${API_BASE}/api/ai/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [...messages, userMsg].filter(m => !m.type).map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text })),
+          messages: [...messages, userMsg].filter(m => !m.type).slice(-10).map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text })),
           emotion: 'default',
           companion: 'sai',
           userEmail: session?.user?.email,
           userId: userId
         }),
-        signal: AbortSignal.timeout ? AbortSignal.timeout(45000) : undefined
+        signal: AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined
       });
-      
+
       if (apiRes.ok) {
         const aiData = await apiRes.json();
-        const aiReply = { id: Date.now() + 1, text: aiData.text, sender: 'ai' };
+        const aiReply = { id: Date.now() + 1, text: aiData.text || "I couldn't generate a response.", sender: 'ai' };
         setMessages(prev => [...prev, aiReply]);
         supabase.from('messages').insert([{ user_id: userId, text: aiReply.text, sender: 'ai', source: 'sai' }]).then();
       } else {
-        const aiReply = { id: Date.now() + 1, text: "I'm having trouble connecting to my logic core right now.", sender: 'ai' };
+        const errText = await apiRes.text().catch(() => '');
+        const aiReply = { id: Date.now() + 1, text: `⚠️ Server error (${apiRes.status}). ${errText ? errText.slice(0, 100) : 'Please try again.'}`, sender: 'ai' };
         setMessages(prev => [...prev, aiReply]);
       }
     } catch (err) {
-      const aiReply = { id: Date.now() + 1, text: "Connection error.", sender: 'ai' };
+      const isTimeout = err.name === 'TimeoutError' || err.name === 'AbortError';
+      const aiReply = {
+        id: Date.now() + 1,
+        text: isTimeout
+          ? "⏱ Request timed out — the server took too long. This usually means the AI provider is slow or SAI's API keys aren't configured on the server."
+          : `Connection error: ${err.message}`,
+        sender: 'ai'
+      };
       setMessages(prev => [...prev, aiReply]);
     } finally {
+      clearTimeout(slowTimerRef.current);
       setIsTyping(false);
+      setSlowWarning(false);
     }
   };
 
   const handleStartLesson = (lessonName) => {
     setIsSidebarOpen(false);
     setInputText(`Explain to me what is ${lessonName}`);
-    // Delay submission slightly to allow state to settle
     setTimeout(() => {
       const form = document.getElementById("sai-chat-form");
-      if(form) form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+      if (form) form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
     }, 100);
   };
 
@@ -378,117 +427,101 @@ export default function SaiChat({ session }) {
     setActiveQuizLesson(lessonName);
   };
 
+  // ============================================
+  // RENDER
+  // ============================================
+
   return (
-    <div className="flex flex-col h-screen bg-[#05010a] text-white font-sans selection:bg-purple-500/30 overflow-hidden relative">
-      
-      {/* Background ambient light */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-purple-900/20 blur-[120px] rounded-full pointer-events-none z-0"></div>
+    <div className="sai-chat-page">
 
       {/* Header */}
-      <header className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-white/5 bg-[#090514]/80 backdrop-blur-xl z-20 shadow-lg">
-        <div className="flex items-center gap-4">
-          <Link to="/sai" className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors shadow-[0_0_15px_rgba(168,85,247,0.15)] group">
-            <span className="material-symbols-outlined text-purple-300 text-[20px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+      <header className="sai-header">
+        <div className="sai-header-left">
+          <Link to="/sai" className="sai-back-btn">
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
           </Link>
-          <div className="flex flex-col">
-            <h1 className="text-xl font-semibold tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-indigo-300">
-              SAI Intelligence
-            </h1>
-            <span className="text-[10px] uppercase tracking-widest text-purple-400/80 font-mono flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(168,85,247,0.8)]"></span>
+          <div>
+            <div className="sai-header-title">SAI</div>
+            <div className="sai-header-status">
+              <span className="sai-status-dot" />
               Study Protocol Active
-            </span>
+            </div>
           </div>
         </div>
-        <button 
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="w-10 h-10 rounded-full bg-purple-600/20 border border-purple-500/30 flex items-center justify-center hover:bg-purple-600/40 transition-colors shadow-[0_0_15px_rgba(168,85,247,0.2)]"
-          title="Open Study Portal"
-        >
-          <span className="material-symbols-outlined text-purple-300">menu_book</span>
+        <button className="sai-sidebar-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)} title="Study Portal">
+          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>menu_book</span>
         </button>
       </header>
 
-      {/* Chat Area */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth z-10">
-        <AnimatePresence>
-          {messages.map((msg) => (
-            <motion.div 
-              key={msg.id}
-              initial={{ opacity: 0, y: 15, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 20 }}
-              className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              {msg.sender === 'ai' && (
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center mr-3 mt-1 flex-shrink-0 shadow-[0_0_15px_rgba(168,85,247,0.5)] border border-purple-400/50">
-                  <span className="material-symbols-outlined text-[16px] md:text-[20px] text-white">psychology</span>
+      {/* Messages */}
+      <div className="sai-messages">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`sai-msg-row ${msg.sender}`}>
+            {msg.sender === 'ai' && (
+              <div className="sai-avatar">
+                <span className="material-symbols-outlined">psychology</span>
+              </div>
+            )}
+            <div>
+              {msg.type === 'pomodoro' ? (
+                <PomodoroWidget onComplete={handleLogPomodoro} />
+              ) : msg.type === 'roadmap' ? (
+                <RoadmapWidget topic={msg.topic} userId={userId} onRoadmapCreated={(r) => { fetchRoadmaps(); setActiveRoadmap(r); }} />
+              ) : msg.type === 'heatmap' ? (
+                <HeatmapWidget userId={userId} />
+              ) : (
+                <div className={`sai-bubble ${msg.sender}`}>
+                  <div className="sai-prose">
+                    <ReactMarkdown>{msg.text || ''}</ReactMarkdown>
+                  </div>
                 </div>
               )}
-              
-              <div className={`max-w-[90%] md:max-w-[75%]`}>
-                {msg.type === 'pomodoro' ? (
-                  <PomodoroWidget onComplete={handleLogPomodoro} />
-                ) : msg.type === 'roadmap' ? (
-                  <RoadmapWidget topic={msg.topic} userId={userId} onRoadmapCreated={(r) => {
-                    fetchRoadmaps();
-                    setActiveRoadmap(r);
-                  }} />
-                ) : msg.type === 'heatmap' ? (
-                  <HeatmapWidget userId={userId} />
-                ) : (
-                  <div className={`p-4 md:p-5 rounded-2xl ${msg.sender === 'user' 
-                    ? 'bg-gradient-to-br from-purple-600/30 to-indigo-600/30 border border-purple-500/40 text-purple-50 rounded-tr-sm shadow-[0_5px_20px_rgba(168,85,247,0.15)] backdrop-blur-md' 
-                    : 'bg-[#150a26]/90 border border-white/10 text-gray-200 rounded-tl-sm shadow-[0_5px_20px_rgba(0,0,0,0.3)] backdrop-blur-md'}`}>
-                    <div className="prose prose-invert prose-p:leading-relaxed prose-pre:bg-black/60 prose-pre:border prose-pre:border-white/10 prose-purple max-w-none text-[14px] md:text-[15px]">
-                      <ReactMarkdown>{msg.text || ''}</ReactMarkdown>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          ))}
-          
-          {isTyping && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
-               <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center mr-3 mt-1 flex-shrink-0 shadow-[0_0_15px_rgba(168,85,247,0.5)] border border-purple-400/50">
-                  <span className="material-symbols-outlined text-[16px] md:text-[20px] text-white">psychology</span>
-                </div>
-              <div className="bg-[#150a26]/90 border border-white/10 p-4 md:p-5 rounded-2xl rounded-tl-sm flex items-center gap-2 backdrop-blur-md">
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-bounce shadow-[0_0_5px_rgba(168,85,247,0.8)]"></span>
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-bounce shadow-[0_0_5px_rgba(168,85,247,0.8)]" style={{animationDelay: '0.2s'}}></span>
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-bounce shadow-[0_0_5px_rgba(168,85,247,0.8)]" style={{animationDelay: '0.4s'}}></span>
-              </div>
-            </motion.div>
-          )}
-          <div ref={messagesEndRef} className="h-4" />
-        </AnimatePresence>
-      </main>
+            </div>
+          </div>
+        ))}
 
-      {/* Input Area */}
-      <div className="p-4 bg-[#090514]/90 border-t border-white/5 backdrop-blur-xl z-20 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-        <form id="sai-chat-form" onSubmit={processMessage} className="max-w-4xl mx-auto relative group">
-          <div className="absolute -inset-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
-          <div className="relative flex items-center bg-[#110820] border border-purple-500/40 rounded-full p-2 pl-6 shadow-2xl">
+        {/* Typing Indicator */}
+        {isTyping && (
+          <div className="sai-typing-row">
+            <div className="sai-avatar">
+              <span className="material-symbols-outlined">psychology</span>
+            </div>
+            <div className="sai-typing-bubble">
+              <span className="tdot" />
+              <span className="tdot" />
+              <span className="tdot" />
+            </div>
+          </div>
+        )}
+
+        {/* Slow warning */}
+        {isTyping && slowWarning && (
+          <div className="sai-slow-warning">Taking longer than usual — server may be waking up...</div>
+        )}
+
+        <div ref={messagesEndRef} style={{ height: 16 }} />
+      </div>
+
+      {/* Input */}
+      <div className="sai-input-area">
+        <form id="sai-chat-form" onSubmit={processMessage} className="sai-input-wrapper">
+          <div className="sai-input-glow" />
+          <div className="sai-input-inner">
             <input
               type="text"
-              placeholder={activeRoadmap ? `Ask SAI about: ${activeRoadmap.topic} (or say 'start pomodoro')` : "Message SAI..."}
+              placeholder={activeRoadmap ? `Ask SAI about: ${activeRoadmap.topic}` : "Message SAI..."}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              className="flex-1 bg-transparent text-white placeholder:text-purple-300/40 focus:outline-none tracking-wide text-sm md:text-base font-light"
+              autoComplete="off"
             />
-            <button 
-              type="submit" 
-              disabled={!inputText.trim() && !isTyping}
-              className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(168,85,247,0.5)] flex-shrink-0"
-            >
-              <span className="material-symbols-outlined text-[20px]">send</span>
+            <button type="submit" className="sai-send-btn" disabled={!inputText.trim()}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>send</span>
             </button>
           </div>
         </form>
       </div>
 
-      {/* Sidebar Overlay */}
+      {/* Sidebar */}
       <AnimatePresence>
         {isSidebarOpen && (
           <motion.div
@@ -512,15 +545,12 @@ export default function SaiChat({ session }) {
         )}
       </AnimatePresence>
 
-      {/* Quiz Modal Overlay */}
+      {/* Quiz Modal */}
       {activeQuizLesson && (
         <QuizModal
           session={session}
           lessonName={activeQuizLesson}
-          onClose={() => {
-            setActiveQuizLesson(null);
-            fetchRoadmaps();
-          }}
+          onClose={() => { setActiveQuizLesson(null); fetchRoadmaps(); }}
         />
       )}
     </div>
