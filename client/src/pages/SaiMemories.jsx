@@ -204,6 +204,20 @@ export default function SaiMemories({ session }) {
   const { scrollYProgress } = useScroll();
   const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
 
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    const load = async () => {
+      const { data } = await supabase.from('sai_memories').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
+      if (data) setMemories(data);
+      setLoading(false);
+    };
+    load();
+  }, [session]);
+
+  // Deep Parallax Y offsets for foreground/background elements
+  const foregroundY = useTransform(smoothProgress, [0, 1], ["0%", "-200%"]);
+  const backgroundY = useTransform(smoothProgress, [0, 1], ["0%", "50%"]);
+
   if (subLoading) return <div className="h-screen w-screen bg-[#05010a] flex items-center justify-center text-gray-500">Authenticating...</div>;
 
   if (!isPremium) {
@@ -223,20 +237,6 @@ export default function SaiMemories({ session }) {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (!session?.user?.id) return;
-    const load = async () => {
-      const { data } = await supabase.from('sai_memories').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
-      if (data) setMemories(data);
-      setLoading(false);
-    };
-    load();
-  }, [session]);
-
-  // Deep Parallax Y offsets for foreground/background elements
-  const foregroundY = useTransform(smoothProgress, [0, 1], ["0%", "-200%"]);
-  const backgroundY = useTransform(smoothProgress, [0, 1], ["0%", "50%"]);
 
   return (
     <div className="h-[300vh] w-screen bg-[#05010a] text-white overflow-x-hidden relative selection:bg-purple-500/30 font-sans">
