@@ -134,8 +134,13 @@ export default function SaiDiary({ session }) {
 
   const handleDeleteEntry = async (id) => {
     try {
-      const { error } = await supabase.from('sai_diary').delete().eq('id', id);
-      if (!error) {
+      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      const res = await fetch(`${API_BASE}/api/study/delete-record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'sai_diary', match: { id: id } })
+      });
+      if (res.ok) {
         setEntries(prev => prev.filter(e => e.id !== id));
         setSelected(null);
       }
