@@ -203,6 +203,26 @@ exports.updateLessonStatus = async (req, res) => {
   }
 };
 
+exports.updateTimetableSchedule = async (req, res) => {
+  const { userId, timetableId, schedule } = req.body;
+  if (!userId || !timetableId || !schedule) return res.status(400).json({ error: "Missing fields" });
+
+  try {
+    const { data, error } = await supabase
+      .from("sai_timetables")
+      .update({ schedule })
+      .eq("id", timetableId)
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // 5. Manage Tasks
 exports.createTask = async (req, res) => {
   const { userId, taskName, scheduledDate } = req.body;

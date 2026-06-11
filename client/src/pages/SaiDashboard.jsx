@@ -1082,7 +1082,7 @@ export default function SaiDashboard({ session }) {
       {/* ── 5. POMODORO OVERLAY MODAL ─────────────────────────────────────── */}
       {activeSlot && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#121214] border border-white/10 rounded-3xl p-8 max-w-lg w-full relative shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#121214] border border-white/10 rounded-3xl p-8 max-w-lg w-full relative shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto companion-scrollbar">
             <button
               onClick={() => setActiveSlot(null)}
               className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"

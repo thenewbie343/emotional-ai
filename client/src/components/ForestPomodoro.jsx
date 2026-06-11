@@ -310,23 +310,34 @@ export default function ForestPomodoro({ userId, onComplete, presetSubject, pres
                 <option value="History">History (Pillar)</option>
               </select>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input 
-                type="number"
-                value={durationVal}
-                onChange={e => setDurationVal(e.target.value)}
-                min="1"
-                style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '8px 12px', borderRadius: 12, outline: 'none', fontSize: '0.85rem' }}
-              />
-              <select 
-                value={timeUnit} 
-                onChange={(e) => setTimeUnit(e.target.value)}
-                style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '8px 12px', borderRadius: 12, outline: 'none', fontSize: '0.85rem' }}
-              >
-                <option value="Minutes">Minutes</option>
-                <option value="Hours">Hours</option>
-                <option value="Seconds">Seconds</option>
-              </select>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1, position: 'relative' }}>
+                <input 
+                  type="number"
+                  value={durationVal}
+                  onChange={e => setDurationVal(e.target.value)}
+                  min="1"
+                  style={{ width: '100%', background: '#1c1c1f', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '12px 16px', borderRadius: 16, outline: 'none', fontSize: '0.9rem', transition: 'all 0.2s ease', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }}
+                  onFocus={e => e.target.style.borderColor = '#7c5cfc'}
+                  onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                />
+              </div>
+              <div style={{ flex: 1, position: 'relative' }}>
+                <select 
+                  value={timeUnit} 
+                  onChange={(e) => setTimeUnit(e.target.value)}
+                  style={{ width: '100%', background: '#1c1c1f', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '12px 16px', borderRadius: 16, outline: 'none', fontSize: '0.9rem', appearance: 'none', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }}
+                  onFocus={e => e.target.style.borderColor = '#7c5cfc'}
+                  onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                >
+                  <option value="Minutes">Minutes</option>
+                  <option value="Hours">Hours</option>
+                  <option value="Seconds">Seconds</option>
+                </select>
+                <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6b7280' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>expand_more</span>
+                </div>
+              </div>
             </div>
             {durationSecs > 1500 && (
               <div style={{ fontSize: '0.7rem', color: '#a78bfa', background: 'rgba(124, 92, 252, 0.1)', padding: '6px', borderRadius: '8px', border: '1px solid rgba(124, 92, 252, 0.2)' }}>

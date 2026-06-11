@@ -67,7 +67,7 @@ function HexCell({ position, emotion, count, maxCount, isActive, onClick }) {
     <Float speed={0.5} floatIntensity={0.3}>
       <group position={position} onClick={onClick} onPointerOver={() => document.body.style.cursor = 'pointer'} onPointerOut={() => document.body.style.cursor = 'auto'}>
         {/* Hex cylinder */}
-        <mesh ref={meshRef} scale={[scale * 1.3, 0.4 + intensity * 1.0, scale * 1.3]}>
+        <mesh ref={meshRef} scale={[scale * 2.5, 0.4 + intensity * 1.5, scale * 2.5]}>
           <cylinderGeometry args={[0.5, 0.5, 1, 6]} />
           <meshStandardMaterial
             color={color}
@@ -81,8 +81,8 @@ function HexCell({ position, emotion, count, maxCount, isActive, onClick }) {
         </mesh>
 
         {/* Top glow disk */}
-        <mesh position={[0, (0.4 + intensity * 1.0) / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.45 * 1.3, 6]} />
+        <mesh position={[0, (0.4 + intensity * 1.5) / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.45 * 2.5, 6]} />
           <meshBasicMaterial color={color} transparent opacity={0.4 + intensity * 0.4} />
         </mesh>
 
@@ -148,9 +148,9 @@ export default function SaiInsights({ session }) {
     return {
       emotion,
       pos: [
-        (col - 1.5) * 1.8 + offset * 1.4,
+        (col - 1.5) * 3.5 + offset * 2.5,
         0,
-        (row - 1) * 1.5
+        (row - 1) * 2.8
       ]
     };
   }) : [];
