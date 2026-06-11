@@ -155,14 +155,21 @@ export default function SaiDreams({ session }) {
 
   const handleDeleteDream = async (dreamId) => {
     try {
-      await supabase.from('sai_dreams').delete().eq('id', dreamId);
-      setDreams(prev => prev.filter(d => d.id !== dreamId));
-      if (selectedDream?.id === dreamId) {
-        setSelectedDream(null);
-        setTargetPos(null);
-      }
-      if (hoveredDream?.id === dreamId) {
-        setHoveredDream(null);
+      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      const res = await fetch(`${API_BASE}/api/study/delete-record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'sai_dreams', match: { id: dreamId } })
+      });
+      if (res.ok) {
+        setDreams(prev => prev.filter(d => d.id !== dreamId));
+        if (selectedDream?.id === dreamId) {
+          setSelectedDream(null);
+          setTargetPos(null);
+        }
+        if (hoveredDream?.id === dreamId) {
+          setHoveredDream(null);
+        }
       }
     } catch (err) {
       console.error("Failed to delete dream", err);

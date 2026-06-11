@@ -126,9 +126,15 @@ export default function SaiDashboard({ session }) {
 
   const handleDeleteTimetable = async (timetableId) => {
     try {
-      await supabase.from('sai_timetables').delete().eq('id', timetableId);
-      setTimetables(prev => prev.filter(t => t.id !== timetableId));
-      if (activeTimetable?.id === timetableId) setActiveTimetable(null);
+      const res = await fetch(`${API_BASE}/api/study/delete-record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'sai_timetables', match: { id: timetableId } })
+      });
+      if (res.ok) {
+        setTimetables(prev => prev.filter(t => t.id !== timetableId));
+        if (activeTimetable?.id === timetableId) setActiveTimetable(null);
+      }
     } catch (err) {
       console.error("Failed to delete timetable", err);
     }
@@ -271,8 +277,14 @@ export default function SaiDashboard({ session }) {
 
   const handleDeleteMission = async (missionId) => {
     try {
-      await supabase.from('sai_missions').delete().eq('id', missionId);
-      setMissions(prev => prev.filter(m => m.id !== missionId));
+      const res = await fetch(`${API_BASE}/api/study/delete-record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'sai_missions', match: { id: missionId } })
+      });
+      if (res.ok) {
+        setMissions(prev => prev.filter(m => m.id !== missionId));
+      }
     } catch (err) {
       console.error("Failed to delete mission", err);
     }
@@ -383,8 +395,14 @@ export default function SaiDashboard({ session }) {
 
   const handleDeleteMastery = async (masteryId) => {
     try {
-      await supabase.from('sai_subject_mastery').delete().eq('id', masteryId);
-      setMasteryEntries(prev => prev.filter(m => m.id !== masteryId));
+      const res = await fetch(`${API_BASE}/api/study/delete-record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'sai_subject_mastery', match: { id: masteryId } })
+      });
+      if (res.ok) {
+        setMasteryEntries(prev => prev.filter(m => m.id !== masteryId));
+      }
     } catch (err) {
       console.error("Delete error", err);
     }

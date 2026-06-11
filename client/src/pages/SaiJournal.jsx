@@ -144,6 +144,22 @@ export default function SaiJournal({ session }) {
     setShunaComment(pool[Math.floor(Math.random() * pool.length)]);
   };
 
+  const handleDeleteEntry = async (id) => {
+    try {
+      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      const res = await fetch(`${API_BASE}/api/study/delete-record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'sai_moods', match: { id: id } })
+      });
+      if (res.ok) {
+        setEntries(prev => prev.filter(e => e.id !== id));
+      }
+    } catch (err) {
+      console.error("Failed to delete journal entry:", err);
+    }
+  };
+
   const handleSave = async () => {
     if (!selectedMood || !session?.user?.id) return;
     setSaving(true);
@@ -270,22 +286,42 @@ export default function SaiJournal({ session }) {
                 entries.map((entry, i) => {
                   const m = MOODS.find(mo => mo.emoji === entry.mood);
                   return (
-                    <motion.div
-                      key={entry.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                      className="flex items-start gap-4 p-4 rounded-2xl bg-black/40 border border-white/5 backdrop-blur-md"
-                    >
-                      <div className="text-2xl">{entry.mood}</div>
-                      <div className="flex-1 min-w-0">
-                        {entry.note && <p className="text-sm text-gray-200 mb-1 truncate">{entry.note}</p>}
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs uppercase tracking-widest" style={{ color: m?.color || '#a78bfa' }}>{m?.label}</span>
-                          <span className="text-xs text-gray-600">· {formatTime(entry.created_at)}</span>
-                        </div>
+                    <div key={entry.id} className="relative rounded-2xl overflow-hidden bg-[#030008] border border-white/5 backdrop-blur-md">
+                      {/* Delete Background (Revealed on swipe) */}
+                      <div className="absolute inset-0 bg-red-600/80 flex items-center justify-end px-8 z-0">
+                        <span className="material-symbols-outlined text-white text-2xl">delete</span>
                       </div>
-                    </motion.div>
+
+                      {/* Swipeable foreground */}
+                      <motion.div
+                        drag="x"
+                        dragConstraints={{ left: -100, right: 0 }}
+                        dragElastic={0.2}
+                        onDragEnd={(e, info) => {
+                          if (info.offset.x < -60) {
+                            handleDeleteEntry(entry.id);
+                          }
+                        }}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        className="relative z-10 flex items-start gap-4 p-4 bg-[#0d091a]/95 cursor-grab active:cursor-grabbing border-l-4"
+                        style={{ borderLeftColor: m?.color || '#a78bfa' }}
+                      >
+                        <div className="text-2xl select-none">{entry.mood}</div>
+                        <div className="flex-1 min-w-0 pointer-events-none">
+                          {entry.note && <p className="text-sm text-gray-200 mb-1 truncate">{entry.note}</p>}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs uppercase tracking-widest" style={{ color: m?.color || '#a78bfa' }}>{m?.label}</span>
+                            <span className="text-xs text-gray-600">· {formatTime(entry.created_at)}</span>
+                          </div>
+                        </div>
+                        <div className="text-[9px] text-gray-400 self-center flex items-center gap-0.5 select-none opacity-60 pointer-events-none">
+                          <span className="material-symbols-outlined text-[11px]">swipe_left</span>
+                          Swipe
+                        </div>
+                      </motion.div>
+                    </div>
                   );
                 })
               )}

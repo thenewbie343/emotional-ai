@@ -256,9 +256,16 @@ export default function SaiTimeCapsule({ session }) {
   const handleDeleteCapsule = async () => {
     if (!selected) return;
     try {
-      await supabase.from("sai_time_capsules").delete().eq("id", selected.id);
-      setCapsules(prev => prev.filter(c => c.id !== selected.id));
-      setSelected(null);
+      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      const res = await fetch(`${API_BASE}/api/study/delete-record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'sai_time_capsules', match: { id: selected.id } })
+      });
+      if (res.ok) {
+        setCapsules(prev => prev.filter(c => c.id !== selected.id));
+        setSelected(null);
+      }
     } catch (err) {
       console.error("Failed to delete capsule", err);
     }

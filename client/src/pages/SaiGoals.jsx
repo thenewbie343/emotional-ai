@@ -176,11 +176,24 @@ export default function SaiGoals({ session }) {
   };
 
   const deleteGoal = async (id) => {
-    await supabase.from('sai_challenges').delete().eq('goal_id', id);
-    await supabase.from('sai_goals').delete().eq('id', id);
-    setGoals(p => p.filter(g => g.id !== id));
-    setChallenges(p => p.filter(c => c.goal_id !== id));
-    if (selected?.id === id) setSelected(null);
+    try {
+      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      await fetch(`${API_BASE}/api/study/delete-record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'sai_challenges', match: { goal_id: id } })
+      });
+      await fetch(`${API_BASE}/api/study/delete-record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'sai_goals', match: { id: id } })
+      });
+      setGoals(p => p.filter(g => g.id !== id));
+      setChallenges(p => p.filter(c => c.goal_id !== id));
+      if (selected?.id === id) setSelected(null);
+    } catch (err) {
+      console.error("Failed to delete goal", err);
+    }
   };
 
   const selectedChallenge = selected ? challenges.find(c => c.goal_id === selected.id) : null;
