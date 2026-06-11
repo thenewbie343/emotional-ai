@@ -154,7 +154,6 @@ export default function SaiDreams({ session }) {
   };
 
   const handleDeleteDream = async (dreamId) => {
-    if (!window.confirm("Dissolve this dream?")) return;
     try {
       await supabase.from('sai_dreams').delete().eq('id', dreamId);
       setDreams(prev => prev.filter(d => d.id !== dreamId));

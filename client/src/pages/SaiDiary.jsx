@@ -131,6 +131,18 @@ export default function SaiDiary({ session }) {
     }, 2000);
   };
 
+  const handleDeleteEntry = async (id) => {
+    try {
+      const { error } = await supabase.from('sai_diary').delete().eq('id', id);
+      if (!error) {
+        setEntries(prev => prev.filter(e => e.id !== id));
+        setSelected(null);
+      }
+    } catch (err) {
+      console.error("Failed to delete diary entry:", err);
+    }
+  };
+
   return (
     <div className="h-screen w-screen bg-[#030008] overflow-hidden relative font-sans text-white">
 
@@ -237,9 +249,14 @@ export default function SaiDiary({ session }) {
                   </span>
                   <span className="text-[10px] text-gray-600 uppercase tracking-widest">Shuna's private thoughts</span>
                 </div>
-                <button onClick={() => setSelected(null)} className="text-gray-600 hover:text-white transition-colors">
-                  <span className="material-symbols-outlined text-sm">close</span>
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => handleDeleteEntry(selected.id)} className="text-gray-600 hover:text-red-400 transition-colors">
+                    <span className="material-symbols-outlined text-sm">delete</span>
+                  </button>
+                  <button onClick={() => setSelected(null)} className="text-gray-600 hover:text-white transition-colors">
+                    <span className="material-symbols-outlined text-sm">close</span>
+                  </button>
+                </div>
               </div>
 
               <TypewriterText

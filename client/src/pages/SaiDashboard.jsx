@@ -125,7 +125,6 @@ export default function SaiDashboard({ session }) {
   };
 
   const handleDeleteTimetable = async (timetableId) => {
-    if (!window.confirm("Delete this exam timetable and all its slots?")) return;
     try {
       await supabase.from('sai_timetables').delete().eq('id', timetableId);
       setTimetables(prev => prev.filter(t => t.id !== timetableId));
@@ -211,7 +210,6 @@ export default function SaiDashboard({ session }) {
 
   const handleDeleteSlot = async (slotToDelete) => {
     if (!activeTimetable) return;
-    if (!window.confirm(`Delete the slot "${slotToDelete.topic}"?`)) return;
     try {
       const updatedSchedule = activeTimetable.schedule.filter(item => 
         !(item.date === slotToDelete.date && item.topic === slotToDelete.topic)
@@ -272,7 +270,6 @@ export default function SaiDashboard({ session }) {
   };
 
   const handleDeleteMission = async (missionId) => {
-    if (!window.confirm("Delete this mission?")) return;
     try {
       await supabase.from('sai_missions').delete().eq('id', missionId);
       setMissions(prev => prev.filter(m => m.id !== missionId));
@@ -385,12 +382,11 @@ export default function SaiDashboard({ session }) {
   };
 
   const handleDeleteMastery = async (masteryId) => {
-    if (!window.confirm("Delete this mastery entry?")) return;
     try {
       await supabase.from('sai_subject_mastery').delete().eq('id', masteryId);
       setMasteryEntries(prev => prev.filter(m => m.id !== masteryId));
     } catch (err) {
-      console.error("Failed to delete mastery", err);
+      console.error("Delete error", err);
     }
   };
 

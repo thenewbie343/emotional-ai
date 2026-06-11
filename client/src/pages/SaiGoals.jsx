@@ -302,9 +302,7 @@ export default function SaiGoals({ session }) {
 
               <button
                 onClick={() => {
-                  if (window.confirm("Dissolve this island forever?")) {
-                    deleteGoal(selected.id);
-                  }
+                  deleteGoal(selected.id);
                 }}
                 className="text-xs text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors uppercase tracking-widest mt-4"
               >

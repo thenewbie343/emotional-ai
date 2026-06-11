@@ -255,7 +255,6 @@ export default function SaiTimeCapsule({ session }) {
 
   const handleDeleteCapsule = async () => {
     if (!selected) return;
-    if (!window.confirm("Dissolve this memory forever?")) return;
     try {
       await supabase.from("sai_time_capsules").delete().eq("id", selected.id);
       setCapsules(prev => prev.filter(c => c.id !== selected.id));

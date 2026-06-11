@@ -192,6 +192,7 @@ export default function SaiChat({ session }) {
   const [activeRoadmap, setActiveRoadmap] = useState(null);
   const [roadmaps, setRoadmaps] = useState([]);
   const [activeQuizLesson, setActiveQuizLesson] = useState(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const messagesEndRef = useRef(null);
   const slowTimerRef = useRef(null);
@@ -214,8 +215,8 @@ export default function SaiChat({ session }) {
   };
 
   const handleClearChat = async () => {
-    if (!window.confirm("Are you sure you want to clear your entire chat history?")) return;
     setMessages([]);
+    setShowClearConfirm(false);
     try {
       await supabase.from('messages').delete().eq('user_id', userId).eq('source', 'sai');
     } catch (e) {
@@ -438,7 +439,7 @@ export default function SaiChat({ session }) {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <button onClick={handleClearChat} className="px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold border border-red-500/20 transition-all flex items-center gap-2">
+          <button onClick={() => setShowClearConfirm(true)} className="px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold border border-red-500/20 transition-all flex items-center gap-2">
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete_sweep</span>
             Clear Chat
           </button>
@@ -570,6 +571,42 @@ export default function SaiChat({ session }) {
           onClose={() => { setActiveQuizLesson(null); fetchRoadmaps(); }}
         />
       )}
+
+      {/* Clear Chat Confirmation Modal */}
+      <AnimatePresence>
+        {showClearConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          >
+            <div className="bg-[#121214] border border-white/10 rounded-3xl p-8 max-w-sm w-full relative shadow-2xl space-y-6 text-center">
+              <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="material-symbols-outlined text-3xl">delete_forever</span>
+              </div>
+              <h3 className="text-xl font-bold text-white">Clear Chat History?</h3>
+              <p className="text-sm text-gray-400">
+                This will permanently delete your entire conversation with SAI. This action cannot be undone.
+              </p>
+              <div className="flex gap-4 w-full mt-6">
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  className="flex-1 py-3 rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleClearChat}
+                  className="flex-1 py-3 rounded-full bg-red-600 hover:bg-red-500 text-white font-semibold transition-colors shadow-lg shadow-red-500/30"
+                >
+                  Delete All
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
