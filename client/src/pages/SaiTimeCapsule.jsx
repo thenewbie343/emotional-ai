@@ -253,6 +253,18 @@ export default function SaiTimeCapsule({ session }) {
     setOpening(false);
   };
 
+  const handleDeleteCapsule = async () => {
+    if (!selected) return;
+    if (!window.confirm("Dissolve this memory forever?")) return;
+    try {
+      await supabase.from("sai_time_capsules").delete().eq("id", selected.id);
+      setCapsules(prev => prev.filter(c => c.id !== selected.id));
+      setSelected(null);
+    } catch (err) {
+      console.error("Failed to delete capsule", err);
+    }
+  };
+
   const today = new Date().toISOString().split("T")[0];
 
   if (subLoading) return <div className="h-screen w-screen bg-[#030008] flex items-center justify-center text-gray-500">Authenticating...</div>;
@@ -334,8 +346,17 @@ export default function SaiTimeCapsule({ session }) {
             </div>
 
             {(selected.opened) && (
-              <div className="mb-4 p-4 rounded-2xl bg-white/5 border border-white/5">
-                <p className="text-sm leading-relaxed text-gray-200 italic">"{selected.message}"</p>
+              <div className="space-y-4 mb-4">
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                  <p className="text-sm leading-relaxed text-gray-200 italic">"{selected.message}"</p>
+                </div>
+                <button
+                  onClick={handleDeleteCapsule}
+                  className="w-full py-3 rounded-2xl border border-red-500/20 text-red-500 hover:bg-red-500/10 font-semibold text-xs tracking-widest uppercase transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                  Dissolve Memory
+                </button>
               </div>
             )}
 

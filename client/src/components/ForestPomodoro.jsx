@@ -27,7 +27,6 @@ const ScienceMushroom = ({ scale }) => (
 );
 
 const LanguageVine = ({ scale }) => {
-  // A simple abstraction of a vine: a curved cylinder-like arrangement of spheres
   const spheres = [];
   for (let i = 0; i < 8; i++) {
     const t = i / 7;
@@ -80,40 +79,85 @@ const WiltingPlant = ({ children }) => {
 };
 
 export default function ForestPomodoro({ userId, onComplete, presetSubject, presetDuration }) {
+  const [customName, setCustomName] = useState('');
   const [subject, setSubject] = useState(presetSubject || 'General');
-  const [durationStr, setDurationStr] = useState(presetDuration ? String(presetDuration) : '25');
-  const [timeLeft, setTimeLeft] = useState((presetDuration || 25) * 60);
+  const [durationVal, setDurationVal] = useState(presetDuration ? String(presetDuration) : '25');
+  const [timeUnit, setTimeUnit] = useState('Minutes');
+  const [timeLeft, setTimeLeft] = useState(25 * 60);
+  const [currentPhaseIdx, setCurrentPhaseIdx] = useState(0);
   const [status, setStatus] = useState('idle'); // idle, running, completed, wilted
-  const [debugMode, setDebugMode] = useState(false);
   const [showGarden, setShowGarden] = useState(false);
 
   useEffect(() => {
-    if (presetSubject) setSubject(presetSubject);
-    if (presetDuration) {
-      setDurationStr(String(presetDuration));
-      setTimeLeft(debugMode ? presetDuration : presetDuration * 60);
+    if (presetSubject) {
+      setSubject(presetSubject);
+      setCustomName(presetSubject);
     }
-  }, [presetSubject, presetDuration, debugMode]);
+    if (presetDuration) {
+      setDurationVal(String(presetDuration));
+      setTimeUnit('Minutes');
+    }
+  }, [presetSubject, presetDuration]);
 
-  const durationMins = parseInt(durationStr, 10);
-  const durationSecs = debugMode ? durationMins : durationMins * 60; // In debug mode, 1 min = 1 sec
+  // Calculate total seconds based on user input
+  let val = parseFloat(durationVal);
+  if (isNaN(val) || val <= 0) val = 1;
+  let durationSecs = 0;
+  if (timeUnit === 'Hours') {
+    if (val > 8) val = 8;
+    durationSecs = Math.floor(val * 3600);
+  } else if (timeUnit === 'Minutes') {
+    durationSecs = Math.floor(val * 60);
+  } else if (timeUnit === 'Seconds') {
+    durationSecs = Math.floor(val);
+  }
+
+  const calculatePhases = (totalSeconds) => {
+    const phases = [];
+    let remaining = totalSeconds;
+    // Auto breaks apply if total > 25 mins (1500 secs)
+    if (remaining > 1500) {
+      while (remaining > 0) {
+        if (remaining >= 1800) {
+          phases.push({ type: 'work', duration: 1500 });
+          phases.push({ type: 'break', duration: 300 });
+          remaining -= 1800;
+        } else if (remaining > 1500) {
+          phases.push({ type: 'work', duration: 1500 });
+          phases.push({ type: 'break', duration: remaining - 1500 });
+          remaining = 0;
+        } else {
+          phases.push({ type: 'work', duration: remaining });
+          remaining = 0;
+        }
+      }
+    } else {
+      phases.push({ type: 'work', duration: remaining });
+    }
+    return phases;
+  };
+
+  const phases = calculatePhases(durationSecs);
 
   useEffect(() => {
     if (status === 'idle') {
-      setTimeLeft(durationSecs);
+      if (phases.length > 0) {
+        setTimeLeft(phases[0].duration);
+      }
+      setCurrentPhaseIdx(0);
     }
   }, [durationSecs, status]);
 
   // Page visibility API for wilting
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden && status === 'running' && !debugMode) {
+      if (document.hidden && status === 'running' && phases[currentPhaseIdx]?.type === 'work') {
         setStatus('wilted');
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [status, debugMode]);
+  }, [status, phases, currentPhaseIdx]);
 
   // Timer interval
   useEffect(() => {
@@ -122,17 +166,37 @@ export default function ForestPomodoro({ userId, onComplete, presetSubject, pres
       interval = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
-            handleComplete();
-            return 0;
+            // Move to next phase
+            if (currentPhaseIdx + 1 < phases.length) {
+              const nextPhase = phases[currentPhaseIdx + 1];
+              setCurrentPhaseIdx(currentPhaseIdx + 1);
+              
+              // Notify
+              if (window.Notification && Notification.permission === 'granted') {
+                new Notification(nextPhase.type === 'break' ? 'Break Time!' : 'Work Time!', { 
+                  body: nextPhase.type === 'break' ? 'Time for a short break.' : 'Break is over. Back to focus.' 
+                });
+              }
+              
+              return nextPhase.duration;
+            } else {
+              handleComplete();
+              return 0;
+            }
           }
           return prev - 1;
         });
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [status, timeLeft]);
+  }, [status, timeLeft, currentPhaseIdx, phases]);
 
   const handleStart = () => {
+    if (window.Notification && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+    setCurrentPhaseIdx(0);
+    if (phases.length > 0) setTimeLeft(phases[0].duration);
     setStatus('running');
   };
 
@@ -143,20 +207,21 @@ export default function ForestPomodoro({ userId, onComplete, presetSubject, pres
   const handleComplete = async () => {
     setStatus('completed');
     try {
+      const finalName = customName.trim() || subject;
       const res = await fetch(`${API_BASE}/api/study/pomodoro/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
-          subject,
-          durationMins,
+          subject: finalName,
+          durationMins: Math.round(durationSecs / 60),
           completed: true,
           plantType: subject
         })
       });
       const data = await res.json();
       if (onComplete && data.success) {
-        onComplete(durationMins, data.xpEarned);
+        onComplete(Math.round(durationSecs / 60), data.xpEarned);
       }
     } catch (err) {
       console.error("Failed to save session:", err);
@@ -165,12 +230,15 @@ export default function ForestPomodoro({ userId, onComplete, presetSubject, pres
 
   const reset = () => {
     setStatus('idle');
-    setTimeLeft(durationSecs);
+    setCurrentPhaseIdx(0);
+    if (phases.length > 0) setTimeLeft(phases[0].duration);
   };
 
-  const progress = status === 'idle' ? 0 : status === 'completed' ? 1 : 1 - (timeLeft / durationSecs);
+  let totalElapsed = 0;
+  for (let i = 0; i < currentPhaseIdx; i++) totalElapsed += phases[i].duration;
+  totalElapsed += (phases[currentPhaseIdx]?.duration || 0) - timeLeft;
   
-  // Base scale starts at 0.2 and grows to 1.0. If wilted, it shrinks or tips over.
+  const progress = status === 'idle' ? 0 : status === 'completed' ? 1 : totalElapsed / durationSecs;
   const baseScale = 0.2 + (progress * 0.8);
   const actualScale = status === 'wilted' ? baseScale * 0.8 : baseScale;
 
@@ -188,7 +256,15 @@ export default function ForestPomodoro({ userId, onComplete, presetSubject, pres
 
   const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
   const secs = (timeLeft % 60).toString().padStart(2, '0');
-  const displayTime = debugMode ? `${timeLeft}s` : `${mins}:${secs}`;
+  const displayTime = `${mins}:${secs}`;
+  const isBreak = phases[currentPhaseIdx]?.type === 'break';
+
+  const workCount = phases.filter(p => p.type === 'work').length;
+  const breakCount = phases.filter(p => p.type === 'break').length;
+  const breakDuration = breakCount > 0 ? (phases.find(p => p.type === 'break')?.duration / 60) : 0;
+  const breakdownText = phases.length > 1 
+    ? `${workCount} sessions × 25m + ${breakCount} break(s) of ${breakDuration}m`
+    : `${Math.round(durationSecs / 60)} min work session`;
 
   return (
     <div className="sai-widget" style={{ width: '100%', maxWidth: 320, padding: 20, textAlign: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 24, position: 'relative', overflow: 'hidden' }}>
@@ -202,12 +278,6 @@ export default function ForestPomodoro({ userId, onComplete, presetSubject, pres
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>local_florist</span>
             Focus Garden
           </div>
-          <button 
-            onClick={() => setDebugMode(!debugMode)}
-            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', padding: '2px 6px', borderRadius: 10, cursor: 'pointer' }}
-          >
-            DEBUG: {debugMode ? 'ON' : 'OFF'}
-          </button>
         </div>
 
         <button 
@@ -219,27 +289,50 @@ export default function ForestPomodoro({ userId, onComplete, presetSubject, pres
         </button>
 
         {status === 'idle' && (
-          <div style={{ display: 'flex', gap: 10, marginBottom: 15 }}>
-            <select 
-              value={subject} 
-              onChange={(e) => setSubject(e.target.value)}
-              style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '8px 12px', borderRadius: 12, outline: 'none', fontSize: '0.85rem' }}
-            >
-              <option value="General">General</option>
-              <option value="Math">Math (Crystal)</option>
-              <option value="Science">Science (Mushroom)</option>
-              <option value="Language">Language (Vine)</option>
-              <option value="History">History (Pillar)</option>
-            </select>
-            <select 
-              value={durationStr} 
-              onChange={(e) => setDurationStr(e.target.value)}
-              style={{ width: 80, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '8px 12px', borderRadius: 12, outline: 'none', fontSize: '0.85rem' }}
-            >
-              <option value="25">25m</option>
-              <option value="45">45m</option>
-              <option value="60">60m</option>
-            </select>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 15 }}>
+            <input 
+              type="text" 
+              placeholder="Custom task name (optional)" 
+              value={customName} 
+              onChange={e => setCustomName(e.target.value)}
+              style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '8px 12px', borderRadius: 12, outline: 'none', fontSize: '0.85rem' }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <select 
+                value={subject} 
+                onChange={(e) => setSubject(e.target.value)}
+                style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '8px 12px', borderRadius: 12, outline: 'none', fontSize: '0.85rem' }}
+              >
+                <option value="General">General</option>
+                <option value="Math">Math (Crystal)</option>
+                <option value="Science">Science (Mushroom)</option>
+                <option value="Language">Language (Vine)</option>
+                <option value="History">History (Pillar)</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input 
+                type="number"
+                value={durationVal}
+                onChange={e => setDurationVal(e.target.value)}
+                min="1"
+                style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '8px 12px', borderRadius: 12, outline: 'none', fontSize: '0.85rem' }}
+              />
+              <select 
+                value={timeUnit} 
+                onChange={(e) => setTimeUnit(e.target.value)}
+                style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '8px 12px', borderRadius: 12, outline: 'none', fontSize: '0.85rem' }}
+              >
+                <option value="Minutes">Minutes</option>
+                <option value="Hours">Hours</option>
+                <option value="Seconds">Seconds</option>
+              </select>
+            </div>
+            {durationSecs > 1500 && (
+              <div style={{ fontSize: '0.7rem', color: '#a78bfa', background: 'rgba(124, 92, 252, 0.1)', padding: '6px', borderRadius: '8px', border: '1px solid rgba(124, 92, 252, 0.2)' }}>
+                {breakdownText}
+              </div>
+            )}
           </div>
         )}
 
@@ -270,7 +363,13 @@ export default function ForestPomodoro({ userId, onComplete, presetSubject, pres
           )}
         </div>
 
-        <div style={{ fontSize: '2.5rem', fontWeight: 300, color: status === 'wilted' ? '#f87171' : 'white', fontFamily: 'monospace', letterSpacing: 4, marginBottom: 20 }}>
+        {status === 'running' && (
+          <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: isBreak ? '#34d399' : '#a78bfa', marginBottom: 4, textTransform: 'uppercase' }}>
+            {isBreak ? '☕ Break Time' : '🎯 Focus Time'}
+          </div>
+        )}
+
+        <div style={{ fontSize: '2.5rem', fontWeight: 300, color: status === 'wilted' ? '#f87171' : isBreak ? '#34d399' : 'white', fontFamily: 'monospace', letterSpacing: 4, marginBottom: 20 }}>
           {status === 'completed' ? 'DONE' : displayTime}
         </div>
 
@@ -300,3 +399,4 @@ export default function ForestPomodoro({ userId, onComplete, presetSubject, pres
     </div>
   );
 }
+

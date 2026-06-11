@@ -31,6 +31,8 @@ export default function SaiDashboard({ session }) {
     }
   });
   const [activeSlot, setActiveSlot] = useState(null); // Slot selected for Pomodoro
+  const [editingSlot, setEditingSlot] = useState(null);
+  const [editSlotForm, setEditSlotForm] = useState({ topic: '', suggestedDurationMinutes: 25 });
   const [rankUpData, setRankUpData] = useState(null);
   const [dailyChallenge, setDailyChallenge] = useState(null);
 
@@ -105,7 +107,6 @@ export default function SaiDashboard({ session }) {
   };
 
 
-  // -- Timetable APIs
   const fetchTimetables = async () => {
     try {
       const { data, error } = await supabase
@@ -120,6 +121,17 @@ export default function SaiDashboard({ session }) {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleDeleteTimetable = async (timetableId) => {
+    if (!window.confirm("Delete this exam timetable and all its slots?")) return;
+    try {
+      await supabase.from('sai_timetables').delete().eq('id', timetableId);
+      setTimetables(prev => prev.filter(t => t.id !== timetableId));
+      if (activeTimetable?.id === timetableId) setActiveTimetable(null);
+    } catch (err) {
+      console.error("Failed to delete timetable", err);
     }
   };
 
@@ -209,6 +221,16 @@ export default function SaiDashboard({ session }) {
       setMissions(data || []);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleDeleteMission = async (missionId) => {
+    if (!window.confirm("Delete this mission?")) return;
+    try {
+      await supabase.from('sai_missions').delete().eq('id', missionId);
+      setMissions(prev => prev.filter(m => m.id !== missionId));
+    } catch (err) {
+      console.error("Failed to delete mission", err);
     }
   };
 
@@ -315,6 +337,16 @@ export default function SaiDashboard({ session }) {
     }
   };
 
+  const handleDeleteMastery = async (masteryId) => {
+    if (!window.confirm("Delete this mastery entry?")) return;
+    try {
+      await supabase.from('sai_subject_mastery').delete().eq('id', masteryId);
+      setMasteryEntries(prev => prev.filter(m => m.id !== masteryId));
+    } catch (err) {
+      console.error("Failed to delete mastery", err);
+    }
+  };
+
   const handleCreateMastery = async (e) => {
     e.preventDefault();
     if (!newMasteryForm.subject || !newMasteryForm.topic) return;
@@ -357,21 +389,54 @@ export default function SaiDashboard({ session }) {
 
   // ── HELPERS ─────────────────────────────────────────────────────────────
   
-  // Weekly Calendar Grid calculation based on schedule JSON
-  const weeklyGrid = useMemo(() => {
-    if (!activeTimetable || !Array.isArray(activeTimetable.schedule)) return {};
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  // Date Calendar Grid calculation based on schedule JSON
+  const dateGrid = useMemo(() => {
+    if (!activeTimetable || !Array.isArray(activeTimetable.schedule)) return { keys: [], grid: {} };
     const grid = {};
-    days.forEach(d => { grid[d] = []; });
 
     activeTimetable.schedule.forEach(item => {
-      const day = item.dayOfWeek || new Date(item.date).toLocaleDateString('en-US', { weekday: 'long' });
-      if (grid[day]) {
-        grid[day].push(item);
+      let key = item.date;
+      if (!key) {
+        key = item.dayOfWeek || 'Unknown';
       }
+      if (!grid[key]) grid[key] = [];
+      grid[key].push(item);
     });
-    return grid;
+
+    const keys = Object.keys(grid).sort((a, b) => {
+      const da = new Date(a);
+      const db = new Date(b);
+      if (!isNaN(da) && !isNaN(db)) return da - db;
+      return 0;
+    });
+
+    return { keys, grid };
   }, [activeTimetable]);
+
+  const handleManualComplete = async (e, slot) => {
+    e.stopPropagation();
+    if (slot.completed) return;
+    const updatedSchedule = activeTimetable.schedule.map(item => {
+      if (item.date === slot.date && item.topic === slot.topic) {
+        return { ...item, completed: true };
+      }
+      return item;
+    });
+    await handleUpdateSchedule(activeTimetable.id, updatedSchedule);
+  };
+
+  const handleSaveEditSlot = async () => {
+    if (!editingSlot) return;
+    const updatedSchedule = activeTimetable.schedule.map(item => {
+      // Need a way to identify original. We can match by date and originalTopic
+      if (item.date === editingSlot.date && item.topic === editingSlot.originalTopic) {
+        return { ...item, topic: editSlotForm.topic, suggestedDurationMinutes: parseInt(editSlotForm.suggestedDurationMinutes, 10) };
+      }
+      return item;
+    });
+    await handleUpdateSchedule(activeTimetable.id, updatedSchedule);
+    setEditingSlot(null);
+  };
 
   const isOverdue = (dueDateStr, status) => {
     if (!dueDateStr || status === 'completed') return false;
@@ -506,26 +571,50 @@ export default function SaiDashboard({ session }) {
                   <span className="text-xs text-gray-400">Click any slot to launch your Pomodoro focus session.</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
-                    <div key={day} className="bg-[#121214] border border-white/5 rounded-2xl p-4 flex flex-col min-h-[220px]">
+                <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                  {dateGrid.keys.map(dateKey => {
+                    const displayDate = isNaN(new Date(dateKey)) ? dateKey : new Date(dateKey).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                    return (
+                    <div key={dateKey} className="bg-[#121214] border border-white/5 rounded-2xl p-4 flex flex-col min-h-[220px]">
                       <h4 className="text-xs font-semibold text-purple-400 mb-3 pb-2 border-b border-white/5 uppercase tracking-wider">
-                        {day.substring(0, 3)}
+                        {displayDate}
                       </h4>
                       <div className="flex-grow space-y-3">
-                        {weeklyGrid[day]?.length > 0 ? (
-                          weeklyGrid[day].map((slot, index) => (
+                        {dateGrid.grid[dateKey]?.length > 0 ? (
+                          dateGrid.grid[dateKey].map((slot, index) => (
                             <div
                               key={index}
                               onClick={() => slot.completed ? null : setActiveSlot({ ...slot, subject: activeTimetable.subject })}
-                              className={`p-3 rounded-xl border transition-all text-left flex flex-col justify-between ${
+                              className={`group p-3 rounded-xl border transition-all text-left flex flex-col justify-between relative overflow-hidden ${
                                 slot.completed
-                                  ? 'bg-emerald-950/20 border-emerald-500/20 text-emerald-400 line-through opacity-60 cursor-default'
+                                  ? 'bg-emerald-950/20 border-emerald-500/20 text-emerald-400 opacity-60 cursor-default'
                                   : 'bg-purple-950/10 border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-950/20 text-gray-300 cursor-pointer hover:scale-[1.02]'
                               }`}
                             >
-                              <div>
-                                <div className="text-xs font-bold truncate">{slot.topic}</div>
+                              {!slot.completed && (
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingSlot({ ...slot, originalTopic: slot.topic });
+                                      setEditSlotForm({ topic: slot.topic, suggestedDurationMinutes: slot.suggestedDurationMinutes });
+                                    }}
+                                    className="p-1 text-gray-400 hover:text-white bg-black/50 rounded"
+                                    title="Edit Slot"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">edit</span>
+                                  </button>
+                                  <button
+                                    onClick={(e) => handleManualComplete(e, slot)}
+                                    className="p-1 text-emerald-500 hover:text-emerald-400 bg-black/50 rounded"
+                                    title="Mark Done"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                  </button>
+                                </div>
+                              )}
+                              <div className={slot.completed ? 'line-through' : ''}>
+                                <div className="text-xs font-bold pr-12">{slot.topic}</div>
                                 <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
                                   <span className="material-symbols-outlined text-xs">schedule</span>
                                   {slot.suggestedDurationMinutes} mins
@@ -540,7 +629,7 @@ export default function SaiDashboard({ session }) {
                                 ) : (
                                   <>
                                     <span className="material-symbols-outlined text-xs text-purple-400">play_circle</span>
-                                    Start
+                                    Start Pomodoro
                                   </>
                                 )}
                               </div>
@@ -551,7 +640,7 @@ export default function SaiDashboard({ session }) {
                         )}
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
             ) : (
@@ -613,7 +702,7 @@ export default function SaiDashboard({ session }) {
                     return (
                       <div
                         key={mission.id}
-                        className={`p-5 rounded-2xl border flex items-center justify-between transition-all ${
+                        className={`p-5 rounded-2xl border flex items-center justify-between transition-all group relative overflow-hidden ${
                           mission.status === 'completed'
                             ? 'bg-emerald-950/10 border-emerald-500/20 opacity-60'
                             : overdue
@@ -621,7 +710,13 @@ export default function SaiDashboard({ session }) {
                             : 'bg-[#121214] border-white/5 hover:border-white/10'
                         }`}
                       >
-                        <div className="space-y-2">
+                        {/* Delete Button (Hover) */}
+                        <div className="absolute left-0 inset-y-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity -translate-x-full group-hover:translate-x-0 bg-red-900/80 px-4">
+                          <button onClick={() => handleDeleteMission(mission.id)} className="text-white hover:text-red-200" title="Delete Mission">
+                            <span className="material-symbols-outlined text-[24px]">delete</span>
+                          </button>
+                        </div>
+                        <div className="space-y-2 group-hover:ml-12 transition-all">
                           <div className="flex items-center gap-2">
                             <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider ${
                               mission.auto_generated ? 'bg-amber-500/10 text-amber-400' : 'bg-purple-500/10 text-purple-400'
@@ -755,11 +850,16 @@ export default function SaiDashboard({ session }) {
                     const percentage = (entry.confidence / 5) * 100;
                     const barColor = entry.confidence <= 2 ? 'bg-red-500' : entry.confidence <= 3 ? 'bg-amber-500' : 'bg-emerald-500';
                     return (
-                      <div key={entry.id || index} className="space-y-2">
+                      <div key={entry.id || index} className="space-y-2 group">
                         <div className="flex justify-between items-end">
-                          <div>
-                            <span className="text-xs text-purple-400 font-bold uppercase">{entry.subject}</span>
-                            <h4 className="text-base font-bold text-white">{entry.topic}</h4>
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <span className="text-xs text-purple-400 font-bold uppercase">{entry.subject}</span>
+                              <h4 className="text-base font-bold text-white">{entry.topic}</h4>
+                            </div>
+                            <button onClick={() => handleDeleteMastery(entry.id)} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 p-1 transition-opacity" title="Delete Entry">
+                              <span className="material-symbols-outlined text-[18px]">delete</span>
+                            </button>
                           </div>
                           <div className="text-right">
                             <span className="text-[10px] text-gray-500 block">Studied: {entry.last_studied}</span>
@@ -857,7 +957,12 @@ export default function SaiDashboard({ session }) {
                       <div className="flex justify-between items-start">
                         <div>
                           <span className="text-xs text-purple-400 font-bold uppercase tracking-widest">countdown</span>
-                          <h3 className="text-2xl font-bold text-white mt-1">{t.subject}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-2xl font-bold text-white mt-1">{t.subject}</h3>
+                            <button onClick={() => handleDeleteTimetable(t.id)} className="text-gray-600 hover:text-red-400 p-1" title="Delete Exam">
+                              <span className="material-symbols-outlined text-[20px]">delete</span>
+                            </button>
+                          </div>
                         </div>
                         <div className="px-4 py-2 bg-purple-950/20 border border-purple-500/20 text-purple-400 font-bold text-xl rounded-2xl flex items-center justify-center shrink-0">
                           ⏳ {daysLeft} Days
@@ -948,6 +1053,48 @@ export default function SaiDashboard({ session }) {
                 setActiveSlot(null);
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* ── 6. EDIT SLOT MODAL ─────────────────────────────────────── */}
+      {editingSlot && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#121214] border border-white/10 rounded-3xl p-8 max-w-sm w-full relative shadow-2xl space-y-6">
+            <button
+              onClick={() => setEditingSlot(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <span className="material-symbols-outlined text-[24px]">close</span>
+            </button>
+            <h3 className="text-xl font-bold text-white mb-4">Edit Slot</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase">Topic</label>
+                <input
+                  type="text"
+                  value={editSlotForm.topic}
+                  onChange={e => setEditSlotForm(prev => ({ ...prev, topic: e.target.value }))}
+                  className="w-full bg-[#1c1c1f] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase">Duration (mins)</label>
+                <input
+                  type="number"
+                  value={editSlotForm.suggestedDurationMinutes}
+                  onChange={e => setEditSlotForm(prev => ({ ...prev, suggestedDurationMinutes: e.target.value }))}
+                  className="w-full bg-[#1c1c1f] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <button
+                onClick={handleSaveEditSlot}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl py-3 font-semibold text-sm transition-all"
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       )}

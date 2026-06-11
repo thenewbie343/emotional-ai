@@ -206,7 +206,7 @@ export default function SaiInsights({ session }) {
 
       {/* Header */}
       <header className="absolute top-6 left-6 z-50 flex items-center gap-4">
-        <button onClick={() => navigate('/siya')} className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all backdrop-blur-md">
+        <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all backdrop-blur-md">
           <span className="material-symbols-outlined text-sm">arrow_back</span>
         </button>
         <div>

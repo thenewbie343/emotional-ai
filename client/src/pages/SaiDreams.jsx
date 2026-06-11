@@ -153,6 +153,23 @@ export default function SaiDreams({ session }) {
     setSaving(false);
   };
 
+  const handleDeleteDream = async (dreamId) => {
+    if (!window.confirm("Dissolve this dream?")) return;
+    try {
+      await supabase.from('sai_dreams').delete().eq('id', dreamId);
+      setDreams(prev => prev.filter(d => d.id !== dreamId));
+      if (selectedDream?.id === dreamId) {
+        setSelectedDream(null);
+        setTargetPos(null);
+      }
+      if (hoveredDream?.id === dreamId) {
+        setHoveredDream(null);
+      }
+    } catch (err) {
+      console.error("Failed to delete dream", err);
+    }
+  };
+
   return (
     <div className="h-screen w-screen bg-[#020005] overflow-hidden relative font-sans text-white">
       
@@ -261,12 +278,21 @@ export default function SaiDreams({ session }) {
               </p>
               
               {selectedDream && (
-                <button 
-                  onClick={() => { setSelectedDream(null); setTargetPos(null); }}
-                  className="mt-6 text-xs uppercase tracking-widest text-gray-400 hover:text-white border-b border-transparent hover:border-white pb-1 transition-all"
-                >
-                  Return to Nebula
-                </button>
+                <div className="mt-6 flex justify-between items-center">
+                  <button 
+                    onClick={() => { setSelectedDream(null); setTargetPos(null); }}
+                    className="text-xs uppercase tracking-widest text-gray-400 hover:text-white border-b border-transparent hover:border-white pb-1 transition-all"
+                  >
+                    Return to Nebula
+                  </button>
+                  <button
+                    onClick={() => handleDeleteDream(selectedDream.id)}
+                    className="text-xs text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors uppercase tracking-widest"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                    Dissolve
+                  </button>
+                </div>
               )}
             </div>
           </motion.div>

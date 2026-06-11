@@ -203,6 +203,16 @@ export default function SaiChat({ session }) {
 
   useEffect(() => { scrollToBottom(); }, [messages, isTyping]);
 
+  const handleDeleteMessage = async (msgId) => {
+    if (!window.confirm("Delete this message?")) return;
+    setMessages(prev => prev.filter(m => m.id !== msgId));
+    try {
+      await supabase.from('messages').delete().eq('id', msgId);
+    } catch (e) {
+      console.error("Failed to delete message", e);
+    }
+  };
+
   useEffect(() => {
     if (!userId) return;
     const loadData = async () => {
@@ -414,27 +424,47 @@ export default function SaiChat({ session }) {
       {/* Messages */}
       <div className="sai-messages">
         {messages.map((msg) => (
-          <div key={msg.id} className={`sai-msg-row ${msg.sender}`}>
+          <div key={msg.id} className={`sai-msg-row ${msg.sender} group`}>
             {msg.sender === 'ai' && (
               <div className="sai-avatar">
                 <span className="material-symbols-outlined">psychology</span>
               </div>
             )}
-            <div>
-              {msg.type === 'pomodoro' ? (
-                <ForestPomodoro userId={userId} onComplete={(duration) => {
-                  setMessages(prev => [...prev, { id: Date.now(), text: `Awesome! I just completed a ${duration}-minute focus session.`, sender: 'user' }]);
-                }} />
-              ) : msg.type === 'roadmap' ? (
-                <RoadmapWidget topic={msg.topic} userId={userId} onRoadmapCreated={(r) => { fetchRoadmaps(); setActiveRoadmap(r); }} />
-              ) : msg.type === 'heatmap' ? (
-                <HeatmapWidget userId={userId} />
-              ) : (
-                <div className={`sai-bubble ${msg.sender}`}>
-                  <div className="sai-prose">
-                    <ReactMarkdown>{msg.text || ''}</ReactMarkdown>
+            <div className="flex items-center gap-2">
+              {msg.sender === 'user' && (
+                <button 
+                  onClick={() => handleDeleteMessage(msg.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500/50 hover:text-red-400 p-1 rounded-full hover:bg-red-500/10"
+                  title="Delete message"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+                </button>
+              )}
+              <div>
+                {msg.type === 'pomodoro' ? (
+                  <ForestPomodoro userId={userId} onComplete={(duration) => {
+                    setMessages(prev => [...prev, { id: Date.now(), text: `Awesome! I just completed a ${duration}-minute focus session.`, sender: 'user' }]);
+                  }} />
+                ) : msg.type === 'roadmap' ? (
+                  <RoadmapWidget topic={msg.topic} userId={userId} onRoadmapCreated={(r) => { fetchRoadmaps(); setActiveRoadmap(r); }} />
+                ) : msg.type === 'heatmap' ? (
+                  <HeatmapWidget userId={userId} />
+                ) : (
+                  <div className={`sai-bubble ${msg.sender}`}>
+                    <div className="sai-prose">
+                      <ReactMarkdown>{msg.text || ''}</ReactMarkdown>
+                    </div>
                   </div>
-                </div>
+                )}
+              </div>
+              {msg.sender === 'ai' && (
+                <button 
+                  onClick={() => handleDeleteMessage(msg.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500/50 hover:text-red-400 p-1 rounded-full hover:bg-red-500/10"
+                  title="Delete message"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+                </button>
               )}
             </div>
           </div>

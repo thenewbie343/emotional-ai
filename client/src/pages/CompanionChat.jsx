@@ -106,8 +106,23 @@ export default function CompanionChat({ session }) {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [activeMode, setActiveMode] = useState('analytical');
   const [characterAnim, setCharacterAnim] = useState('idle');
+  const bottomRef = useRef(null);
 
   const { applyTierBehavior, recordEngagement } = useSIYATierBehavior();
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleDeleteMessage = async (msgId) => {
+    if (!window.confirm("Delete this message?")) return;
+    setMessages(prev => prev.filter(m => m.id !== msgId));
+    try {
+      await supabase.from('messages').delete().eq('id', msgId);
+    } catch (e) {
+      console.error("Failed to delete message", e);
+    }
+  };
 
   useEffect(() => {
     const load = () => window.speechSynthesis.getVoices();
@@ -301,20 +316,41 @@ export default function CompanionChat({ session }) {
         </header>
 
         {/* Floating Messages - Non-obstructive display */}
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-full max-w-2xl h-64 overflow-y-auto no-scrollbar pointer-events-none z-20 flex flex-col justify-end p-4 mask-image-b">
-          <AnimatePresence>
-            {messages.slice(-3).map((msg) => (
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-full max-w-2xl max-h-[60vh] overflow-y-auto no-scrollbar pointer-events-auto z-20 flex flex-col p-4 mask-image-b">
+          <AnimatePresence initial={false}>
+            {messages.map((msg) => (
               <motion.div 
                 key={msg.id}
                 initial={{ opacity: 0, y: 20, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                className={`mb-4 w-fit max-w-[80%] p-4 rounded-3xl backdrop-blur-md border ${msg.sender === 'ai' ? 'self-start bg-black/40 border-fuchsia-500/20 text-gray-200' : 'self-end bg-white/10 border-white/10 text-white'}`}
+                className={`mb-4 w-fit max-w-[80%] flex items-center gap-2 ${msg.sender === 'ai' ? 'self-start' : 'self-end'}`}
               >
-                {msg.text}
+                {msg.sender === 'user' && (
+                  <button 
+                    onClick={() => handleDeleteMessage(msg.id)}
+                    className="opacity-0 hover:opacity-100 transition-opacity text-red-500/50 hover:text-red-400 p-1 rounded-full hover:bg-red-500/10"
+                    title="Delete message"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+                  </button>
+                )}
+                <div className={`p-4 rounded-3xl backdrop-blur-md border ${msg.sender === 'ai' ? 'bg-black/40 border-fuchsia-500/20 text-gray-200' : 'bg-white/10 border-white/10 text-white'}`}>
+                  {msg.text}
+                </div>
+                {msg.sender === 'ai' && (
+                  <button 
+                    onClick={() => handleDeleteMessage(msg.id)}
+                    className="opacity-0 hover:opacity-100 transition-opacity text-red-500/50 hover:text-red-400 p-1 rounded-full hover:bg-red-500/10"
+                    title="Delete message"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+                  </button>
+                )}
               </motion.div>
             ))}
           </AnimatePresence>
+          <div ref={bottomRef} />
         </div>
 
         {/* Input area */}

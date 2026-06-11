@@ -301,10 +301,15 @@ export default function SaiGoals({ session }) {
               )}
 
               <button
-                onClick={() => deleteGoal(selected.id)}
-                className="text-xs text-gray-600 hover:text-rose-400 transition-colors uppercase tracking-widest"
+                onClick={() => {
+                  if (window.confirm("Dissolve this island forever?")) {
+                    deleteGoal(selected.id);
+                  }
+                }}
+                className="text-xs text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors uppercase tracking-widest mt-4"
               >
-                Dissolve Island
+                <span className="material-symbols-outlined text-[16px]">delete</span>
+                Remove Island
               </button>
             </div>
           </motion.div>
