@@ -345,11 +345,21 @@ export default function SaiMemories({ session }) {
                 
                 <MagneticButton
                   className="w-12 h-12 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
-                  onClick={() => {
-                    supabase.from('sai_memories').delete().eq('id', selectedMemory.id).then(() => {
-                      setMemories(prev => prev.filter(m => m.id !== selectedMemory.id));
-                      setSelectedMemory(null);
-                    });
+                  onClick={async () => {
+                    const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+                    try {
+                      const res = await fetch(`${API_BASE}/api/study/delete-record`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ table: 'sai_memories', match: { id: selectedMemory.id } })
+                      });
+                      if (res.ok) {
+                        setMemories(prev => prev.filter(m => m.id !== selectedMemory.id));
+                        setSelectedMemory(null);
+                      }
+                    } catch (e) {
+                      console.error("Failed to delete memory", e);
+                    }
                   }}
                 >
                   <span className="material-symbols-outlined">shatter</span>

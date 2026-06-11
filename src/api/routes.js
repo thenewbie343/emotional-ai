@@ -60,6 +60,9 @@ router.post('/study/timetable/save', studyController.saveTimetable);
 router.post('/study/timetable/list', studyController.getTimetables);
 router.post('/study/timetable/update-schedule', studyController.updateTimetableSchedule);
 
+// Universal Delete (Admin-Level Persistence)
+router.post('/study/delete-record', studyController.deleteRecord);
+
 // Mission Board
 router.post('/study/missions/list', studyController.listMissions);
 router.post('/study/missions/create', studyController.createMission);

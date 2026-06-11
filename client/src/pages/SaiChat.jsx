@@ -205,22 +205,34 @@ export default function SaiChat({ session }) {
   useEffect(() => { scrollToBottom(); }, [messages, isTyping]);
 
   const handleDeleteMessage = async (msgId) => {
-    // Silent delete for single messages
     setMessages(prev => prev.filter(m => m.id !== msgId));
     try {
-      await supabase.from('messages').delete().eq('id', msgId);
+      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      await fetch(`${API_BASE}/api/study/delete-record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'messages', match: { id: msgId } })
+      });
     } catch (e) {
       console.error("Failed to delete message", e);
     }
   };
 
   const handleClearChat = async () => {
-    setMessages([]);
-    setShowClearConfirm(false);
+    if (!session?.user?.id) return;
     try {
-      await supabase.from('messages').delete().eq('user_id', userId).eq('source', 'sai');
+      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      const res = await fetch(`${API_BASE}/api/study/delete-record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'messages', match: { user_id: session.user.id, source: 'sai' } })
+      });
+      if (res.ok) {
+        setMessages([]);
+        setShowClearConfirm(false);
+      }
     } catch (e) {
-      console.error("Failed to clear chat", e);
+      console.error(e);
     }
   };
 
@@ -319,9 +331,11 @@ export default function SaiChat({ session }) {
     const lowerText = text.toLowerCase();
     setInputText('');
 
-    const userMsg = { id: Date.now(), text, sender: 'user' };
+    const userMsg = { id: crypto.randomUUID(), text: inputText.trim(), sender: 'user', type: activeRoadmap ? 'topic' : undefined };
     setMessages(prev => [...prev, userMsg]);
-    saveMessageToDB({ user_id: userId, text, sender: 'user', source: 'sai' }, userMsg.id);
+    setInputText("");
+
+    saveMessageToDB({ id: userMsg.id, user_id: userId, text: userMsg.text, sender: 'user', source: 'sai' }, userMsg.id);
 
     // WIDGET INTERCEPTORS — no setIsTyping needed here
     if (lowerText.includes('roadmap of') || lowerText.match(/make.*roadmap.*for/) || lowerText.match(/roadmap.*for/)) {
@@ -335,23 +349,23 @@ export default function SaiChat({ session }) {
       // Capitalize first letter
       topic = topic.charAt(0).toUpperCase() + topic.slice(1);
 
-      const widgetMsg = { id: Date.now() + 1, type: 'roadmap', topic, sender: 'ai' };
+      const widgetMsg = { id: crypto.randomUUID(), type: 'roadmap', topic, sender: 'ai' };
       setMessages(prev => [...prev, widgetMsg]);
-      saveMessageToDB({ user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'roadmap', topic })}`, sender: 'ai', source: 'sai' }, widgetMsg.id);
+      saveMessageToDB({ id: widgetMsg.id, user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'roadmap', topic })}`, sender: 'ai', source: 'sai' }, widgetMsg.id);
       return;
     }
 
-    if (lowerText.includes('start pomodoro') || lowerText.includes('start timer') || lowerText.includes('focus session')) {
-      const widgetMsg = { id: Date.now() + 1, type: 'pomodoro', sender: 'ai' };
+    if (lowerText.includes('pomodoro') || lowerText.includes('timer') || lowerText.includes('focus')) {
+      const widgetMsg = { id: crypto.randomUUID(), type: 'pomodoro', sender: 'ai' };
       setMessages(prev => [...prev, widgetMsg]);
-      saveMessageToDB({ user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'pomodoro' })}`, sender: 'ai', source: 'sai' }, widgetMsg.id);
+      saveMessageToDB({ id: widgetMsg.id, user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'pomodoro' })}`, sender: 'ai', source: 'sai' }, widgetMsg.id);
       return;
     }
 
     if (lowerText.includes('heatmap') || lowerText.includes('less studied') || lowerText.includes('my activity') || lowerText.includes('my work') || lowerText.includes('show activity')) {
-      const widgetMsg = { id: Date.now() + 1, type: 'heatmap', sender: 'ai' };
+      const widgetMsg = { id: crypto.randomUUID(), type: 'heatmap', sender: 'ai' };
       setMessages(prev => [...prev, widgetMsg]);
-      saveMessageToDB({ user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'heatmap' })}`, sender: 'ai', source: 'sai' }, widgetMsg.id);
+      saveMessageToDB({ id: widgetMsg.id, user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'heatmap' })}`, sender: 'ai', source: 'sai' }, widgetMsg.id);
       return;
     }
 
@@ -378,18 +392,18 @@ export default function SaiChat({ session }) {
 
       if (apiRes.ok) {
         const aiData = await apiRes.json();
-        const aiReply = { id: Date.now() + 1, text: aiData.text || "I couldn't generate a response.", sender: 'ai' };
+        const aiReply = { id: crypto.randomUUID(), text: aiData.text || "I couldn't generate a response.", sender: 'ai' };
         setMessages(prev => [...prev, aiReply]);
-        saveMessageToDB({ user_id: userId, text: aiReply.text, sender: 'ai', source: 'sai' }, aiReply.id);
+        saveMessageToDB({ id: aiReply.id, user_id: userId, text: aiReply.text, sender: 'ai', source: 'sai' }, aiReply.id);
       } else {
         const errText = await apiRes.text().catch(() => '');
-        const aiReply = { id: Date.now() + 1, text: `⚠️ Server error (${apiRes.status}). ${errText ? errText.slice(0, 100) : 'Please try again.'}`, sender: 'ai' };
+        const aiReply = { id: crypto.randomUUID(), text: `⚠️ Server error (${apiRes.status}). ${errText ? errText.slice(0, 100) : 'Please try again.'}`, sender: 'ai' };
         setMessages(prev => [...prev, aiReply]);
       }
     } catch (err) {
       const isTimeout = err.name === 'TimeoutError' || err.name === 'AbortError';
       const aiReply = {
-        id: Date.now() + 1,
+        id: crypto.randomUUID(),
         text: isTimeout
           ? "⏱ Request timed out — the server took too long. This usually means the AI provider is slow or SAI's API keys aren't configured on the server."
           : `Connection error: ${err.message}`,

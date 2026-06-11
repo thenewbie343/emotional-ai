@@ -116,22 +116,34 @@ export default function CompanionChat({ session }) {
   }, [messages]);
 
   const handleDeleteMessage = async (msgId) => {
-    // Silent delete for single messages
     setMessages(prev => prev.filter(m => m.id !== msgId));
     try {
-      await supabase.from('messages').delete().eq('id', msgId);
+      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      await fetch(`${API_BASE}/api/study/delete-record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'messages', match: { id: msgId } })
+      });
     } catch (e) {
-      console.error("Failed to delete message", e);
+      console.error(e);
     }
   };
 
   const handleClearChat = async () => {
-    setMessages([]);
-    setShowClearConfirm(false);
+    if (!session?.user?.id) return;
     try {
-      await supabase.from('messages').delete().eq('user_id', session?.user?.id).eq('source', 'aria');
+      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      const res = await fetch(`${API_BASE}/api/study/delete-record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'messages', match: { user_id: session.user.id, source: 'aria' } })
+      });
+      if (res.ok) {
+        setMessages([{ id: 'initial', text: "System online. Shuna is operational in the void.", sender: 'ai' }]);
+        setShowClearConfirm(false);
+      }
     } catch (e) {
-      console.error("Failed to clear chat", e);
+      console.error(e);
     }
   };
 
@@ -201,11 +213,11 @@ export default function CompanionChat({ session }) {
       }
     }
 
-    const newUserMsg = { id: Date.now(), text, sender: 'user' };
+    const newUserMsg = { id: crypto.randomUUID(), text, sender: 'user' };
     setMessages(prev => [...prev, newUserMsg]);
 
     if (session?.user?.id) {
-      saveMessageToDB({ user_id: session.user.id, text, sender: 'user', source: 'aria' }, newUserMsg.id);
+      saveMessageToDB({ id: newUserMsg.id, user_id: session.user.id, text, sender: 'user', source: 'aria' }, newUserMsg.id);
     }
 
     setIsTyping(true);
@@ -251,14 +263,14 @@ export default function CompanionChat({ session }) {
       await recordEngagement(text);
       const { response: tieredText } = applyTierBehavior(text, generatedText);
 
-      const aiReply = { id: Date.now() + 1, text: tieredText, sender: 'ai' };
-      setMessages(prev => [...prev, aiReply]);
-      setIsTyping(false);
+      const aiResponse = { id: crypto.randomUUID(), text: tieredText, sender: 'ai' };
+      setMessages(prev => [...prev, aiResponse]);
 
       if (session?.user?.id) {
-        saveMessageToDB({ user_id: session.user.id, text: tieredText, sender: 'ai', source: 'aria' }, aiReply.id);
+        saveMessageToDB({ id: aiResponse.id, user_id: session.user.id, text: tieredText, sender: 'ai', source: 'aria' }, aiResponse.id);
       }
 
+      setIsTyping(false);
       speakText(tieredText);
       
       if (emotionKey === 'angry' || activeMode === 'unhinged') setCharacterAnim('arguing');

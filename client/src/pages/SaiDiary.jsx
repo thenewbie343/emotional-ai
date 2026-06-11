@@ -108,6 +108,7 @@ export default function SaiDiary({ session }) {
   const [entries, setEntries] = useState([]);
   const [selected, setSelected] = useState(null);
   const [isWriting, setIsWriting] = useState(false);
+  const [viewMode, setViewMode] = useState('3d'); // '3d' or 'list'
 
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -147,30 +148,93 @@ export default function SaiDiary({ session }) {
     <div className="h-screen w-screen bg-[#030008] overflow-hidden relative font-sans text-white">
 
       {/* 3D Floating Pages Canvas */}
-      <div className="absolute inset-0 z-0">
-        <Canvas camera={{ position: [0, 4, 10], fov: 55 }}>
-          <color attach="background" args={['#030008']} />
-          <fog attach="fog" args={['#030008', 8, 25]} />
-          <ambientLight intensity={0.3} />
-          <directionalLight position={[3, 8, 5]} intensity={0.6} color="#a78bfa" />
-          <Stars radius={80} depth={60} count={3000} factor={4} saturation={1} fade />
+      {/* 3D Floating Pages Canvas (Conditional) */}
+      <AnimatePresence>
+        {viewMode === '3d' && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="absolute inset-0 z-0"
+          >
+            <Canvas camera={{ position: [0, 4, 10], fov: 55 }}>
+              <color attach="background" args={['#030008']} />
+              <fog attach="fog" args={['#030008', 8, 25]} />
+              <ambientLight intensity={0.3} />
+              <directionalLight position={[3, 8, 5]} intensity={0.6} color="#a78bfa" />
+              <Stars radius={80} depth={60} count={3000} factor={4} saturation={1} fade />
 
-          <Suspense fallback={null}>
-            {entries.map((entry, i) => (
-              <DiaryPage
-                key={entry.id}
-                entry={entry}
-                index={i}
-                isSelected={selected?.id === entry.id}
-                onClick={(e) => { e.stopPropagation(); setSelected(selected?.id === entry.id ? null : entry); }}
-              />
-            ))}
+              <Suspense fallback={null}>
+                {entries.map((entry, i) => (
+                  <DiaryPage
+                    key={entry.id}
+                    entry={entry}
+                    index={i}
+                    isSelected={selected?.id === entry.id}
+                    onClick={(e) => { e.stopPropagation(); setSelected(selected?.id === entry.id ? null : entry); }}
+                  />
+                ))}
 
-            {/* Atmospheric particles - ink dust */}
-            <Sparkles count={80} scale={12} size={0.5} color="#4c1d95" speed={0.1} opacity={0.4} />
-          </Suspense>
-        </Canvas>
-      </div>
+                {/* Atmospheric particles - ink dust */}
+                <Sparkles count={80} scale={12} size={0.5} color="#4c1d95" speed={0.1} opacity={0.4} />
+              </Suspense>
+            </Canvas>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* List View with Swipe-to-Delete */}
+      <AnimatePresence>
+        {viewMode === 'list' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="absolute inset-0 z-10 pt-32 px-6 pb-6 overflow-y-auto"
+          >
+            <div className="max-w-3xl mx-auto space-y-4">
+              {entries.map((entry) => (
+                <div key={entry.id} className="relative rounded-3xl overflow-hidden bg-white/5 border border-white/10 backdrop-blur-md">
+                  {/* Delete Background (Revealed on swipe) */}
+                  <div className="absolute inset-0 bg-red-600/80 flex items-center justify-end px-8 z-0">
+                    <span className="material-symbols-outlined text-white text-3xl">delete</span>
+                  </div>
+
+                  {/* Swipeable foreground */}
+                  <motion.div
+                    drag="x"
+                    dragConstraints={{ left: -120, right: 0 }}
+                    dragElastic={0.2}
+                    onDragEnd={(e, info) => {
+                      if (info.offset.x < -80) {
+                        handleDeleteEntry(entry.id);
+                      }
+                    }}
+                    className="relative z-10 p-6 bg-[#0a0512] flex flex-col cursor-grab active:cursor-grabbing border-l-4"
+                    style={{ borderLeftColor: EMOTION_COLORS[entry.emotion] || '#a78bfa' }}
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-[10px] uppercase tracking-widest" style={{ color: EMOTION_COLORS[entry.emotion] || '#a78bfa' }}>
+                        {entry.emotion} · {new Date(entry.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                      <span className="text-[10px] text-gray-500 uppercase tracking-widest flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">swipe_left</span>
+                        Swipe to dissolve
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-200 italic leading-relaxed">{entry.entry}</p>
+                  </motion.div>
+                </div>
+              ))}
+
+              {entries.length === 0 && (
+                <div className="text-center py-20">
+                  <div className="text-4xl mb-4 opacity-50">📖</div>
+                  <p className="text-gray-500 text-sm tracking-widest uppercase">The diary is empty</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Header */}
       <header className="absolute top-6 left-6 z-50 flex items-center gap-4">
@@ -180,6 +244,20 @@ export default function SaiDiary({ session }) {
         <div>
           <span className="text-sm tracking-[0.2em] font-light text-gray-300 block">SHUNA'S DIARY</span>
           <span className="text-[10px] tracking-widest uppercase text-fuchsia-400">PagePortals · Private</span>
+        </div>
+        <div className="ml-4 flex gap-2 bg-white/5 p-1 rounded-full border border-white/10 backdrop-blur-md">
+          <button 
+            onClick={() => setViewMode('3d')}
+            className={`px-4 py-1.5 rounded-full text-[10px] uppercase tracking-widest transition-all ${viewMode === '3d' ? 'bg-fuchsia-600/50 text-white' : 'text-gray-400 hover:text-white'}`}
+          >
+            Nebula
+          </button>
+          <button 
+            onClick={() => setViewMode('list')}
+            className={`px-4 py-1.5 rounded-full text-[10px] uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-fuchsia-600/50 text-white' : 'text-gray-400 hover:text-white'}`}
+          >
+            List
+          </button>
         </div>
       </header>
 
