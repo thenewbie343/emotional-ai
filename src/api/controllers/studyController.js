@@ -1015,3 +1015,23 @@ exports.completeDailyChallenge = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// ==========================================
+// UNIVERSAL DELETE ENFORCER (ADMIN PERSISTENCE)
+// ==========================================
+exports.deleteRecord = async (req, res) => {
+  const { table, match } = req.body;
+  if (!table || !match) return res.status(400).json({ error: "Missing table or match criteria" });
+  
+  try {
+    const { data, error } = await supabase.from(table).delete().match(match);
+    if (error) {
+      console.error(`Admin delete error on table ${table}:`, error);
+      return res.status(500).json({ error: error.message });
+    }
+    return res.json({ success: true, data });
+  } catch (err) {
+    console.error(`Admin delete failure on table ${table}:`, err);
+    return res.status(500).json({ error: err.message });
+  }
+};
