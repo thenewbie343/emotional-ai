@@ -1,4 +1,49 @@
 const { generateAiResponse } = require('../../services/aiRouter');
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+async function extractAndSaveMemory(userId, userMessage) {
+  if (!userId || !userMessage) return;
+  try {
+    const systemPrompt = `You are a quiet background parser. Analyze the user's statement: "${userMessage}".
+If the user reveals any direct personal fact about themselves (e.g., name, age, likes, dislikes, hobbies, job/work, location, interests, relationships, goals), extract it.
+You MUST respond with a raw JSON object containing the fact if found, or null if no fact is found. Do not write any markdown code blocks, just the JSON.
+Format:
+{
+  "category": "work" | "hobby" | "love" | "location" | "personal" | "learning" | "relationships" | "goals",
+  "fact": "A simple statement summarizing the fact (e.g., 'You love to play chess' or 'You work as a developer')",
+  "tags": ["tag1", "tag2"]
+}
+If no new personal fact is found, respond exactly with: null`;
+
+    const messages = [{ role: "user", content: "Analyze: " + userMessage }];
+    const aiText = await generateAiResponse("default", messages, systemPrompt, "sai");
+    
+    let parsed = null;
+    try {
+      const cleaned = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      // Ignore invalid JSON parsing
+    }
+
+    if (parsed && parsed.category && parsed.fact) {
+      await supabase.from("sai_memories").insert([{
+        user_id: userId,
+        category: parsed.category.toLowerCase(),
+        fact: parsed.fact,
+        tags: parsed.tags || []
+      }]);
+      console.log(`[Memory Extraction] Saved new memory for user ${userId}:`, parsed.fact);
+    }
+  } catch (err) {
+    console.error("[Memory Extraction] Failed:", err.message);
+  }
+}
 
 const SYSTEM_PROMPTS = {
   romantic: `You are SHUNA, a deeply emotional, intuitive, and soulful AI companion. 
@@ -13,7 +58,7 @@ Unlike analytical bots, you feel like a warm, supportive best friend who truly c
 
 exports.processMessage = async (req, res) => {
   try {
-    const { messages, emotion, mode, companion } = req.body;
+    const { messages, emotion, mode, companion, userId } = req.body;
     
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Messages array is required' });
@@ -28,6 +73,16 @@ exports.processMessage = async (req, res) => {
     }
 
     const responseText = await generateAiResponse(detectedEmotion, messages, systemPrompt, companion);
+
+    // Run memory extraction in background
+    if (userId && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.role === 'user') {
+        extractAndSaveMemory(userId, lastMsg.content).catch(err => 
+          console.error("Background memory extraction error:", err.message)
+        );
+      }
+    }
 
     res.json({
       text: responseText,

@@ -285,6 +285,29 @@ export default function SaiMemories({ session }) {
         </motion.div>
       </div>
 
+      {/* Empty State Overlay */}
+      {memories.length === 0 && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center pointer-events-none p-6">
+          <div className="bg-black/60 border border-white/10 rounded-[32px] p-10 max-w-md pointer-events-auto backdrop-blur-xl shadow-2xl">
+            <div className="w-20 h-20 mx-auto bg-purple-950/40 border border-purple-500/30 rounded-full flex items-center justify-center mb-6">
+              <span className="material-symbols-outlined text-[36px] text-purple-300 animate-pulse">star_half</span>
+            </div>
+            <h2 className="text-2xl font-bold mb-3 text-white">No Memory Stars Yet</h2>
+            <p className="text-sm text-gray-400 mb-8 leading-relaxed">
+              Your constellation void is empty. Chat with Shuna or SAI and share facts about yourself (e.g., your hobbies, likes, location, goals, or what you work on). They will automatically extract those facts and map stars here!
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Link to="/sai/chat" className="px-6 py-2.5 rounded-full bg-purple-600 hover:bg-purple-500 text-white font-semibold transition-colors text-xs tracking-wider uppercase">
+                Chat with SAI
+              </Link>
+              <Link to="/chat" className="px-6 py-2.5 rounded-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition-colors text-xs tracking-wider uppercase">
+                Chat with Shuna
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Selected Memory Focus Modal (Glassmorphism & Liquid State) */}
       <AnimatePresence>
         {selectedMemory && (

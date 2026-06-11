@@ -50,6 +50,7 @@ router.post('/study/logs/log-session', studyController.logStudySession);
 router.post('/study/pomodoro/save', studyController.savePomodoroSession);
 router.post('/study/pomodoro/list', studyController.getPomodoroSessions);
 router.post('/study/logs/heatmap', studyController.getHeatmapData);
+router.post('/study/heatmap', studyController.getHeatmapData);
 router.post('/study/quiz/generate', studyController.generateQuiz);
 router.post('/study/quiz/evaluate', studyController.evaluateQuizAnswer);
 
