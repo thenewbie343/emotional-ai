@@ -108,7 +108,7 @@ export default function SaiDiary({ session }) {
   const [entries, setEntries] = useState([]);
   const [selected, setSelected] = useState(null);
   const [isWriting, setIsWriting] = useState(false);
-  const [viewMode, setViewMode] = useState('3d'); // '3d' or 'list'
+  const [viewMode, setViewMode] = useState('list'); // Default to list so swipe-to-delete is immediately visible
 
   useEffect(() => {
     if (!session?.user?.id) return;
