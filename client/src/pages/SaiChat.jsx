@@ -204,12 +204,33 @@ export default function SaiChat({ session }) {
   useEffect(() => { scrollToBottom(); }, [messages, isTyping]);
 
   const handleDeleteMessage = async (msgId) => {
-    if (!window.confirm("Delete this message?")) return;
+    // Silent delete for single messages
     setMessages(prev => prev.filter(m => m.id !== msgId));
     try {
       await supabase.from('messages').delete().eq('id', msgId);
     } catch (e) {
       console.error("Failed to delete message", e);
+    }
+  };
+
+  const handleClearChat = async () => {
+    if (!window.confirm("Are you sure you want to clear your entire chat history?")) return;
+    setMessages([]);
+    try {
+      await supabase.from('messages').delete().eq('user_id', userId).eq('source', 'sai');
+    } catch (e) {
+      console.error("Failed to clear chat", e);
+    }
+  };
+
+  const saveMessageToDB = async (insertData, tempId) => {
+    try {
+      const { data } = await supabase.from('messages').insert([insertData]).select().single();
+      if (data && tempId) {
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: data.id } : m));
+      }
+    } catch (err) {
+      console.error("Failed to save message to DB", err);
     }
   };
 
@@ -299,7 +320,7 @@ export default function SaiChat({ session }) {
 
     const userMsg = { id: Date.now(), text, sender: 'user' };
     setMessages(prev => [...prev, userMsg]);
-    supabase.from('messages').insert([{ user_id: userId, text, sender: 'user', source: 'sai' }]).then();
+    saveMessageToDB({ user_id: userId, text, sender: 'user', source: 'sai' }, userMsg.id);
 
     // WIDGET INTERCEPTORS — no setIsTyping needed here
     if (lowerText.includes('roadmap of') || lowerText.match(/make.*roadmap.*for/) || lowerText.match(/roadmap.*for/)) {
@@ -315,21 +336,21 @@ export default function SaiChat({ session }) {
 
       const widgetMsg = { id: Date.now() + 1, type: 'roadmap', topic, sender: 'ai' };
       setMessages(prev => [...prev, widgetMsg]);
-      supabase.from('messages').insert([{ user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'roadmap', topic })}`, sender: 'ai', source: 'sai' }]).then();
+      saveMessageToDB({ user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'roadmap', topic })}`, sender: 'ai', source: 'sai' }, widgetMsg.id);
       return;
     }
 
     if (lowerText.includes('start pomodoro') || lowerText.includes('start timer') || lowerText.includes('focus session')) {
       const widgetMsg = { id: Date.now() + 1, type: 'pomodoro', sender: 'ai' };
       setMessages(prev => [...prev, widgetMsg]);
-      supabase.from('messages').insert([{ user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'pomodoro' })}`, sender: 'ai', source: 'sai' }]).then();
+      saveMessageToDB({ user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'pomodoro' })}`, sender: 'ai', source: 'sai' }, widgetMsg.id);
       return;
     }
 
     if (lowerText.includes('heatmap') || lowerText.includes('less studied') || lowerText.includes('my activity') || lowerText.includes('my work') || lowerText.includes('show activity')) {
       const widgetMsg = { id: Date.now() + 1, type: 'heatmap', sender: 'ai' };
       setMessages(prev => [...prev, widgetMsg]);
-      supabase.from('messages').insert([{ user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'heatmap' })}`, sender: 'ai', source: 'sai' }]).then();
+      saveMessageToDB({ user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'heatmap' })}`, sender: 'ai', source: 'sai' }, widgetMsg.id);
       return;
     }
 
@@ -358,7 +379,7 @@ export default function SaiChat({ session }) {
         const aiData = await apiRes.json();
         const aiReply = { id: Date.now() + 1, text: aiData.text || "I couldn't generate a response.", sender: 'ai' };
         setMessages(prev => [...prev, aiReply]);
-        supabase.from('messages').insert([{ user_id: userId, text: aiReply.text, sender: 'ai', source: 'sai' }]).then();
+        saveMessageToDB({ user_id: userId, text: aiReply.text, sender: 'ai', source: 'sai' }, aiReply.id);
       } else {
         const errText = await apiRes.text().catch(() => '');
         const aiReply = { id: Date.now() + 1, text: `⚠️ Server error (${apiRes.status}). ${errText ? errText.slice(0, 100) : 'Please try again.'}`, sender: 'ai' };
@@ -416,9 +437,15 @@ export default function SaiChat({ session }) {
             </div>
           </div>
         </div>
-        <button className="sai-sidebar-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)} title="Study Portal">
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>menu_book</span>
-        </button>
+        <div className="flex items-center gap-4">
+          <button onClick={handleClearChat} className="px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold border border-red-500/20 transition-all flex items-center gap-2">
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete_sweep</span>
+            Clear Chat
+          </button>
+          <button className="sai-sidebar-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)} title="Study Portal">
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>menu_book</span>
+          </button>
+        </div>
       </header>
 
       {/* Messages */}

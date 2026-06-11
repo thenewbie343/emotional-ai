@@ -338,15 +338,15 @@ exports.savePomodoroSession = async (req, res) => {
 
       if (xpEarned > 0) {
         await addXpBackend(userId, xpEarned);
-        
-        // Also populate study_logs so the consistency heatmap reflects Pomodoros
-        const todayStr = new Date().toISOString().split('T')[0];
-        await supabase.from("study_logs").insert([{
-          user_id: userId,
-          date: todayStr,
-          duration_mins: durationMins
-        }]);
       }
+      
+      // Also populate study_logs so the consistency heatmap reflects Pomodoros
+      const todayStr = new Date().toISOString().split('T')[0];
+      await supabase.from("study_logs").insert([{
+        user_id: userId,
+        date: todayStr,
+        duration_mins: durationMins
+      }]);
     }
 
     res.json({ success: true, session: data, xpEarned });

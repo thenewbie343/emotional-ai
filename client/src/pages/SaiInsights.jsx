@@ -67,7 +67,7 @@ function HexCell({ position, emotion, count, maxCount, isActive, onClick }) {
     <Float speed={0.5} floatIntensity={0.3}>
       <group position={position} onClick={onClick} onPointerOver={() => document.body.style.cursor = 'pointer'} onPointerOut={() => document.body.style.cursor = 'auto'}>
         {/* Hex cylinder */}
-        <mesh ref={meshRef} scale={[scale, 0.3 + intensity * 0.8, scale]}>
+        <mesh ref={meshRef} scale={[scale * 1.3, 0.4 + intensity * 1.0, scale * 1.3]}>
           <cylinderGeometry args={[0.5, 0.5, 1, 6]} />
           <meshStandardMaterial
             color={color}
@@ -81,8 +81,8 @@ function HexCell({ position, emotion, count, maxCount, isActive, onClick }) {
         </mesh>
 
         {/* Top glow disk */}
-        <mesh position={[0, (0.3 + intensity * 0.8) / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.45, 6]} />
+        <mesh position={[0, (0.4 + intensity * 1.0) / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.45 * 1.3, 6]} />
           <meshBasicMaterial color={color} transparent opacity={0.4 + intensity * 0.4} />
         </mesh>
 
@@ -148,9 +148,9 @@ export default function SaiInsights({ session }) {
     return {
       emotion,
       pos: [
-        (col - 1.5) * 1.3 + offset,
+        (col - 1.5) * 1.8 + offset * 1.4,
         0,
-        (row - 1) * 1.1
+        (row - 1) * 1.5
       ]
     };
   }) : [];
@@ -205,27 +205,27 @@ export default function SaiInsights({ session }) {
       </div>
 
       {/* Header */}
-      <header className="absolute top-6 left-6 z-50 flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all backdrop-blur-md">
-          <span className="material-symbols-outlined text-sm">arrow_back</span>
+      <header className="absolute top-6 left-6 z-50 flex items-center gap-6">
+        <button onClick={() => navigate(-1)} className="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all backdrop-blur-md">
+          <span className="material-symbols-outlined text-lg">arrow_back</span>
         </button>
         <div>
-          <span className="text-sm tracking-[0.2em] font-light text-gray-300 block">RESONANCE</span>
-          <span className="text-[10px] tracking-widest uppercase text-pink-400">The Harmony Hive</span>
+          <span className="text-base tracking-[0.2em] font-light text-gray-300 block">RESONANCE</span>
+          <span className="text-xs tracking-widest uppercase text-pink-400">The Harmony Hive</span>
         </div>
       </header>
 
       {/* Stats Row */}
       {analysis && (
-        <div className="absolute top-6 right-6 z-50 flex gap-3">
+        <div className="absolute top-6 right-6 z-50 flex gap-4">
           {[
             { label: 'Messages', val: analysis.totalMsgs },
             { label: 'Positivity', val: `${analysis.positivity}%` },
             { label: 'Memories', val: memories.length },
           ].map(s => (
-            <div key={s.label} className="px-4 py-2 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-xl text-center">
-              <div className="text-base font-semibold text-white">{s.val}</div>
-              <div className="text-[10px] uppercase tracking-widest text-gray-500">{s.label}</div>
+            <div key={s.label} className="px-6 py-4 rounded-3xl bg-black/40 border border-white/10 backdrop-blur-xl text-center shadow-xl">
+              <div className="text-2xl font-bold text-white mb-1">{s.val}</div>
+              <div className="text-xs uppercase tracking-widest text-gray-400 font-semibold">{s.label}</div>
             </div>
           ))}
         </div>
@@ -239,18 +239,18 @@ export default function SaiInsights({ session }) {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="absolute bottom-10 left-10 z-40 max-w-sm p-6 rounded-3xl backdrop-blur-2xl border"
+            className="absolute bottom-10 left-10 z-40 max-w-md p-8 rounded-[2rem] backdrop-blur-2xl border shadow-2xl"
             style={{
-              background: `${EMOTION_COLORS[activeData[0]] || '#7c3aed'}08`,
-              borderColor: `${EMOTION_COLORS[activeData[0]] || '#7c3aed'}30`
+              background: `${EMOTION_COLORS[activeData[0]] || '#7c3aed'}15`,
+              borderColor: `${EMOTION_COLORS[activeData[0]] || '#7c3aed'}40`
             }}
           >
-            <div className="text-3xl mb-2">{EMOTION_EMOJI[activeData[0]]}</div>
-            <h3 className="text-lg font-semibold capitalize mb-1" style={{ color: EMOTION_COLORS[activeData[0]] }}>
+            <div className="text-5xl mb-4">{EMOTION_EMOJI[activeData[0]]}</div>
+            <h3 className="text-2xl font-bold capitalize mb-2" style={{ color: EMOTION_COLORS[activeData[0]] }}>
               {activeData[0]}
             </h3>
-            <p className="text-sm text-gray-400 mb-3">
-              Detected {activeData[1]} time{activeData[1] !== 1 ? 's' : ''} in your conversations
+            <p className="text-base text-gray-300 mb-4 font-light">
+              Detected <span className="font-bold text-white">{activeData[1]}</span> time{activeData[1] !== 1 ? 's' : ''} in your conversations
             </p>
             <div className="h-1 bg-white/10 rounded-full overflow-hidden">
               <motion.div

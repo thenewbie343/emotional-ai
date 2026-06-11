@@ -209,6 +209,53 @@ export default function SaiDashboard({ session }) {
     }
   };
 
+  const handleDeleteSlot = async (slotToDelete) => {
+    if (!activeTimetable) return;
+    if (!window.confirm(`Delete the slot "${slotToDelete.topic}"?`)) return;
+    try {
+      const updatedSchedule = activeTimetable.schedule.filter(item => 
+        !(item.date === slotToDelete.date && item.topic === slotToDelete.topic)
+      );
+      setActiveTimetable(prev => ({ ...prev, schedule: updatedSchedule }));
+      await handleUpdateSchedule(activeTimetable.id, updatedSchedule);
+      setEditingSlot(null);
+    } catch (err) {
+      console.error('Delete slot error', err);
+    }
+  };
+
+  const handleDragStart = (e, slot, sourceDate, sourceIndex) => {
+    if (slot.completed) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.setData('application/json', JSON.stringify({ slot, sourceDate, sourceIndex }));
+  };
+
+  const handleDrop = async (e, targetDate) => {
+    e.preventDefault();
+    const dataString = e.dataTransfer.getData('application/json');
+    if (!dataString || !activeTimetable) return;
+
+    try {
+      const { slot, sourceDate } = JSON.parse(dataString);
+      if (sourceDate === targetDate) return;
+
+      const updatedSchedule = [...activeTimetable.schedule];
+      const itemIndex = updatedSchedule.findIndex(item => 
+        item.date === sourceDate && item.topic === slot.topic
+      );
+
+      if (itemIndex > -1) {
+        updatedSchedule[itemIndex] = { ...updatedSchedule[itemIndex], date: targetDate };
+        setActiveTimetable(prev => ({ ...prev, schedule: updatedSchedule }));
+        await handleUpdateSchedule(activeTimetable.id, updatedSchedule);
+      }
+    } catch (err) {
+      console.error('Drop error', err);
+    }
+  };
+
   // -- Mission APIs
   const fetchMissions = async () => {
     try {
@@ -555,7 +602,18 @@ export default function SaiDashboard({ session }) {
                         : 'bg-white/[0.02] border-white/5 text-gray-400 hover:text-white'
                     }`}
                   >
-                    📚 {t.subject} (Exam: {new Date(t.exam_date).toLocaleDateString()})
+                    <div className="flex items-center gap-2">
+                      📚 {t.subject} (Exam: {new Date(t.exam_date).toLocaleDateString()})
+                      {activeTimetable?.id === t.id && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteTimetable(t.id); }} 
+                          className="text-red-400 hover:text-red-300 ml-2 bg-red-400/10 hover:bg-red-400/20 rounded-full p-1 transition-all"
+                          title="Delete Schedule"
+                        >
+                          <span className="material-symbols-outlined text-[14px] leading-none block">close</span>
+                        </button>
+                      )}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -575,7 +633,12 @@ export default function SaiDashboard({ session }) {
                   {dateGrid.keys.map(dateKey => {
                     const displayDate = isNaN(new Date(dateKey)) ? dateKey : new Date(dateKey).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                     return (
-                    <div key={dateKey} className="bg-[#121214] border border-white/5 rounded-2xl p-4 flex flex-col min-h-[220px]">
+                    <div 
+                      key={dateKey} 
+                      className="bg-[#121214] border border-white/5 rounded-2xl p-4 flex flex-col min-h-[220px] transition-colors hover:bg-white/[0.02]"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => handleDrop(e, dateKey)}
+                    >
                       <h4 className="text-xs font-semibold text-purple-400 mb-3 pb-2 border-b border-white/5 uppercase tracking-wider">
                         {displayDate}
                       </h4>
@@ -584,6 +647,8 @@ export default function SaiDashboard({ session }) {
                           dateGrid.grid[dateKey].map((slot, index) => (
                             <div
                               key={index}
+                              draggable={!slot.completed}
+                              onDragStart={(e) => handleDragStart(e, slot, dateKey, index)}
                               onClick={() => slot.completed ? null : setActiveSlot({ ...slot, subject: activeTimetable.subject })}
                               className={`group p-3 rounded-xl border transition-all text-left flex flex-col justify-between relative overflow-hidden ${
                                 slot.completed
@@ -599,17 +664,17 @@ export default function SaiDashboard({ session }) {
                                       setEditingSlot({ ...slot, originalTopic: slot.topic });
                                       setEditSlotForm({ topic: slot.topic, suggestedDurationMinutes: slot.suggestedDurationMinutes });
                                     }}
-                                    className="p-1 text-gray-400 hover:text-white bg-black/50 rounded"
+                                    className="p-1.5 text-gray-400 hover:text-white bg-black/70 rounded-md"
                                     title="Edit Slot"
                                   >
-                                    <span className="material-symbols-outlined text-[14px]">edit</span>
+                                    <span className="material-symbols-outlined text-[18px]">edit</span>
                                   </button>
                                   <button
                                     onClick={(e) => handleManualComplete(e, slot)}
-                                    className="p-1 text-emerald-500 hover:text-emerald-400 bg-black/50 rounded"
+                                    className="p-1.5 text-emerald-500 hover:text-emerald-400 bg-black/70 rounded-md"
                                     title="Mark Done"
                                   >
-                                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
                                   </button>
                                 </div>
                               )}
@@ -1017,7 +1082,7 @@ export default function SaiDashboard({ session }) {
       {/* ── 5. POMODORO OVERLAY MODAL ─────────────────────────────────────── */}
       {activeSlot && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#121214] border border-white/10 rounded-3xl p-8 max-w-lg w-full relative shadow-2xl space-y-6">
+          <div className="bg-[#121214] border border-white/10 rounded-3xl p-8 max-w-lg w-full relative shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setActiveSlot(null)}
               className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
@@ -1088,12 +1153,21 @@ export default function SaiDashboard({ session }) {
                   className="w-full bg-[#1c1c1f] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
-              <button
-                onClick={handleSaveEditSlot}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl py-3 font-semibold text-sm transition-all"
-              >
-                Save Changes
-              </button>
+              <div className="flex gap-4 pt-2">
+                <button
+                  onClick={() => handleDeleteSlot(editingSlot)}
+                  className="flex-1 bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/30 rounded-xl py-3 font-semibold text-sm transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                  Delete Slot
+                </button>
+                <button
+                  onClick={handleSaveEditSlot}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-xl py-3 font-semibold text-sm transition-all"
+                >
+                  Save Changes
+                </button>
+              </div>
             </div>
           </div>
         </div>

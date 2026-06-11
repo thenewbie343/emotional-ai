@@ -278,19 +278,19 @@ export default function SaiDreams({ session }) {
               </p>
               
               {selectedDream && (
-                <div className="mt-6 flex justify-between items-center">
+                <div className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-white/5 pt-6">
                   <button 
                     onClick={() => { setSelectedDream(null); setTargetPos(null); }}
-                    className="text-xs uppercase tracking-widest text-gray-400 hover:text-white border-b border-transparent hover:border-white pb-1 transition-all"
+                    className="w-full sm:w-auto px-4 py-2 text-xs uppercase tracking-widest text-gray-300 hover:text-white border border-gray-500/30 rounded-full hover:bg-white/5 transition-all"
                   >
                     Return to Nebula
                   </button>
                   <button
                     onClick={() => handleDeleteDream(selectedDream.id)}
-                    className="text-xs text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors uppercase tracking-widest"
+                    className="w-full sm:w-auto px-4 py-2 text-xs text-red-400 hover:text-white hover:bg-red-500/20 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center gap-2 transition-all uppercase tracking-widest"
                   >
                     <span className="material-symbols-outlined text-[16px]">delete</span>
-                    Dissolve
+                    Dissolve Dream
                   </button>
                 </div>
               )}

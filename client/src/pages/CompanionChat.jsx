@@ -115,12 +115,33 @@ export default function CompanionChat({ session }) {
   }, [messages]);
 
   const handleDeleteMessage = async (msgId) => {
-    if (!window.confirm("Delete this message?")) return;
+    // Silent delete for single messages
     setMessages(prev => prev.filter(m => m.id !== msgId));
     try {
       await supabase.from('messages').delete().eq('id', msgId);
     } catch (e) {
       console.error("Failed to delete message", e);
+    }
+  };
+
+  const handleClearChat = async () => {
+    if (!window.confirm("Are you sure you want to clear your entire chat history?")) return;
+    setMessages([]);
+    try {
+      await supabase.from('messages').delete().eq('user_id', session?.user?.id).eq('source', 'aria');
+    } catch (e) {
+      console.error("Failed to clear chat", e);
+    }
+  };
+
+  const saveMessageToDB = async (insertData, tempId) => {
+    try {
+      const { data } = await supabase.from('messages').insert([insertData]).select().single();
+      if (data && tempId) {
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: data.id } : m));
+      }
+    } catch (err) {
+      console.error("Failed to save message to DB", err);
     }
   };
 
@@ -183,7 +204,7 @@ export default function CompanionChat({ session }) {
     setMessages(prev => [...prev, newUserMsg]);
 
     if (session?.user?.id) {
-      supabase.from('messages').insert([{ user_id: session.user.id, text, sender: 'user', source: 'aria' }]).then();
+      saveMessageToDB({ user_id: session.user.id, text, sender: 'user', source: 'aria' }, newUserMsg.id);
     }
 
     setIsTyping(true);
@@ -234,7 +255,7 @@ export default function CompanionChat({ session }) {
       setIsTyping(false);
 
       if (session?.user?.id) {
-        supabase.from('messages').insert([{ user_id: session.user.id, text: tieredText, sender: 'ai', source: 'aria' }]).then();
+        saveMessageToDB({ user_id: session.user.id, text: tieredText, sender: 'ai', source: 'aria' }, aiReply.id);
       }
 
       speakText(tieredText);
@@ -302,28 +323,36 @@ export default function CompanionChat({ session }) {
         </div>
 
         {/* Top Header */}
-        <header className="absolute top-6 left-6 z-50 flex items-center gap-4">
-          <button onClick={() => navigate('/siya')} className="text-gray-400 hover:text-white transition-colors">
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-          <div className="flex flex-col">
-            <span className="text-sm tracking-[0.2em] font-light text-gray-300">SHUNA</span>
-            <span className="text-[10px] tracking-widest uppercase text-fuchsia-400 flex items-center gap-2">
-              <span className={`w-1.5 h-1.5 rounded-full ${isTyping ? 'bg-fuchsia-400 animate-pulse' : 'bg-white/30'}`}></span>
-              {isTyping ? 'Transmitting' : 'Idle in void'}
-            </span>
+        <header className="absolute top-6 left-6 z-50 flex items-center justify-between w-[calc(100%-3rem)] pointer-events-auto">
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate('/siya')} className="text-gray-400 hover:text-white transition-colors">
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+            <div className="flex flex-col">
+              <span className="text-sm tracking-[0.2em] font-light text-gray-300">SHUNA</span>
+              <span className="text-[10px] tracking-widest uppercase text-fuchsia-400 flex items-center gap-2">
+                <span className={`w-1.5 h-1.5 rounded-full ${isTyping ? 'bg-fuchsia-400 animate-pulse' : 'bg-white/30'}`}></span>
+                {isTyping ? 'Transmitting' : 'Idle in void'}
+              </span>
+            </div>
           </div>
+          <button onClick={handleClearChat} className="px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold border border-red-500/20 transition-all flex items-center gap-2">
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete_sweep</span>
+            Clear Chat
+          </button>
         </header>
 
         {/* Floating Messages - Non-obstructive display */}
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-full max-w-2xl max-h-[60vh] overflow-y-auto no-scrollbar pointer-events-auto z-20 flex flex-col p-4 mask-image-b">
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-full max-w-2xl max-h-[60vh] overflow-y-auto pointer-events-auto z-20 flex flex-col p-4 mask-image-b companion-scrollbar">
           <AnimatePresence initial={false}>
             {messages.map((msg) => (
               <motion.div 
                 key={msg.id}
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                style={{ willChange: 'transform, opacity' }}
                 className={`mb-4 w-fit max-w-[80%] flex items-center gap-2 ${msg.sender === 'ai' ? 'self-start' : 'self-end'}`}
               >
                 {msg.sender === 'user' && (
@@ -335,7 +364,7 @@ export default function CompanionChat({ session }) {
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
                   </button>
                 )}
-                <div className={`p-4 rounded-3xl backdrop-blur-md border ${msg.sender === 'ai' ? 'bg-black/40 border-fuchsia-500/20 text-gray-200' : 'bg-white/10 border-white/10 text-white'}`}>
+                <div className={`p-4 rounded-3xl backdrop-blur-sm border ${msg.sender === 'ai' ? 'bg-black/60 border-fuchsia-500/20 text-gray-200' : 'bg-white/10 border-white/10 text-white'}`}>
                   {msg.text}
                 </div>
                 {msg.sender === 'ai' && (
