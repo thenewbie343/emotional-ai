@@ -43,6 +43,8 @@ export default function SiyaHub({ session }) {
   const navigate = useNavigate();
   const { isPremium } = useSubscription(session);
   const [greeting, setGreeting] = useState('');
+  const [rhythmData, setRhythmData] = useState([30, 30, 30, 30, 30, 30, 30]);
+  const [daysLabels, setDaysLabels] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -52,6 +54,64 @@ export default function SiyaHub({ session }) {
     else if (hour < 21) setGreeting('The evening brings calm.');
     else setGreeting('Rest easy tonight.');
   }, []);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    
+    const fetchRhythm = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('sai_moods')
+          .select('mood, created_at')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false })
+          .limit(100);
+          
+        if (error) throw error;
+        
+        // Calculate past 7 days starting from 6 days ago up to today
+        const today = new Date();
+        const past7Days = [];
+        const labels = [];
+        const valueMap = { '🤩': 95, '😊': 75, '😐': 50, '😢': 25, '😡': 15 };
+        
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(today.getDate() - i);
+          past7Days.push(d.toISOString().split('T')[0]);
+          labels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
+        }
+        
+        const dayScores = {};
+        const dayCounts = {};
+        
+        if (data) {
+          data.forEach(entry => {
+            const dateStr = new Date(entry.created_at).toISOString().split('T')[0];
+            const score = valueMap[entry.mood] || 50;
+            if (past7Days.includes(dateStr)) {
+              dayScores[dateStr] = (dayScores[dateStr] || 0) + score;
+              dayCounts[dateStr] = (dayCounts[dateStr] || 0) + 1;
+            }
+          });
+        }
+        
+        const mappedData = past7Days.map(dateStr => {
+          if (dayCounts[dateStr]) {
+            return Math.round(dayScores[dateStr] / dayCounts[dateStr]);
+          }
+          return 30; // default baseline for days with no logs
+        });
+        
+        setRhythmData(mappedData);
+        setDaysLabels(labels);
+      } catch (err) {
+        console.error("Failed to fetch emotional rhythm:", err);
+      }
+    };
+    
+    fetchRhythm();
+  }, [session]);
 
   return (
     <div className="min-h-screen bg-[#130b1c] text-gray-100 font-sans selection:bg-fuchsia-500/30 overflow-x-hidden pb-24 relative">
@@ -239,7 +299,7 @@ export default function SiyaHub({ session }) {
                 </h3>
                 
                 <div className="flex justify-between items-end gap-2 h-24 mt-4">
-                  {[40, 70, 45, 90, 60, 80, 50].map((h, i) => (
+                  {rhythmData.map((h, i) => (
                     <motion.div 
                       key={i} 
                       className="w-full bg-white/5 rounded-t-lg relative"
@@ -256,7 +316,9 @@ export default function SiyaHub({ session }) {
                   ))}
                 </div>
                 <div className="mt-4 flex justify-between text-xs text-gray-500">
-                  <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                  {daysLabels.map((label, idx) => (
+                    <span key={idx}>{label}</span>
+                  ))}
                 </div>
               </div>
             </motion.div>

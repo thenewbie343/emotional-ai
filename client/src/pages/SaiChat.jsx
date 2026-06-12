@@ -285,7 +285,6 @@ export default function SaiChat({ session }) {
       const data = await res.json();
       if (Array.isArray(data)) {
         setRoadmaps(data);
-        if (data.length > 0 && !activeRoadmap) setActiveRoadmap(data[0]);
       }
     } catch (err) {
       console.error(err);

@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { motion } from 'framer-motion';
+import { useSubscription } from '../hooks/useSubscription';
 
 export default function Billing({ session }) {
   const navigate = useNavigate();
+  const { isPremium } = useSubscription(session);
   const [step, setStep] = useState('plans'); // 'plans', 'checkout', 'success'
   const [orderId, setOrderId] = useState('');
   const [utr, setUtr] = useState('');
@@ -95,9 +97,15 @@ export default function Billing({ session }) {
                   <li className="flex items-center gap-3 opacity-30"><span className="material-symbols-outlined text-lg">cancel</span> No Deep Memories</li>
                   <li className="flex items-center gap-3 opacity-30"><span className="material-symbols-outlined text-lg">cancel</span> No 3D Shattered Sphere</li>
                 </ul>
-                <button disabled className="mt-auto w-full py-3 rounded-full bg-white/5 text-gray-500 border border-white/10 cursor-not-allowed">
-                  Current Plan
-                </button>
+                {!isPremium ? (
+                  <button disabled className="mt-auto w-full py-3 rounded-full bg-white/5 text-gray-500 border border-white/10 cursor-not-allowed">
+                    Current Plan
+                  </button>
+                ) : (
+                  <div className="mt-auto py-3 text-xs uppercase tracking-widest text-gray-500">
+                    Standard Account
+                  </div>
+                )}
               </div>
 
               {/* Premium Tier */}
@@ -113,9 +121,15 @@ export default function Billing({ session }) {
                   <li className="flex items-center gap-3"><span className="material-symbols-outlined text-fuchsia-400 text-lg">check_circle</span> Unlocked 3D Features</li>
                   <li className="flex items-center gap-3"><span className="material-symbols-outlined text-fuchsia-400 text-lg">check_circle</span> Priority Processing</li>
                 </ul>
-                <button onClick={handleCheckout} className="mt-auto w-full py-3 rounded-full bg-gradient-to-r from-fuchsia-600 to-cyan-600 hover:from-fuchsia-500 hover:to-cyan-500 text-white font-semibold transition-all shadow-lg hover:shadow-fuchsia-500/25">
-                  Upgrade Now
-                </button>
+                {isPremium ? (
+                  <button disabled className="mt-auto w-full py-3 rounded-full bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 cursor-not-allowed font-semibold">
+                    Current Plan (Active)
+                  </button>
+                ) : (
+                  <button onClick={handleCheckout} className="mt-auto w-full py-3 rounded-full bg-gradient-to-r from-fuchsia-600 to-cyan-600 hover:from-fuchsia-500 hover:to-cyan-500 text-white font-semibold transition-all shadow-lg hover:shadow-fuchsia-500/25">
+                    Upgrade Now
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>

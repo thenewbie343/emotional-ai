@@ -159,18 +159,27 @@ export default function StudySidebar({ session, onClose, onStartQuiz, onStartLes
   };
 
   const handleToggleTask = async (taskId, completed) => {
+    const originalTasks = tasks;
+    // Optimistically update tasks local state
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed } : t));
+
     try {
-      await fetch(`${API_BASE}/api/study/tasks/toggle-completed`, {
+      const res = await fetch(`${API_BASE}/api/study/tasks/toggle-completed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, taskId, completed })
       });
-      fetchTasks();
-      if (completed) {
-        alert("✨ Task completed! 15 XP earned.");
+      if (res.ok) {
+        fetchTasks();
+        if (completed) {
+          alert("✨ Task completed! 15 XP earned.");
+        }
+      } else {
+        setTasks(originalTasks);
       }
     } catch (err) {
       console.error(err);
+      setTasks(originalTasks);
     }
   };
 
@@ -230,7 +239,25 @@ export default function StudySidebar({ session, onClose, onStartQuiz, onStartLes
 
   const handleToggleLesson = async (stageIndex, lessonIndex, completed) => {
     if (!activeRoadmap) return;
+
+    // Optimistically update activeRoadmap syllabus lessons local state
+    const originalRoadmap = activeRoadmap;
     try {
+      const updatedSyllabus = [...activeRoadmap.syllabus];
+      const updatedLessons = [...updatedSyllabus[stageIndex].lessons];
+      updatedLessons[lessonIndex] = {
+        ...updatedLessons[lessonIndex],
+        completed
+      };
+      updatedSyllabus[stageIndex] = {
+        ...updatedSyllabus[stageIndex],
+        lessons: updatedLessons
+      };
+      setActiveRoadmap({
+        ...activeRoadmap,
+        syllabus: updatedSyllabus
+      });
+
       const res = await fetch(`${API_BASE}/api/study/roadmap/update-lesson`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -244,7 +271,13 @@ export default function StudySidebar({ session, onClose, onStartQuiz, onStartLes
       });
       const data = await res.json();
       if (data && !data.error) {
+        // Handle syllabus as string edge case
+        if (data.syllabus && typeof data.syllabus === 'string') {
+          try { data.syllabus = JSON.parse(data.syllabus); } catch(e) { }
+        }
         setActiveRoadmap(data);
+      } else {
+        setActiveRoadmap(originalRoadmap);
       }
       fetchRoadmaps();
       if (completed) {
@@ -252,6 +285,7 @@ export default function StudySidebar({ session, onClose, onStartQuiz, onStartLes
       }
     } catch (err) {
       console.error(err);
+      setActiveRoadmap(originalRoadmap);
     }
   };
 
@@ -277,8 +311,15 @@ export default function StudySidebar({ session, onClose, onStartQuiz, onStartLes
       blocks.push(
         <div
           key={dateString}
-          className="w-3.5 h-3.5 rounded-[3px] transition-colors relative group"
-          style={{ background: bg }}
+          className="relative group"
+          style={{
+            width: '14px',
+            height: '14px',
+            borderRadius: '3px',
+            background: bg,
+            transition: 'background-color 0.2s ease',
+            flexShrink: 0
+          }}
           title={`${date.toLocaleDateString()}: ${mins} mins focused`}
         />
       );
