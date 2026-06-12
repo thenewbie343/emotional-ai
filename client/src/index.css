@@ -130,3 +130,52 @@ canvas {
 .companion-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .companion-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
 .companion-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* Companion Switch Toggle Button */
+.companion-toggle-btn {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: rgba(10, 10, 18, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50px;
+  padding: 7px 18px;
+  color: white;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.companion-toggle-btn:hover {
+  background: rgba(10, 10, 18, 0.9);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateX(-50%) translateY(-1px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Mobile responsive toggle position and page clearance */
+@media (max-width: 768px) {
+  .companion-toggle-btn {
+    top: 8px;
+    padding: 5px 12px;
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    gap: 6px;
+  }
+  
+  /* Safe area top padding offset for Hub headers on mobile so toggle never covers text */
+  div.max-w-6xl {
+    padding-top: 72px !important;
+  }
+}

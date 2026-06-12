@@ -304,9 +304,8 @@ export default function SaiChat({ session }) {
     }
   };
 
-  const processMessage = async (e) => {
-    if (e) e.preventDefault();
-    if (!inputText.trim()) return;
+  const sendMessage = async (textToSend) => {
+    if (!textToSend.trim()) return;
 
     if (session?.user?.user_metadata?.is_blocked) {
       alert("Your account has been blocked.");
@@ -326,13 +325,11 @@ export default function SaiChat({ session }) {
       }
     }
 
-    const text = inputText;
+    const text = textToSend.trim();
     const lowerText = text.toLowerCase();
-    setInputText('');
 
-    const userMsg = { id: crypto.randomUUID(), text: inputText.trim(), sender: 'user', type: activeRoadmap ? 'topic' : undefined };
+    const userMsg = { id: crypto.randomUUID(), text: text, sender: 'user' };
     setMessages(prev => [...prev, userMsg]);
-    setInputText("");
 
     saveMessageToDB({ id: userMsg.id, user_id: userId, text: userMsg.text, sender: 'user', source: 'sai' }, userMsg.id);
 
@@ -416,13 +413,17 @@ export default function SaiChat({ session }) {
     }
   };
 
+  const processMessage = async (e) => {
+    if (e) e.preventDefault();
+    if (!inputText.trim()) return;
+    const text = inputText;
+    setInputText('');
+    sendMessage(text);
+  };
+
   const handleStartLesson = (lessonName) => {
     setIsSidebarOpen(false);
-    setInputText(`Explain to me what is ${lessonName}`);
-    setTimeout(() => {
-      const form = document.getElementById("sai-chat-form");
-      if (form) form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-    }, 100);
+    sendMessage(`Explain to me what is ${lessonName}`);
   };
 
   const handleStartQuiz = (lessonName) => {

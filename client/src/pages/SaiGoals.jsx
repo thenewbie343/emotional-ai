@@ -255,7 +255,7 @@ export default function SaiGoals({ session }) {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="absolute bottom-10 left-10 z-40 w-full max-w-sm"
+            className="absolute bottom-28 left-4 sm:bottom-10 sm:left-10 z-40 w-[calc(100vw-32px)] sm:max-w-sm max-h-[70vh] overflow-y-auto"
           >
             <div
               className="p-6 rounded-3xl backdrop-blur-2xl border shadow-2xl"
@@ -333,7 +333,7 @@ export default function SaiGoals({ session }) {
             initial={{ opacity: 0, y: 40, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 40, scale: 0.95 }}
-            className="absolute bottom-12 left-1/2 -translate-x-1/2 w-full max-w-md p-8 rounded-3xl bg-black/60 border border-white/10 backdrop-blur-2xl z-50"
+            className="absolute bottom-6 sm:bottom-12 left-1/2 -translate-x-1/2 w-[calc(100vw-32px)] max-w-md max-h-[85vh] overflow-y-auto p-5 sm:p-8 rounded-3xl bg-black/60 border border-white/10 backdrop-blur-2xl z-50"
           >
             <h2 className="text-sm uppercase tracking-widest text-gray-300 mb-6">Create New Island</h2>
             <div className="space-y-4">

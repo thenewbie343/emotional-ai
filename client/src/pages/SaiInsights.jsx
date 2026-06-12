@@ -46,7 +46,7 @@ const EMOTION_EMOJI = {
 };
 
 // ─── HarmonyHive 3D Visualization ────────────────────────────────────────────
-function HexCell({ position, emotion, count, maxCount, isActive, onClick }) {
+function HexCell({ position, emotion, count, maxCount, isActive, onClick, scaleMultiplier = 2.5 }) {
   const meshRef = useRef();
   const color = EMOTION_COLORS[emotion] || '#7c3aed';
   const intensity = count / Math.max(maxCount, 1);
@@ -67,7 +67,7 @@ function HexCell({ position, emotion, count, maxCount, isActive, onClick }) {
     <Float speed={0.5} floatIntensity={0.3}>
       <group position={position} onClick={onClick} onPointerOver={() => document.body.style.cursor = 'pointer'} onPointerOut={() => document.body.style.cursor = 'auto'}>
         {/* Hex cylinder */}
-        <mesh ref={meshRef} scale={[scale * 2.5, 0.4 + intensity * 1.5, scale * 2.5]}>
+        <mesh ref={meshRef} scale={[scale * scaleMultiplier, 0.4 + intensity * 1.5, scale * scaleMultiplier]}>
           <cylinderGeometry args={[0.5, 0.5, 1, 6]} />
           <meshStandardMaterial
             color={color}
@@ -82,7 +82,7 @@ function HexCell({ position, emotion, count, maxCount, isActive, onClick }) {
 
         {/* Top glow disk */}
         <mesh position={[0, (0.4 + intensity * 1.5) / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.45 * 2.5, 6]} />
+          <circleGeometry args={[0.45 * scaleMultiplier, 6]} />
           <meshBasicMaterial color={color} transparent opacity={0.4 + intensity * 0.4} />
         </mesh>
 
@@ -122,6 +122,16 @@ export default function SaiInsights({ session }) {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeEmotion, setActiveEmotion] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -141,16 +151,18 @@ export default function SaiInsights({ session }) {
 
   // Position emotions in a honeycomb pattern
   const hexPositions = analysis ? analysis.dominant.map(([emotion], i) => {
-    const cols = 4;
+    const cols = isMobile ? 3 : 4;
     const row = Math.floor(i / cols);
     const col = i % cols;
-    const offset = row % 2 === 0 ? 0 : 0.6;
+    const offset = row % 2 === 0 ? 0 : 0.5;
+    const hexSpacingX = isMobile ? 2.2 : 3.5;
+    const hexSpacingZ = isMobile ? 1.8 : 2.8;
     return {
       emotion,
       pos: [
-        (col - 1.5) * 3.5 + offset * 2.5,
+        (col - (cols - 1) / 2) * hexSpacingX + offset * (hexSpacingX * 0.5),
         0,
-        (row - 1) * 2.8
+        (row - 0.5) * hexSpacingZ
       ]
     };
   }) : [];
@@ -164,7 +176,7 @@ export default function SaiInsights({ session }) {
 
       {/* 3D HarmonyHive Canvas */}
       <div className="absolute inset-0 z-0">
-        <Canvas camera={{ position: [0, 5, 8], fov: 55 }}>
+        <Canvas camera={{ position: [0, isMobile ? 9 : 5, isMobile ? 16 : 8], fov: isMobile ? 60 : 55 }}>
           <color attach="background" args={['#020005']} />
           <fog attach="fog" args={['#020005', 10, 25]} />
           <ambientLight intensity={0.4} />
@@ -183,6 +195,7 @@ export default function SaiInsights({ session }) {
                   maxCount={maxCount}
                   isActive={activeEmotion === emotion}
                   onClick={(e) => { e.stopPropagation(); setActiveEmotion(activeEmotion === emotion ? null : emotion); }}
+                  scaleMultiplier={isMobile ? 1.6 : 2.5}
                 />
               );
             })}
@@ -217,15 +230,15 @@ export default function SaiInsights({ session }) {
 
       {/* Stats Row */}
       {analysis && (
-        <div className="absolute top-6 right-6 z-50 flex gap-4">
+        <div className="absolute top-24 left-6 right-6 sm:top-6 sm:left-auto sm:right-6 z-50 flex gap-2 sm:gap-4 justify-between sm:justify-end">
           {[
             { label: 'Messages', val: analysis.totalMsgs },
             { label: 'Positivity', val: `${analysis.positivity}%` },
             { label: 'Memories', val: memories.length },
           ].map(s => (
-            <div key={s.label} className="px-6 py-4 rounded-3xl bg-black/40 border border-white/10 backdrop-blur-xl text-center shadow-xl">
-              <div className="text-2xl font-bold text-white mb-1">{s.val}</div>
-              <div className="text-xs uppercase tracking-widest text-gray-400 font-semibold">{s.label}</div>
+            <div key={s.label} className="flex-1 sm:flex-initial px-3 py-2 sm:px-6 sm:py-4 rounded-2xl sm:rounded-3xl bg-black/40 border border-white/10 backdrop-blur-xl text-center shadow-xl">
+              <div className="text-base sm:text-2xl font-bold text-white sm:mb-1">{s.val}</div>
+              <div className="text-[9px] sm:text-xs uppercase tracking-widest text-gray-400 font-semibold">{s.label}</div>
             </div>
           ))}
         </div>
@@ -239,7 +252,7 @@ export default function SaiInsights({ session }) {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="absolute bottom-10 left-10 z-40 max-w-md p-8 rounded-[2rem] backdrop-blur-2xl border shadow-2xl"
+            className="absolute bottom-4 left-4 sm:bottom-10 sm:left-10 z-40 w-[calc(100vw-32px)] sm:max-w-md p-6 sm:p-8 rounded-[2rem] backdrop-blur-2xl border shadow-2xl"
             style={{
               background: `${EMOTION_COLORS[activeData[0]] || '#7c3aed'}15`,
               borderColor: `${EMOTION_COLORS[activeData[0]] || '#7c3aed'}40`
@@ -287,8 +300,8 @@ export default function SaiInsights({ session }) {
       )}
 
       {/* Top keywords cloud */}
-      {analysis && analysis.topKeywords.length > 0 && (
-        <div className="absolute bottom-10 right-10 z-40 flex flex-wrap gap-2 max-w-xs justify-end">
+      {analysis && (!isMobile || !activeEmotion) && analysis.topKeywords.length > 0 && (
+        <div className="absolute bottom-10 right-10 z-40 flex flex-wrap gap-2 max-w-[280px] sm:max-w-xs justify-end">
           {analysis.topKeywords.map(([word, count], i) => (
             <motion.span
               key={word}

@@ -234,7 +234,7 @@ export default function SaiDreams({ session }) {
       {/* Floating Action Button */}
       <button 
         onClick={() => setShowInput(!showInput)}
-        className="absolute bottom-10 right-10 z-50 w-16 h-16 rounded-full bg-indigo-600/50 border border-indigo-400/50 flex items-center justify-center backdrop-blur-xl hover:bg-indigo-500/50 transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)]"
+        className="absolute bottom-8 right-4 sm:bottom-10 sm:right-10 z-50 w-16 h-16 rounded-full bg-indigo-600/50 border border-indigo-400/50 flex items-center justify-center backdrop-blur-xl hover:bg-indigo-500/50 transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)]"
       >
         <span className="material-symbols-outlined">{showInput ? 'close' : 'add'}</span>
       </button>
@@ -246,7 +246,7 @@ export default function SaiDreams({ session }) {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="absolute bottom-32 right-10 z-50 w-[400px] p-6 rounded-3xl bg-black/60 border border-white/10 backdrop-blur-2xl shadow-2xl"
+            className="absolute bottom-28 right-4 sm:right-10 z-50 w-[calc(100vw-32px)] sm:w-[400px] max-h-[60vh] overflow-y-auto p-5 sm:p-6 rounded-3xl bg-black/60 border border-white/10 backdrop-blur-2xl shadow-2xl"
           >
             <h3 className="text-sm font-semibold tracking-widest uppercase text-indigo-300 mb-4">Log a New Dream</h3>
             <textarea
@@ -273,7 +273,7 @@ export default function SaiDreams({ session }) {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="absolute bottom-10 left-10 z-40 max-w-md"
+            className="absolute bottom-28 left-4 sm:bottom-10 sm:left-10 z-40 w-[calc(100vw-32px)] sm:max-w-md max-h-[60vh] overflow-y-auto"
           >
             <div className="p-6 rounded-3xl bg-black/40 border border-white/10 backdrop-blur-xl">
               <div className="text-xs tracking-widest text-indigo-400 mb-2 uppercase">

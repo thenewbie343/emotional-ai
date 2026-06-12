@@ -160,7 +160,7 @@ function SealFormOverlay({ userId, onSealed, onClose }) {
       initial={{ opacity: 0, y: 40, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 40, scale: 0.95 }}
-      className="absolute bottom-12 left-1/2 -translate-x-1/2 w-full max-w-lg p-8 rounded-3xl bg-black/60 border border-purple-500/20 backdrop-blur-2xl z-50 shadow-[0_0_60px_rgba(124,58,237,0.15)]"
+      className="absolute bottom-6 sm:bottom-12 left-1/2 -translate-x-1/2 w-[calc(100vw-32px)] max-w-lg max-h-[85vh] overflow-y-auto p-5 sm:p-8 rounded-3xl bg-black/60 border border-purple-500/20 backdrop-blur-2xl z-50 shadow-[0_0_60px_rgba(124,58,237,0.15)]"
     >
       <h2 className="text-lg font-light tracking-[0.2em] uppercase text-purple-300 mb-6">Seal a Time Capsule</h2>
       
@@ -322,7 +322,7 @@ export default function SaiTimeCapsule({ session }) {
       {!showForm && (
         <button
           onClick={() => setShowForm(true)}
-          className="absolute bottom-10 right-10 z-50 w-16 h-16 rounded-full bg-purple-600/50 border border-purple-400/50 flex items-center justify-center backdrop-blur-xl hover:bg-purple-500/50 transition-all shadow-[0_0_30px_rgba(124,58,237,0.3)]"
+          className="absolute bottom-8 right-4 sm:bottom-10 sm:right-10 z-50 w-16 h-16 rounded-full bg-purple-600/50 border border-purple-400/50 flex items-center justify-center backdrop-blur-xl hover:bg-purple-500/50 transition-all shadow-[0_0_30px_rgba(124,58,237,0.3)]"
         >
           <span className="material-symbols-outlined">add</span>
         </button>
@@ -335,7 +335,7 @@ export default function SaiTimeCapsule({ session }) {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="absolute bottom-10 left-10 z-40 w-full max-w-sm p-6 rounded-3xl bg-black/50 border border-white/10 backdrop-blur-2xl"
+            className="absolute bottom-28 left-4 sm:bottom-10 sm:left-10 z-40 w-[calc(100vw-32px)] sm:max-w-sm max-h-[60vh] overflow-y-auto p-6 rounded-3xl bg-black/50 border border-white/10 backdrop-blur-2xl"
           >
             <div className="flex justify-between items-start mb-4">
               <div>

@@ -48,16 +48,6 @@ function CompanionToggle({ session, onToggle }) {
     <button
       onClick={handleToggle}
       className="companion-toggle-btn"
-      style={{
-        position: 'fixed', top: '18px', left: '50%', transform: 'translateX(-50%)',
-        zIndex: 9999, background: 'rgba(10,10,18,0.75)', backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)',
-        borderRadius: '50px', padding: '7px 18px', color: 'white',
-        fontFamily: "'Inter', system-ui, sans-serif", fontSize: '0.7rem',
-        fontWeight: 600, letterSpacing: '1.5px', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.3s ease',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-      }}
       title={isSai ? 'Switch to SHUNA (Companion Mode)' : 'Switch to SAI (Personal AI)'}
     >
       <span style={{ color: isSai ? '#00d4ff' : 'rgba(255,255,255,0.4)' }}>SAI</span>
