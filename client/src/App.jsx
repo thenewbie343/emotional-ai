@@ -31,7 +31,12 @@ function CompanionToggle({ session, onToggle }) {
   const isSai = location.pathname.startsWith('/sai')
   const isChat = location.pathname === '/chat'
   const isSiya = location.pathname.startsWith('/siya')
-  const showToggle = session && (isSai || isChat || isSiya)
+  const showToggle = session && (
+    location.pathname === '/sai' || 
+    location.pathname === '/siya' || 
+    location.pathname === '/chat' || 
+    location.pathname === '/sai/chat'
+  )
 
   if (!showToggle) return null
 
@@ -45,15 +50,18 @@ function CompanionToggle({ session, onToggle }) {
   }
 
   return (
-    <button
-      onClick={handleToggle}
-      className="companion-toggle-btn"
-      title={isSai ? 'Switch to SHUNA (Companion Mode)' : 'Switch to SAI (Personal AI)'}
-    >
-      <span style={{ color: isSai ? '#00d4ff' : 'rgba(255,255,255,0.4)' }}>SAI</span>
-      <span style={{ opacity: 0.3 }}>⇄</span>
-      <span style={{ color: (isChat || isSiya) ? '#a78bfa' : 'rgba(255,255,255,0.4)' }}>SHUNA</span>
-    </button>
+    <>
+      <div className="mobile-top-bar-bg" />
+      <button
+        onClick={handleToggle}
+        className="companion-toggle-btn"
+        title={isSai ? 'Switch to SHUNA (Companion Mode)' : 'Switch to SAI (Personal AI)'}
+      >
+        <span style={{ color: isSai ? '#00d4ff' : 'rgba(255,255,255,0.4)' }}>SAI</span>
+        <span style={{ opacity: 0.3 }}>⇄</span>
+        <span style={{ color: (isChat || isSiya) ? '#a78bfa' : 'rgba(255,255,255,0.4)' }}>SHUNA</span>
+      </button>
+    </>
   )
 }
 

@@ -280,6 +280,7 @@ export default function StudySidebar({ session, onClose, onStartQuiz, onStartLes
         setActiveRoadmap(originalRoadmap);
       }
       fetchRoadmaps();
+      fetchHeatmapData();
       if (completed) {
         alert("📚 Lesson completed! 20 XP earned.");
       }

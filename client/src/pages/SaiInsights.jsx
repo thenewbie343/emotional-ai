@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Stars, Float, Sparkles, Environment } from '@react-three/drei';
+import { Stars, Float, Sparkles, Environment, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabaseClient';
@@ -155,8 +155,8 @@ export default function SaiInsights({ session }) {
     const row = Math.floor(i / cols);
     const col = i % cols;
     const offset = row % 2 === 0 ? 0 : 0.5;
-    const hexSpacingX = isMobile ? 2.2 : 3.5;
-    const hexSpacingZ = isMobile ? 1.8 : 2.8;
+    const hexSpacingX = isMobile ? 1.8 : 3.5;
+    const hexSpacingZ = isMobile ? 1.5 : 2.8;
     return {
       emotion,
       pos: [
@@ -172,16 +172,17 @@ export default function SaiInsights({ session }) {
   const activeData = activeEmotion ? analysis?.dominant.find(([e]) => e === activeEmotion) : null;
 
   return (
-    <div className="h-screen w-screen bg-[#020005] overflow-hidden relative font-sans text-white">
+    <div className="h-[100dvh] w-screen bg-[#020005] overflow-hidden relative font-sans text-white">
 
       {/* 3D HarmonyHive Canvas */}
       <div className="absolute inset-0 z-0">
-        <Canvas camera={{ position: [0, isMobile ? 9 : 5, isMobile ? 16 : 8], fov: isMobile ? 60 : 55 }}>
+        <Canvas camera={{ position: [0, isMobile ? 25 : 5, isMobile ? 40 : 8], fov: isMobile ? 80 : 55 }}>
           <color attach="background" args={['#020005']} />
-          <fog attach="fog" args={['#020005', 10, 25]} />
+          <fog attach="fog" args={['#020005', 10, 60]} />
           <ambientLight intensity={0.4} />
           <directionalLight position={[5, 8, 5]} intensity={0.6} color="#a78bfa" />
           <Stars radius={80} depth={60} count={3000} factor={4} saturation={1} fade />
+          <OrbitControls maxPolarAngle={Math.PI / 2.1} minDistance={5} maxDistance={60} />
 
           <Suspense fallback={null}>
             {analysis && hexPositions.map(({ emotion, pos }, i) => {
@@ -195,7 +196,7 @@ export default function SaiInsights({ session }) {
                   maxCount={maxCount}
                   isActive={activeEmotion === emotion}
                   onClick={(e) => { e.stopPropagation(); setActiveEmotion(activeEmotion === emotion ? null : emotion); }}
-                  scaleMultiplier={isMobile ? 1.6 : 2.5}
+                  scaleMultiplier={isMobile ? 1.0 : 2.5}
                 />
               );
             })}

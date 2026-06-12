@@ -242,27 +242,33 @@ export default function SaiDreams({ session }) {
       {/* Input Overlay */}
       <AnimatePresence>
         {showInput && (
-          <motion.div 
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="absolute bottom-28 right-4 sm:right-10 z-50 w-[calc(100vw-32px)] sm:w-[400px] max-h-[60vh] overflow-y-auto p-5 sm:p-6 rounded-3xl bg-black/60 border border-white/10 backdrop-blur-2xl shadow-2xl"
+          <div 
+            className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setShowInput(false)}
           >
-            <h3 className="text-sm font-semibold tracking-widest uppercase text-indigo-300 mb-4">Log a New Dream</h3>
-            <textarea
-              className="w-full h-32 bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-200 focus:outline-none focus:border-indigo-500/50 resize-none placeholder:text-gray-600"
-              placeholder="I was falling through a sky of glass..."
-              value={newDream}
-              onChange={(e) => setNewDream(e.target.value)}
-            />
-            <button 
-              onClick={handleSaveDream}
-              disabled={saving || !newDream.trim()}
-              className="w-full mt-4 py-3 rounded-xl bg-white/10 border border-white/20 text-sm font-semibold hover:bg-white/20 transition-all disabled:opacity-50"
+            <motion.div 
+              initial={{ opacity: 0, y: 30, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 30, scale: 0.9 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-md bg-[#05010a] border border-white/10 p-6 rounded-3xl shadow-2xl my-auto"
             >
-              {saving ? 'Manifesting...' : 'Solidify Dream'}
-            </button>
-          </motion.div>
+              <h3 className="text-sm font-semibold tracking-widest uppercase text-indigo-300 mb-4">Log a New Dream</h3>
+              <textarea
+                className="w-full h-32 bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-200 focus:outline-none focus:border-indigo-500/50 resize-none placeholder:text-gray-600"
+                placeholder="I was falling through a sky of glass..."
+                value={newDream}
+                onChange={(e) => setNewDream(e.target.value)}
+              />
+              <button 
+                onClick={handleSaveDream}
+                disabled={saving || !newDream.trim()}
+                className="w-full mt-4 py-3 rounded-xl bg-white/10 border border-white/20 text-sm font-semibold hover:bg-white/20 transition-all disabled:opacity-50"
+              >
+                {saving ? 'Manifesting...' : 'Solidify Dream'}
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

@@ -306,7 +306,7 @@ export default function SaiJournal({ session }) {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.03 }}
                         className="relative z-10 flex items-start gap-4 p-4 bg-[#0d091a]/95 cursor-grab active:cursor-grabbing border-l-4"
-                        style={{ borderLeftColor: m?.color || '#a78bfa' }}
+                        style={{ borderLeftColor: m?.color || '#a78bfa', touchAction: 'pan-y' }}
                       >
                         <div className="text-2xl select-none">{entry.mood}</div>
                         <div className="flex-1 min-w-0 pointer-events-none">

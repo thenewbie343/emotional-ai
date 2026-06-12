@@ -156,62 +156,68 @@ function SealFormOverlay({ userId, onSealed, onClose }) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 40, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 40, scale: 0.95 }}
-      className="absolute bottom-6 sm:bottom-12 left-1/2 -translate-x-1/2 w-[calc(100vw-32px)] max-w-lg max-h-[85vh] overflow-y-auto p-5 sm:p-8 rounded-3xl bg-black/60 border border-purple-500/20 backdrop-blur-2xl z-50 shadow-[0_0_60px_rgba(124,58,237,0.15)]"
+    <div 
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+      onClick={onClose}
     >
-      <h2 className="text-lg font-light tracking-[0.2em] uppercase text-purple-300 mb-6">Seal a Time Capsule</h2>
-      
-      <div className="space-y-5">
-        <div>
-          <label className="text-xs uppercase tracking-widest text-gray-400 block mb-2">Message to your future self</label>
-          <textarea
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-            placeholder="Dear future me..."
-            rows={4}
-            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-purple-500/40 resize-none"
-          />
-        </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 20, scale: 0.95 }}
+        onClick={e => e.stopPropagation()}
+        className="w-full max-w-lg bg-[#06030c] border border-purple-500/20 p-6 sm:p-8 rounded-3xl shadow-[0_0_60px_rgba(124,58,237,0.15)] my-auto"
+      >
+        <h2 className="text-lg font-light tracking-[0.2em] uppercase text-purple-300 mb-6">Seal a Time Capsule</h2>
+        
+        <div className="space-y-5">
+          <div>
+            <label className="text-xs uppercase tracking-widest text-gray-400 block mb-2">Message to your future self</label>
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              placeholder="Dear future me..."
+              rows={4}
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-purple-500/40 resize-none"
+            />
+          </div>
 
-        <div>
-          <label className="text-xs uppercase tracking-widest text-gray-400 block mb-2">Current Mood</label>
-          <div className="flex gap-2 flex-wrap">
-            {MOODS.map((m, i) => (
-              <button
-                key={m}
-                onClick={() => setMood(i)}
-                className={`px-3 py-1.5 rounded-full text-xs border transition-all ${mood === i ? 'border-purple-400 bg-purple-500/20 text-purple-200' : 'border-white/10 text-gray-500 hover:border-white/20'}`}
-              >{m}</button>
-            ))}
+          <div>
+            <label className="text-xs uppercase tracking-widest text-gray-400 block mb-2">Current Mood</label>
+            <div className="flex gap-2 flex-wrap">
+              {MOODS.map((m, i) => (
+                <button
+                  key={m}
+                  onClick={() => setMood(i)}
+                  className={`px-3 py-1.5 rounded-full text-xs border transition-all ${mood === i ? 'border-purple-400 bg-purple-500/20 text-purple-200' : 'border-white/10 text-gray-500 hover:border-white/20'}`}
+                >{m}</button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs uppercase tracking-widest text-gray-400 block mb-2">Unlock Date (min. 7 days)</label>
+            <input
+              type="date"
+              min={minDate}
+              value={unlockDate}
+              onChange={e => setUnlockDate(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-gray-200 focus:outline-none focus:border-purple-500/40"
+            />
           </div>
         </div>
 
-        <div>
-          <label className="text-xs uppercase tracking-widest text-gray-400 block mb-2">Unlock Date (min. 7 days)</label>
-          <input
-            type="date"
-            min={minDate}
-            value={unlockDate}
-            onChange={e => setUnlockDate(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-gray-200 focus:outline-none focus:border-purple-500/40"
-          />
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-white/10 text-gray-400 text-sm hover:bg-white/5">Cancel</button>
+          <button
+            onClick={seal}
+            disabled={sealing || !message.trim() || !unlockDate}
+            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+          >
+            {sealing ? "Sealing..." : "🔮 Seal"}
+          </button>
         </div>
-      </div>
-
-      <div className="flex gap-3 mt-6">
-        <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-white/10 text-gray-400 text-sm hover:bg-white/5">Cancel</button>
-        <button
-          onClick={seal}
-          disabled={sealing || !message.trim() || !unlockDate}
-          className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50"
-        >
-          {sealing ? "Sealing..." : "🔮 Seal"}
-        </button>
-      </div>
-    </motion.div>
+      </motion.div>
+    </div>
   );
 }
 

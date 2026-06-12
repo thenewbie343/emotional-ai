@@ -86,6 +86,11 @@ const RoadmapWidget = ({ topic, userId, onRoadmapCreated }) => {
   const [roadmap, setRoadmap] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  const onRoadmapCreatedRef = useRef(onRoadmapCreated);
+  useEffect(() => {
+    onRoadmapCreatedRef.current = onRoadmapCreated;
+  }, [onRoadmapCreated]);
 
   const generate = useCallback(async () => {
     setLoading(true);
@@ -101,21 +106,22 @@ const RoadmapWidget = ({ topic, userId, onRoadmapCreated }) => {
       if (data.error) {
         setError(data.error);
       } else {
-        // Handle syllabus as string edge case
         if (data.syllabus && typeof data.syllabus === 'string') {
-          try { data.syllabus = JSON.parse(data.syllabus); } catch(e) { /* keep as-is */ }
+          try { data.syllabus = JSON.parse(data.syllabus); } catch(e) { }
         }
         setRoadmap(data);
-        if (onRoadmapCreated) onRoadmapCreated(data);
+        if (onRoadmapCreatedRef.current) onRoadmapCreatedRef.current(data);
       }
     } catch (err) {
       setError(err.name === 'TimeoutError' ? 'Request timed out. SAI API keys may not be configured on the server.' : err.message);
     } finally {
       setLoading(false);
     }
-  }, [topic, userId, onRoadmapCreated]);
+  }, [topic, userId]);
 
-  useEffect(() => { generate(); }, [generate]);
+  useEffect(() => {
+    generate();
+  }, [generate]);
 
   if (loading) return (
     <div className="sai-widget" style={{ display: 'flex', alignItems: 'center', gap: 12, maxWidth: 380 }}>
@@ -248,6 +254,26 @@ export default function SaiChat({ session }) {
   };
 
   useEffect(() => {
+    // Prevent body scrolling on mobile
+    const originalOverflow = document.body.style.overflow;
+    const originalPosition = document.body.style.position;
+    const originalHeight = document.body.style.height;
+    const originalWidth = document.body.style.width;
+    
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.position = originalPosition;
+      document.body.style.width = originalWidth;
+      document.body.style.height = originalHeight;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!userId) return;
     const loadData = async () => {
       const { data: msgs } = await supabase.from('messages').select('*').eq('user_id', userId).eq('source', 'sai').order('created_at', { ascending: true });
@@ -304,7 +330,7 @@ export default function SaiChat({ session }) {
     }
   };
 
-  const sendMessage = async (textToSend) => {
+  const sendMessage = async (textToSend, skipInterceptor = false) => {
     if (!textToSend.trim()) return;
 
     if (session?.user?.user_metadata?.is_blocked) {
@@ -334,7 +360,7 @@ export default function SaiChat({ session }) {
     saveMessageToDB({ id: userMsg.id, user_id: userId, text: userMsg.text, sender: 'user', source: 'sai' }, userMsg.id);
 
     // WIDGET INTERCEPTORS — no setIsTyping needed here
-    if (lowerText.includes('roadmap of') || lowerText.match(/make.*roadmap.*for/) || lowerText.match(/roadmap.*for/)) {
+    if (!skipInterceptor && (lowerText.includes('roadmap of') || lowerText.match(/make.*roadmap.*for/) || lowerText.match(/roadmap.*for/))) {
       let topic = 'Unknown Topic';
       const m1 = lowerText.match(/roadmap of\s+(.+)/);
       const m2 = lowerText.match(/roadmap for\s+(.+)/);
@@ -351,14 +377,14 @@ export default function SaiChat({ session }) {
       return;
     }
 
-    if (lowerText.includes('pomodoro') || lowerText.includes('timer') || lowerText.includes('focus')) {
+    if (!skipInterceptor && (lowerText.includes('pomodoro') || lowerText.includes('timer') || lowerText.includes('focus'))) {
       const widgetMsg = { id: crypto.randomUUID(), type: 'pomodoro', sender: 'ai' };
       setMessages(prev => [...prev, widgetMsg]);
       saveMessageToDB({ id: widgetMsg.id, user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'pomodoro' })}`, sender: 'ai', source: 'sai' }, widgetMsg.id);
       return;
     }
 
-    if (lowerText.includes('heatmap') || lowerText.includes('less studied') || lowerText.includes('my activity') || lowerText.includes('my work') || lowerText.includes('show activity')) {
+    if (!skipInterceptor && (lowerText.includes('heatmap') || lowerText.includes('less studied') || lowerText.includes('my activity') || lowerText.includes('my work') || lowerText.includes('show activity'))) {
       const widgetMsg = { id: crypto.randomUUID(), type: 'heatmap', sender: 'ai' };
       setMessages(prev => [...prev, widgetMsg]);
       saveMessageToDB({ id: widgetMsg.id, user_id: userId, text: `WIDGET:${JSON.stringify({ type: 'heatmap' })}`, sender: 'ai', source: 'sai' }, widgetMsg.id);
@@ -423,7 +449,8 @@ export default function SaiChat({ session }) {
 
   const handleStartLesson = (lessonName) => {
     setIsSidebarOpen(false);
-    sendMessage(`Explain to me what is ${lessonName}`);
+    const context = activeRoadmap ? ` in the context of ${activeRoadmap.topic}` : '';
+    sendMessage(`I am ready to study. Please act as my expert teacher and give me a detailed, structured lesson explaining ${lessonName}${context}. Break it down clearly with examples.`, true);
   };
 
   const handleStartQuiz = (lessonName) => {

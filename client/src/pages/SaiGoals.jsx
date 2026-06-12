@@ -328,48 +328,54 @@ export default function SaiGoals({ session }) {
 
         {/* New Goal Form */}
         {showForm && (
-          <motion.div
-            key="form"
-            initial={{ opacity: 0, y: 40, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 40, scale: 0.95 }}
-            className="absolute bottom-6 sm:bottom-12 left-1/2 -translate-x-1/2 w-[calc(100vw-32px)] max-w-md max-h-[85vh] overflow-y-auto p-5 sm:p-8 rounded-3xl bg-black/60 border border-white/10 backdrop-blur-2xl z-50"
+          <div 
+            className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setShowForm(false)}
           >
-            <h2 className="text-sm uppercase tracking-widest text-gray-300 mb-6">Create New Island</h2>
-            <div className="space-y-4">
-              <input
-                placeholder="What do you want to achieve?"
-                value={newTitle}
-                onChange={e => setNewTitle(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-indigo-500/40"
-              />
-              <div className="grid grid-cols-3 gap-2">
-                {CATEGORIES.map(cat => {
-                  const c = ISLAND_CONFIGS[cat.key];
-                  return (
-                    <button
-                      key={cat.key}
-                      onClick={() => setNewCat(cat.key)}
-                      className={`py-2 px-3 rounded-xl text-xs border transition-all ${newCat === cat.key ? 'text-white' : 'border-white/10 text-gray-500 hover:border-white/20'}`}
-                      style={newCat === cat.key ? { borderColor: c.baseColor, background: `${c.baseColor}20`, color: c.lightColor } : {}}
-                    >
-                      {cat.emoji} {cat.label}
-                    </button>
-                  );
-                })}
+            <motion.div
+              key="form"
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-[#0a0a16] border border-white/10 p-6 sm:p-8 rounded-3xl shadow-2xl my-auto"
+            >
+              <h2 className="text-sm uppercase tracking-widest text-gray-300 mb-6 font-semibold">Create New Island</h2>
+              <div className="space-y-4">
+                <input
+                  placeholder="What do you want to achieve?"
+                  value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-indigo-500/40"
+                />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {CATEGORIES.map(cat => {
+                    const c = ISLAND_CONFIGS[cat.key];
+                    return (
+                      <button
+                        key={cat.key}
+                        onClick={() => setNewCat(cat.key)}
+                        className={`py-2 px-3 rounded-xl text-xs border transition-all ${newCat === cat.key ? 'text-white' : 'border-white/10 text-gray-500 hover:border-white/20'}`}
+                        style={newCat === cat.key ? { borderColor: c.baseColor, background: `${c.baseColor}20`, color: c.lightColor } : {}}
+                      >
+                        {cat.emoji} {cat.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowForm(false)} className="flex-1 py-3 rounded-xl border border-white/10 text-gray-400 text-sm hover:bg-white/5">Cancel</button>
-              <button
-                onClick={handleAddGoal}
-                disabled={saving || !newTitle.trim()}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold disabled:opacity-50"
-              >
-                {saving ? 'Building...' : '🗺 Create Island'}
-              </button>
-            </div>
-          </motion.div>
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => setShowForm(false)} className="flex-1 py-3 rounded-xl border border-white/10 text-gray-400 text-sm hover:bg-white/5">Cancel</button>
+                <button
+                  onClick={handleAddGoal}
+                  disabled={saving || !newTitle.trim()}
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold disabled:opacity-50"
+                >
+                  {saving ? 'Building...' : '🗺 Create Island'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

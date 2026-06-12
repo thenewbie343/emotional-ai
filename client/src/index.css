@@ -164,8 +164,27 @@ canvas {
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
 }
 
+/* Mobile top bar background to hide scrolled content behind toggle */
+.mobile-top-bar-bg {
+  display: none;
+}
+
 /* Mobile responsive toggle position and page clearance */
 @media (max-width: 768px) {
+  .mobile-top-bar-bg {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 52px;
+    background: rgba(10, 10, 18, 0.65);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 9998; /* Just below the toggle button */
+  }
+
   .companion-toggle-btn {
     top: 8px;
     padding: 5px 12px;
@@ -175,7 +194,14 @@ canvas {
   }
   
   /* Safe area top padding offset for Hub headers on mobile so toggle never covers text */
-  div.max-w-6xl {
-    padding-top: 72px !important;
+  div.max-w-4xl, div.max-w-5xl, div.max-w-6xl, div.max-w-7xl {
+    padding-top: 96px !important;
+  }
+
+  /* Scale down the massive title on mobile and center it */
+  div > h1 {
+    font-size: 1.8rem !important;
+    text-align: center;
+    padding: 0 10px;
   }
 }

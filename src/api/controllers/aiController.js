@@ -70,6 +70,10 @@ exports.processMessage = async (req, res) => {
     let systemPrompt = SYSTEM_PROMPTS[currentMode] || SYSTEM_PROMPTS.romantic;
     if (companion === 'sai') {
       systemPrompt = SYSTEM_PROMPTS.sai;
+      const lastUserMsg = messages && messages.length > 0 ? messages[messages.length - 1]?.content : '';
+      if (lastUserMsg && (lastUserMsg.includes("I am ready to study") || lastUserMsg.includes("detailed, structured lesson") || lastUserMsg.includes("Please act as my expert teacher"))) {
+        systemPrompt = `You are SAI, acting as an expert, highly knowledgeable teacher. Provide a comprehensive, clear, and well-structured lesson on the requested topic. Use markdown, bold headers, and bullet points. Break it down with clear explanations and practical examples. Keep the tone professional, encouraging, and clear (no roasting, demotivating, or strict study coach persona for this lesson).`;
+      }
     } else if (userId) {
       try {
         const [diary, wellness, insights] = await Promise.all([

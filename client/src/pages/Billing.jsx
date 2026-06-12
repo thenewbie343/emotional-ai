@@ -63,16 +63,23 @@ export default function Billing({ session }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#050510] text-white flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-[#050510] text-white flex flex-col items-center p-6 pt-28 md:justify-center md:pt-6 font-sans relative overflow-y-auto overflow-x-hidden">
       {/* Background elements */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-fuchsia-900/20 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-cyan-900/20 blur-[120px] rounded-full pointer-events-none" />
 
-      <button onClick={() => navigate(-1)} className="absolute top-6 left-6 text-gray-400 hover:text-white flex items-center gap-2 transition-colors z-10">
-        <span className="material-symbols-outlined">arrow_back</span> Back
-      </button>
+      {/* Header */}
+      <header className="absolute top-6 left-6 z-50 flex items-center gap-4">
+        <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all backdrop-blur-md">
+          <span className="material-symbols-outlined text-sm">arrow_back</span>
+        </button>
+        <div>
+          <span className="text-sm tracking-[0.2em] font-light text-gray-300 block">PORTAL BILLING</span>
+          <span className="text-[10px] tracking-widest uppercase text-fuchsia-400">Subscription & Plan</span>
+        </div>
+      </header>
 
-      <div className="z-10 w-full max-w-4xl flex flex-col items-center">
+      <div className="z-10 w-full max-w-4xl flex flex-col items-center my-auto">
         
         {step === 'plans' && (
           <motion.div 

@@ -192,9 +192,15 @@ exports.updateLessonStatus = async (req, res) => {
 
     if (updateErr) throw updateErr;
 
-    // Award 20 XP if lesson completed
+    // Award 20 XP and log activity for heatmap if lesson completed
     if (completed) {
       await addXpBackend(userId, 20);
+      const todayStr = new Date().toISOString().split('T')[0];
+      await supabase.from("study_logs").insert([{
+        user_id: userId,
+        date: todayStr,
+        duration_mins: 15 // Equivalent to 15 mins of activity for completing a lesson
+      }]);
     }
 
     res.json(data);
@@ -275,9 +281,15 @@ exports.toggleTaskCompleted = async (req, res) => {
 
     if (error) throw error;
 
-    // Award 15 XP if task completed
+    // Award 15 XP and log activity if task completed
     if (completed) {
       await addXpBackend(userId, 15);
+      const todayStr = new Date().toISOString().split('T')[0];
+      await supabase.from("study_logs").insert([{
+        user_id: userId,
+        date: todayStr,
+        duration_mins: 10 // Equivalent to 10 mins of activity for completing a task
+      }]);
     }
 
     res.json(data);
