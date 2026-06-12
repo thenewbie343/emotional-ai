@@ -155,8 +155,8 @@ export default function SaiInsights({ session }) {
     const row = Math.floor(i / cols);
     const col = i % cols;
     const offset = row % 2 === 0 ? 0 : 0.5;
-    const hexSpacingX = isMobile ? 1.8 : 3.5;
-    const hexSpacingZ = isMobile ? 1.5 : 2.8;
+    const hexSpacingX = isMobile ? 2.2 : 3.5;
+    const hexSpacingZ = isMobile ? 1.8 : 2.8;
     return {
       emotion,
       pos: [
@@ -176,7 +176,7 @@ export default function SaiInsights({ session }) {
 
       {/* 3D HarmonyHive Canvas */}
       <div className="absolute inset-0 z-0">
-        <Canvas camera={{ position: [0, isMobile ? 25 : 5, isMobile ? 40 : 8], fov: isMobile ? 80 : 55 }}>
+        <Canvas camera={{ position: [0, isMobile ? 11 : 5, isMobile ? 19 : 8], fov: isMobile ? 60 : 55 }}>
           <color attach="background" args={['#020005']} />
           <fog attach="fog" args={['#020005', 10, 60]} />
           <ambientLight intensity={0.4} />
@@ -196,7 +196,7 @@ export default function SaiInsights({ session }) {
                   maxCount={maxCount}
                   isActive={activeEmotion === emotion}
                   onClick={(e) => { e.stopPropagation(); setActiveEmotion(activeEmotion === emotion ? null : emotion); }}
-                  scaleMultiplier={isMobile ? 1.0 : 2.5}
+                  scaleMultiplier={isMobile ? 1.6 : 2.5}
                 />
               );
             })}

@@ -356,7 +356,7 @@ export default function CompanionChat({ session }) {
         </div>
 
         {/* Top Header */}
-        <header className="absolute top-6 left-6 z-50 flex items-center justify-between w-[calc(100%-3rem)] pointer-events-auto">
+        <header className="absolute top-12 sm:top-6 left-6 z-50 flex items-center justify-between w-[calc(100%-3rem)] pointer-events-auto">
           <div className="flex items-center gap-4">
             <button onClick={() => navigate('/siya')} className="text-gray-400 hover:text-white transition-colors">
               <span className="material-symbols-outlined">arrow_back</span>
