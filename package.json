@@ -12,6 +12,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.19.2",
+    "ioredis": "^5.4.1",
     "node-cron": "^3.0.3"
   },
   "engines": {

@@ -1,5 +1,6 @@
 const { generateAiResponse } = require('../../services/aiRouter');
 const { createClient } = require('@supabase/supabase-js');
+const { assembleContext } = require('../../services/contextAssembler');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -76,16 +77,14 @@ exports.processMessage = async (req, res) => {
       }
     } else if (userId) {
       try {
-        const [diary, wellness, insights] = await Promise.all([
-          supabase.from("sai_diary").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(3),
-          supabase.from("sai_wellness").select("*").eq("user_id", userId).order("date_key", { ascending: false }).limit(7),
+        const lastUserMsg = messages && messages.length > 0 ? messages[messages.length - 1]?.content : '';
+        const [compressedContext, insights] = await Promise.all([
+          assembleContext(userId, lastUserMsg),
           supabase.from("sai_personality").select("*").eq("user_id", userId).single()
         ]);
-        const diaryData = JSON.stringify(diary?.data || []);
-        const wellnessData = JSON.stringify(wellness?.data || []);
-        const insightsData = JSON.stringify(insights?.data || {});
         
-        systemPrompt += `\n\nRecent diary entries: ${diaryData}\nWellness last 7 days: ${wellnessData}\nPersonality traits: ${insightsData}\nReference this data naturally in conversation.\nIf user asks about their mood or wellness, use this actual data to respond.`;
+        const insightsData = JSON.stringify(insights?.data || {});
+        systemPrompt += `\n\nPersonality traits: ${insightsData}\n${compressedContext}\nReference this data naturally in conversation. If user asks about their mood, diaries, memories, or wellness, use this actual data to respond.`;
       } catch (e) {
         console.error("Failed to fetch SIYA context data:", e);
       }

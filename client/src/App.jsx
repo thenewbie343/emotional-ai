@@ -21,9 +21,11 @@ import OnboardingTutorial from './components/OnboardingTutorial'
 import Billing from './pages/Billing'
 import AdminPanel from './pages/AdminPanel'
 import { useSubscription } from './hooks/useSubscription'
+import { GlobalCanvasProvider } from './components/GlobalCanvas'
 import './index.css'
 
 // ── SAI ↔ SHUNA Toggle Button ────────────────────────────────────────────────
+// ... (rest of helper functions and components) ...
 function CompanionToggle({ session, onToggle }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -108,7 +110,7 @@ export default function App() {
   if (loading) return <div style={{ width: '100vw', height: '100vh', background: '#0a0e1a' }} />
 
   return (
-    <>
+    <GlobalCanvasProvider>
       <OnboardingTutorial userId={session?.user?.id} />
       <CompanionToggle session={session} onToggle={() => setCompanionKey(k => k + 1)} />
       <Routes>
@@ -138,6 +140,6 @@ export default function App() {
         <Route path="/billing" element={session ? <Billing session={session} /> : <Navigate to="/auth" />} />
         <Route path="/admin" element={session ? <AdminPanel session={session} /> : <Navigate to="/auth" />} />
       </Routes>
-    </>
+    </GlobalCanvasProvider>
   )
 }

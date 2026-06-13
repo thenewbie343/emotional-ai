@@ -5,13 +5,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Admin Email from User Instructions
 const ADMIN_EMAIL = 'sns@mayhere.com';
 
-const isAdmin = (email) => email === ADMIN_EMAIL;
+const isAdmin = (req) => req.user && req.user.email === ADMIN_EMAIL;
 
 exports.getRequests = async (req, res) => {
-  if (!isAdmin(req.body.userEmail)) return res.status(403).json({ error: 'Unauthorized' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
 
   try {
     // Join with auth.users if possible, but since we are using service_role, we might need to fetch users separately
@@ -44,7 +43,7 @@ exports.getRequests = async (req, res) => {
 };
 
 exports.approveRequest = async (req, res) => {
-  if (!isAdmin(req.body.userEmail)) return res.status(403).json({ error: 'Unauthorized' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
 
   try {
     const { requestId, userId, tier } = req.body;
@@ -73,7 +72,7 @@ exports.approveRequest = async (req, res) => {
 };
 
 exports.rejectRequest = async (req, res) => {
-  if (!isAdmin(req.body.userEmail)) return res.status(403).json({ error: 'Unauthorized' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
 
   try {
     const { requestId } = req.body;
@@ -85,7 +84,7 @@ exports.rejectRequest = async (req, res) => {
 };
 
 exports.getUsers = async (req, res) => {
-  if (!isAdmin(req.body.userEmail)) return res.status(403).json({ error: 'Unauthorized' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
 
   try {
     const { data: subs, error: subsError } = await supabase.from('user_subscriptions').select('*');
@@ -149,7 +148,7 @@ exports.getUsers = async (req, res) => {
 };
 
 exports.toggleBlockUser = async (req, res) => {
-  if (!isAdmin(req.body.userEmail)) return res.status(403).json({ error: 'Unauthorized' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
 
   try {
     const { userId, block } = req.body;
@@ -167,7 +166,7 @@ exports.toggleBlockUser = async (req, res) => {
 };
 
 exports.changeUserPassword = async (req, res) => {
-  if (!isAdmin(req.body.userEmail)) return res.status(403).json({ error: 'Unauthorized' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
 
   try {
     const { userId, newPassword } = req.body;
@@ -183,7 +182,7 @@ exports.changeUserPassword = async (req, res) => {
 };
 
 exports.updateUserTier = async (req, res) => {
-  if (!isAdmin(req.body.userEmail)) return res.status(403).json({ error: 'Unauthorized' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
 
   try {
     const { userId, tier } = req.body;

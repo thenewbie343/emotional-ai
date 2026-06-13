@@ -4,6 +4,7 @@ const router = express.Router();
 const aiController = require('./controllers/aiController');
 const adminController = require('./controllers/adminController');
 const { checkMessageLimit } = require('./middleware/subscriptionMiddleware');
+const adminAuth = require('./middleware/adminAuth');
 
 // Health check — shows which keys are loaded (safe, no values exposed)
 router.get('/health', (req, res) => {
@@ -29,13 +30,13 @@ router.post('/ai/message', checkMessageLimit, aiController.processMessage);
 router.get('/ai/personality', aiController.getPersonality);
 
 // Admin routes
-router.post('/admin/requests', adminController.getRequests);
-router.post('/admin/approve', adminController.approveRequest);
-router.post('/admin/reject', adminController.rejectRequest);
-router.post('/admin/users', adminController.getUsers);
-router.post('/admin/block', adminController.toggleBlockUser);
-router.post('/admin/change-password', adminController.changeUserPassword);
-router.post('/admin/update-tier', adminController.updateUserTier);
+router.post('/admin/requests', adminAuth, adminController.getRequests);
+router.post('/admin/approve', adminAuth, adminController.approveRequest);
+router.post('/admin/reject', adminAuth, adminController.rejectRequest);
+router.post('/admin/users', adminAuth, adminController.getUsers);
+router.post('/admin/block', adminAuth, adminController.toggleBlockUser);
+router.post('/admin/change-password', adminAuth, adminController.changeUserPassword);
+router.post('/admin/update-tier', adminAuth, adminController.updateUserTier);
 
 // Study Companion routes
 const studyController = require('./controllers/studyController');

@@ -1,28 +1,34 @@
 const { createClient } = require("@supabase/supabase-js");
+const Redis = require("ioredis");
 
+// Initialize Supabase Client
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Middleware to check subscription limits for AI messages
+// Initialize Redis Client safely
+const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
+  maxRetriesPerRequest: 1,
+  connectTimeout: 2000
+});
+
+redis.on('error', (err) => {
+  console.warn('[Redis Warning] Connection failed, rate limits will fail open:', err.message);
+});
+
+// Middleware to check subscription limits for AI messages using Redis
 async function checkMessageLimit(req, res, next) {
   try {
     const { userEmail } = req.body;
     
     // Admin is always allowed
-    if (userEmail === 'sns@mayhere.com') {
-      return next();
-    }
-
-    if (!userEmail) {
-      // If no email provided, maybe fallback to free limit logic based on IP,
-      // but assuming frontend always passes userEmail for authenticated users
+    if (userEmail === 'sns@mayhere.com' || req.user?.email === 'sns@mayhere.com') {
       return next();
     }
 
     // 1. Get user ID and check if blocked
-    let userId = req.body.userId;
+    let userId = req.body.userId || req.user?.id;
     let isBlocked = false;
     
     if (userId) {
@@ -59,45 +65,65 @@ async function checkMessageLimit(req, res, next) {
 
     if (!userId) return next();
 
-    // 2. Check if user has active premium subscription
+    // 2. Check if user has active premium/standard subscription
     const { data: sub } = await supabase
       .from("user_subscriptions")
       .select("status, tier")
       .eq("user_id", userId)
       .single();
 
-    if (sub && sub.status === 'active' && sub.tier === 'premium') {
-      return next(); // Premium users have unlimited messages
-    }
+    const tier = (sub && sub.status === 'active') ? sub.tier : 'free';
 
-    // 3. Free user: check daily message count
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const { count, error } = await supabase
-      .from('messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('sender', 'user')
-      .gte('created_at', today.toISOString());
-
-    if (error) {
-      console.error('Error counting messages:', error);
+    // Premium users have unlimited messages
+    if (tier === 'premium') {
       return next();
     }
 
-    if (count >= 10) {
-      return res.status(403).json({ 
-        error: 'Payment Required', 
-        message: 'You have reached your daily limit of 10 messages on the Free tier. Upgrade to Premium for unlimited access.',
-        requiresUpgrade: true
-      });
+    // 3. Enforce Redis Rate Limiting
+    let limit = 5;
+    let windowSeconds = 86400; // 24h
+    let key = `user:${userId}:msg_count`;
+    let durationLabel = 'day';
+
+    if (tier === 'standard') {
+      limit = 100;
+      windowSeconds = 2592000; // 30 days (monthly)
+      key = `user:${userId}:msg_count:monthly`;
+      durationLabel = 'month';
+    }
+
+    try {
+      // Pipelined increment and TTL check for atomic operation
+      const pipeline = redis.pipeline();
+      pipeline.incr(key);
+      pipeline.ttl(key);
+      
+      const results = await pipeline.exec();
+      const count = results[0][1];
+      const ttl = results[1][1];
+
+      // If the key has no TTL (first increment in window), set the expiry window
+      if (ttl === -1) {
+        await redis.expire(key, windowSeconds);
+      }
+
+      if (count > limit) {
+        return res.status(429).json({ 
+          error: 'Too Many Requests', 
+          message: `You have reached your limit of ${limit} messages per ${durationLabel} on the ${tier.toUpperCase()} tier. Upgrade to Premium for unlimited access.`,
+          requiresUpgrade: true,
+          limit,
+          resetInSeconds: ttl > 0 ? ttl : windowSeconds
+        });
+      }
+    } catch (redisErr) {
+      console.error('[Redis Rate Limiter Error] Bypassing limit checks (fail-open):', redisErr.message);
     }
 
     next();
   } catch (error) {
     console.error('Subscription middleware error:', error);
-    next(); // Fail open so we don't break the app if DB is down
+    next(); // Fail open so we don't break the app if DB/middleware crashes
   }
 }
 
