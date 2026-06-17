@@ -22,6 +22,7 @@ import Billing from './pages/Billing'
 import AdminPanel from './pages/AdminPanel'
 import { useSubscription } from './hooks/useSubscription'
 import { GlobalCanvasProvider } from './components/GlobalCanvas'
+import OnboardingGate from './components/OnboardingGate'
 import './index.css'
 
 // ── SAI ↔ SHUNA Toggle Button ────────────────────────────────────────────────
@@ -111,35 +112,37 @@ export default function App() {
 
   return (
     <GlobalCanvasProvider>
-      <OnboardingTutorial userId={session?.user?.id} />
-      <CompanionToggle session={session} onToggle={() => setCompanionKey(k => k + 1)} />
-      <Routes>
-        <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/" />} />
-        <Route path="/" element={session ? <HomeScene /> : <Navigate to="/auth" />} />
-        <Route path="/chat" element={session ? <CompanionChat key={`siya-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
+      <OnboardingGate>
+        <OnboardingTutorial userId={session?.user?.id} />
+        <CompanionToggle session={session} onToggle={() => setCompanionKey(k => k + 1)} />
+        <Routes>
+          <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/" />} />
+          <Route path="/" element={session ? <HomeScene /> : <Navigate to="/auth" />} />
+          <Route path="/chat" element={session ? <CompanionChat key={`siya-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
 
-        {/* SHUNA features */}
-        <Route path="/siya" element={session ? <SiyaHub key={`siyahub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/siya/journal" element={session ? <PremiumRoute session={session}><SaiJournal session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/siya/wellness" element={session ? <PremiumRoute session={session}><SaiWellness session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/siya/insights" element={session ? <PremiumRoute session={session}><SaiInsights session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/siya/diary" element={session ? <PremiumRoute session={session}><SaiDiary session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/siya/memory" element={session ? <PremiumRoute session={session}><SaiConstellation session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          {/* SHUNA features */}
+          <Route path="/siya" element={session ? <SiyaHub key={`siyahub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
+          <Route path="/siya/journal" element={session ? <PremiumRoute session={session}><SaiJournal session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/siya/wellness" element={session ? <PremiumRoute session={session}><SaiWellness session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/siya/insights" element={session ? <PremiumRoute session={session}><SaiInsights session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/siya/diary" element={session ? <PremiumRoute session={session}><SaiDiary session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/siya/memory" element={session ? <PremiumRoute session={session}><SaiConstellation session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
 
-        {/* SAI routes */}
-        <Route path="/sai" element={session ? <SaiHub key={`saihub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/chat" element={session ? <SaiChat key={`saichat-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/dreams" element={session ? <PremiumRoute session={session}><SaiDreams session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/sai/memories" element={session ? <PremiumRoute session={session}><SaiMemories session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/sai/goals" element={session ? <SaiGoals session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/capsule" element={session ? <PremiumRoute session={session}><SaiTimeCapsule session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/sai/study" element={session ? <SaiDashboard session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/dashboard" element={session ? <Navigate to="/sai/study" replace /> : <Navigate to="/auth" />} />
-        
-        {/* Billing & Admin */}
-        <Route path="/billing" element={session ? <Billing session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/admin" element={session ? <AdminPanel session={session} /> : <Navigate to="/auth" />} />
-      </Routes>
+          {/* SAI routes */}
+          <Route path="/sai" element={session ? <SaiHub key={`saihub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
+          <Route path="/sai/chat" element={session ? <SaiChat key={`saichat-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
+          <Route path="/sai/dreams" element={session ? <PremiumRoute session={session}><SaiDreams session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/sai/memories" element={session ? <PremiumRoute session={session}><SaiMemories session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/sai/goals" element={session ? <SaiGoals session={session} /> : <Navigate to="/auth" />} />
+          <Route path="/sai/capsule" element={session ? <PremiumRoute session={session}><SaiTimeCapsule session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/sai/study" element={session ? <SaiDashboard session={session} /> : <Navigate to="/auth" />} />
+          <Route path="/dashboard" element={session ? <Navigate to="/sai/study" replace /> : <Navigate to="/auth" />} />
+          
+          {/* Billing & Admin */}
+          <Route path="/billing" element={session ? <Billing session={session} /> : <Navigate to="/auth" />} />
+          <Route path="/admin" element={session ? <AdminPanel session={session} /> : <Navigate to="/auth" />} />
+        </Routes>
+      </OnboardingGate>
     </GlobalCanvasProvider>
   )
 }

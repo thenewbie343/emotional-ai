@@ -5,6 +5,8 @@ const aiController = require('./controllers/aiController');
 const adminController = require('./controllers/adminController');
 const { checkMessageLimit } = require('./middleware/subscriptionMiddleware');
 const adminAuth = require('./middleware/adminAuth');
+const userAuth = require('./middleware/userAuth');
+const userController = require('./controllers/userController');
 
 // Health check — shows which keys are loaded (safe, no values exposed)
 router.get('/health', (req, res) => {
@@ -82,5 +84,8 @@ router.post('/study/countdown/comment', studyController.getCountdownComment);
 router.post('/study/rank/message', studyController.getRankUpMessage);
 router.post('/study/challenges/daily', studyController.generateDailyChallenge);
 router.post('/study/challenges/complete', studyController.completeDailyChallenge);
+
+// User Account Erasure route (DPDP / GDPR Right to Erasure)
+router.delete('/user/erasure', userAuth, userController.deleteUserAccount);
 
 module.exports = router;

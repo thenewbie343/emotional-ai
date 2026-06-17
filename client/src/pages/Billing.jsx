@@ -62,6 +62,44 @@ export default function Billing({ session }) {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    const confirmation = window.confirm(
+      "WARNING: This will permanently delete your account and erase all your diaries, dreams, wellness records, and memories. This action is irreversible and complies with your Right to Erasure (GDPR / DPDP Act 2023).\\n\\nAre you absolutely sure you want to proceed?"
+    );
+    if (!confirmation) return;
+
+    try {
+      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      const token = session?.access_token;
+      
+      if (!token) {
+        alert("Session token is missing. Please log in again.");
+        return;
+      }
+
+      const res = await fetch(`${API_BASE}/api/user/erasure`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || 'Failed to erase account.');
+      }
+
+      alert("Your account and all associated data have been permanently erased.");
+      localStorage.removeItem('antigravity_legal_consent');
+      await supabase.auth.signOut();
+      navigate('/auth');
+    } catch (err) {
+      console.error("Erasure failed:", err);
+      alert(`Error: ${err.message}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#050510] text-white flex flex-col items-center p-6 pt-28 md:justify-center md:pt-6 font-sans relative overflow-y-auto overflow-x-hidden">
       {/* Background elements */}
@@ -138,6 +176,24 @@ export default function Billing({ session }) {
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* Right to Erasure Section */}
+            <div className="mt-16 w-full max-w-3xl border border-red-500/20 bg-red-950/10 backdrop-blur-xl rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_0_30px_rgba(239,68,68,0.05)]">
+              <div className="space-y-2 text-center md:text-left">
+                <h3 className="text-xl font-bold text-red-400 flex items-center justify-center md:justify-start gap-2">
+                  <span className="material-symbols-outlined text-red-400 text-lg">delete_forever</span> Right to Erasure (GDPR / DPDP)
+                </h3>
+                <p className="text-gray-400 text-sm max-w-xl">
+                  You have the absolute right to be forgotten. Clicking delete will permanently destroy your account and hard-erase all associated psychological data (diaries, dreams, wellness history, and memories). <strong>This action is irreversible.</strong>
+                </p>
+              </div>
+              <button
+                onClick={handleDeleteAccount}
+                className="px-6 py-3 rounded-full bg-red-600/20 hover:bg-red-600 text-red-200 border border-red-500/30 hover:border-red-500 font-semibold text-sm transition-all whitespace-nowrap"
+              >
+                Delete Account Permanently
+              </button>
             </div>
           </motion.div>
         )}
