@@ -23,6 +23,7 @@ import AdminPanel from './pages/AdminPanel'
 import { useSubscription } from './hooks/useSubscription'
 import { GlobalCanvasProvider } from './components/GlobalCanvas'
 import OnboardingGate from './components/OnboardingGate'
+import posthog from 'posthog-js'
 import './index.css'
 
 // ── SAI ↔ SHUNA Toggle Button ────────────────────────────────────────────────
@@ -47,8 +48,16 @@ function CompanionToggle({ session, onToggle }) {
     onToggle()           
     if (isSai) {
       navigate('/siya')
+      posthog.capture('persona_switched', {
+        from: 'SAI',
+        to: 'SHUNA'
+      })
     } else {
       navigate('/sai')
+      posthog.capture('persona_switched', {
+        from: 'SHUNA',
+        to: 'SAI'
+      })
     }
   }
 
@@ -85,6 +94,25 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [companionKey, setCompanionKey] = useState(0)
 
+  const identifyUserPostHog = async (user) => {
+    if (!user) return;
+    try {
+      const { data: sub } = await supabase
+        .from('user_subscriptions')
+        .select('tier')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      const tier = sub?.tier || 'free';
+      posthog.identify(user.id, {
+        email: user.email,
+        tier: tier
+      });
+    } catch (err) {
+      console.error('[PostHog] Identity error:', err);
+    }
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user?.user_metadata?.is_blocked) {
@@ -92,6 +120,9 @@ export default function App() {
         setSession(null)
       } else {
         setSession(session)
+        if (session?.user) {
+          identifyUserPostHog(session.user);
+        }
       }
       setLoading(false)
     })
@@ -102,6 +133,9 @@ export default function App() {
         setSession(null)
       } else {
         setSession(session)
+        if (session?.user) {
+          identifyUserPostHog(session.user);
+        }
       }
     })
 

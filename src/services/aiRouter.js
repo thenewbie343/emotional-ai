@@ -266,6 +266,14 @@ const PROVIDERS = {
 // Semantic Routing Maps
 // ------------------------------------------------------------------
 
+const { createClient } = require('@supabase/supabase-js');
+const posthog = require('../posthog');
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 // Map emotions to a priority list of providers
 const EMOTION_TO_PROVIDERS = {
   default: ['groq', 'gemini', 'mistral', 'cohere', 'nvidia', 'openrouter'], // Groq priority for analytical/default
@@ -284,27 +292,77 @@ const EMOTION_TO_PROVIDERS = {
  * @param {Array} messages - Chat history array [{role, content}]
  * @param {string} systemPrompt - Base system instructions
  * @param {string} companion - The companion identifier ('sai' or 'shuna')
+ * @param {string} userId - Optional user ID for tracking
  */
-async function generateAiResponse(emotion, messages, systemPrompt, companion) {
+async function generateAiResponse(emotion, messages, systemPrompt, companion, userId) {
   const isSai = (companion === 'sai');
   const priorityList = EMOTION_TO_PROVIDERS[emotion] || EMOTION_TO_PROVIDERS.default;
 
-  for (const providerName of priorityList) {
+  for (let idx = 0; idx < priorityList.length; idx++) {
+    const providerName = priorityList[idx];
     if (checkExhausted(providerName)) {
       console.log(`[AI Router] Skipping ${providerName} (exhausted)`);
       continue;
     }
 
+    const startTime = Date.now();
     try {
       console.log(`[AI Router] Attempting to generate with ${providerName} for emotion '${emotion}' (SAI: ${isSai})`);
       const response = await PROVIDERS[providerName](messages, systemPrompt, isSai);
-      console.log(`[AI Router] SUCCESS with ${providerName}`);
+      const latency = Date.now() - startTime;
+      console.log(`[AI Router] SUCCESS with ${providerName} in ${latency}ms`);
+
+      // Resolve user subscription tier
+      let tier = 'free';
+      if (userId) {
+        try {
+          const { data: sub } = await supabase
+            .from('user_subscriptions')
+            .select('tier')
+            .eq('user_id', userId)
+            .maybeSingle();
+          if (sub) tier = sub.tier;
+        } catch (e) {
+          console.error('[PostHog] Failed to query user tier:', e.message);
+        }
+      }
+
+      // Track successful generation
+      posthog.capture({
+        distinctId: userId || 'anonymous_user',
+        event: 'ai_message_sent',
+        properties: {
+          persona: isSai ? 'SAI' : 'SHUNA',
+          emotion: emotion,
+          provider: providerName,
+          response_ms: latency,
+          tier: tier
+        }
+      });
+
       return response;
     } catch (error) {
-      console.error(`[AI Router] FAILED with ${providerName}: ${error.message}`);
+      const latency = Date.now() - startTime;
+      console.error(`[AI Router] FAILED with ${providerName} after ${latency}ms: ${error.message}`);
+      
       if (error.message === "RATE_LIMIT") {
         markExhausted(providerName);
       }
+
+      // Track fallback event
+      const nextProvider = priorityList[idx + 1] || 'none';
+      posthog.capture({
+        distinctId: userId || 'anonymous_user',
+        event: 'ai_provider_fallback',
+        properties: {
+          failed_provider: providerName,
+          fallback_to: nextProvider,
+          reason: error.message === 'RATE_LIMIT' ? 'rate_limited' : 'error',
+          error_details: error.message,
+          latency_ms: latency
+        }
+      });
+      
       // Continue to the next provider in the loop
     }
   }

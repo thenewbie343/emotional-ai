@@ -1,6 +1,7 @@
 const { generateAiResponse } = require('../../services/aiRouter');
 const { createClient } = require('@supabase/supabase-js');
 const { assembleContext } = require('../../services/contextAssembler');
+const posthog = require('../../posthog');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -40,6 +41,15 @@ If no new personal fact is found, respond exactly with: null`;
         tags: parsed.tags || []
       }]);
       console.log(`[Memory Extraction] Saved new memory for user ${userId}:`, parsed.fact);
+
+      posthog.capture({
+        distinctId: userId,
+        event: 'memory_extracted',
+        properties: {
+          category: parsed.category.toLowerCase(),
+          fact_count: 1
+        }
+      });
     }
   } catch (err) {
     console.error("[Memory Extraction] Failed:", err.message);
@@ -90,7 +100,7 @@ exports.processMessage = async (req, res) => {
       }
     }
 
-    const responseText = await generateAiResponse(detectedEmotion, messages, systemPrompt, companion);
+    const responseText = await generateAiResponse(detectedEmotion, messages, systemPrompt, companion, userId);
 
     // Run memory extraction in background
     if (userId && messages.length > 0) {

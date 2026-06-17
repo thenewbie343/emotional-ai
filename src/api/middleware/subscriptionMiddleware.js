@@ -1,5 +1,6 @@
 const { createClient } = require("@supabase/supabase-js");
 const redis = require("../../redisClient");
+const posthog = require("../../posthog");
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -97,6 +98,16 @@ async function checkMessageLimit(req, res, next) {
       }
 
       if (count > limit) {
+        posthog.capture({
+          distinctId: userId,
+          event: 'rate_limit_hit',
+          properties: {
+            tier: tier,
+            messages_today: count - 1,
+            upgrade_shown: true
+          }
+        });
+
         return res.status(429).json({ 
           error: 'Too Many Requests', 
           message: `You have reached your limit of ${limit} messages per ${durationLabel} on the ${tier.toUpperCase()} tier. Upgrade to Premium for unlimited access.`,
