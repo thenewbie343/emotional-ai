@@ -4,6 +4,7 @@ const cors = require('cors');
 const apiRoutes = require('./api/routes');
 const parasiteRoutes = require('./api/parasiteRoutes');
 const { startAbsenceWorker } = require('./jobs/absenceWorker');
+const redis = require('./redisClient');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,6 +21,16 @@ app.use('/api', apiRoutes);
 app.use('/api/parasite', parasiteRoutes);
 
 startAbsenceWorker();
+
+app.get('/health', async (req, res) => {
+  try {
+    await redis.ping();
+    res.json({ status: 'ok', redis: 'connected', ts: Date.now() });
+  } catch (e) {
+    console.error('[Health Check Warning] Redis ping failed:', e.message);
+    res.status(500).json({ status: 'degraded', redis: 'down', error: e.message });
+  }
+});
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Emotional AI server running on port ${PORT}`);

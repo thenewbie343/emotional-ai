@@ -1,21 +1,10 @@
 const { createClient } = require("@supabase/supabase-js");
-const Redis = require("ioredis");
+const redis = require("../../redisClient");
 
-// Initialize Supabase Client
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-
-// Initialize Redis Client safely
-const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
-  maxRetriesPerRequest: 1,
-  connectTimeout: 2000
-});
-
-redis.on('error', (err) => {
-  console.warn('[Redis Warning] Connection failed, rate limits will fail open:', err.message);
-});
 
 // Middleware to check subscription limits for AI messages using Redis
 async function checkMessageLimit(req, res, next) {
