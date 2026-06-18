@@ -6,7 +6,8 @@ import './index.css'
 import posthog from 'posthog-js'
 
 posthog.init('phc_AFQXLJ733zFpGqVjeS7D685D6YqobovzyesDG9sY5542', {
-  api_host: 'https://app.posthog.com',
+  api_host: window.location.origin + '/ingest',
+  ui_host: 'https://us.posthog.com',
   capture_pageview: true,
   session_recording: { maskAllInputs: true }
 })
