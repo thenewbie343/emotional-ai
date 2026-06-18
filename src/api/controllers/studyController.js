@@ -962,9 +962,7 @@ exports.generateDailyChallenge = async (req, res) => {
       .from("sai_challenges")
       .select("*")
       .eq("user_id", userId)
-      .gte("created_at", todayStr)
-      .order("created_at", { ascending: false })
-      .limit(1)
+      .eq("date_key", todayStr)
       .maybeSingle();
 
     if (existing) {
@@ -989,9 +987,8 @@ exports.generateDailyChallenge = async (req, res) => {
       .insert([{
         user_id: userId,
         challenge_text: challengeText || "Complete 2 hours of deep work focusing on your weakest subject.",
-        xp_reward: 100,
         completed: false,
-        created_at: todayStr
+        date_key: todayStr
       }])
       .select()
       .single();
