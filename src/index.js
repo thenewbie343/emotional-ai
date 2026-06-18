@@ -14,6 +14,48 @@ const corsOptions = {
   credentials: true
 };
 app.use(cors(corsOptions));
+
+app.use('/ingest', (req, res) => {
+  const chunks = [];
+  req.on('data', chunk => chunks.push(chunk));
+  req.on('end', async () => {
+    try {
+      const rawBody = Buffer.concat(chunks);
+      const targetPath = req.originalUrl.replace(/^\/ingest/, '');
+      const posthogUrl = `https://us.i.posthog.com${targetPath}`;
+      
+      const headers = { ...req.headers };
+      delete headers.host;
+      delete headers.origin;
+      delete headers.referer;
+      
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+      if (ip) {
+        headers['x-forwarded-for'] = ip;
+      }
+      
+      const response = await fetch(posthogUrl, {
+        method: req.method,
+        headers: headers,
+        body: req.method !== 'GET' && req.method !== 'HEAD' && rawBody.length > 0 ? rawBody : undefined,
+      });
+      
+      res.status(response.status);
+      response.headers.forEach((value, name) => {
+        if (name.toLowerCase() !== 'transfer-encoding' && name.toLowerCase() !== 'content-encoding') {
+          res.setHeader(name, value);
+        }
+      });
+      
+      const resBody = await response.arrayBuffer();
+      res.send(Buffer.from(resBody));
+    } catch (error) {
+      console.error('[PostHog Proxy Error]:', error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

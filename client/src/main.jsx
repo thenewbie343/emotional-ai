@@ -5,8 +5,10 @@ import App from './App.jsx'
 import './index.css'
 import posthog from 'posthog-js'
 
+const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+
 posthog.init('phc_AFQXLJ733zFpGqVjeS7D685D6YqobovzyesDG9sY5542', {
-  api_host: window.location.origin + '/ingest',
+  api_host: API_BASE + '/ingest',
   ui_host: 'https://us.posthog.com',
   capture_pageview: true,
   session_recording: { maskAllInputs: true }
