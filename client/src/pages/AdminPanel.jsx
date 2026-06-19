@@ -23,6 +23,8 @@ export default function AdminPanel({ session }) {
     fetchData();
   }, [userEmail, activeTab]);
 
+  const token = session?.access_token;
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
@@ -30,7 +32,10 @@ export default function AdminPanel({ session }) {
       if (activeTab === 'requests') {
         const res = await fetch(`${API_BASE}/api/admin/requests`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
           body: JSON.stringify({ userEmail })
         });
         if (!res.ok) throw new Error('Failed to fetch requests');
@@ -39,7 +44,10 @@ export default function AdminPanel({ session }) {
       } else {
         const res = await fetch(`${API_BASE}/api/admin/users`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
           body: JSON.stringify({ userEmail })
         });
         if (!res.ok) throw new Error('Failed to fetch users');
@@ -57,7 +65,10 @@ export default function AdminPanel({ session }) {
     try {
       const res = await fetch(`${API_BASE}/api/admin/approve`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
         body: JSON.stringify({ userEmail, requestId, userId, tier })
       });
       if (res.ok) fetchData();
@@ -71,7 +82,10 @@ export default function AdminPanel({ session }) {
     try {
       const res = await fetch(`${API_BASE}/api/admin/reject`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
         body: JSON.stringify({ userEmail, requestId })
       });
       if (res.ok) fetchData();
@@ -84,7 +98,10 @@ export default function AdminPanel({ session }) {
     try {
       const res = await fetch(`${API_BASE}/api/admin/block`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
         body: JSON.stringify({ userEmail, userId, block: !currentBlockStatus })
       });
       if (res.ok) fetchData();
@@ -99,7 +116,10 @@ export default function AdminPanel({ session }) {
     try {
       const res = await fetch(`${API_BASE}/api/admin/update-tier`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
         body: JSON.stringify({ userEmail, userId, tier: targetTier })
       });
       if (res.ok) fetchData();
@@ -118,7 +138,10 @@ export default function AdminPanel({ session }) {
     try {
       const res = await fetch(`${API_BASE}/api/admin/change-password`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
         body: JSON.stringify({ userEmail, userId, newPassword })
       });
       if (res.ok) {
