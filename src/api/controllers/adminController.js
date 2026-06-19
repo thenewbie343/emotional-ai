@@ -215,3 +215,24 @@ exports.updateUserTier = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.deleteUser = async (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
+
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'Missing userId' });
+
+    console.log(`[Admin User Erasure] Admin request to delete user: ${userId}`);
+
+    // Call Supabase Auth Admin API to delete the user
+    const { error } = await supabase.auth.admin.deleteUser(userId);
+
+    if (error) throw error;
+
+    res.json({ success: true, message: 'User permanently deleted and all data cascaded.' });
+  } catch (error) {
+    console.error(`[Admin User Erasure Error] Failure deleting user ${userId}:`, error.message);
+    res.status(500).json({ error: error.message });
+  }
+};

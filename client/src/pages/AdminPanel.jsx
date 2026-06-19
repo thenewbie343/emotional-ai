@@ -154,6 +154,30 @@ export default function AdminPanel({ session }) {
     }
   };
 
+  const handleDeleteUser = async (userId, email) => {
+    if (!window.confirm(`⚠️ WARNING: Are you absolutely sure you want to permanently DELETE user "${email}"?\n\nThis will hard-delete their account from Supabase Auth and cascade delete all their psychological data (diaries, dreams, memories, wellness scores) forever. This action CANNOT be undone.`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/delete-user`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ userEmail, userId })
+      });
+      if (res.ok) {
+        alert("User and all data deleted successfully!");
+        fetchData();
+      } else {
+        const errData = await res.json();
+        alert(`Failed to delete user: ${errData.error || 'Unknown error'}`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error contacting the admin API.");
+    }
+  };
+
   if (userEmail !== 'sns@mayhere.com') return null;
 
   return (
@@ -283,6 +307,12 @@ export default function AdminPanel({ session }) {
                             className={`px-3 py-1 rounded text-xs ${u.is_blocked ? 'bg-gray-600 hover:bg-gray-500' : 'bg-red-600/80 hover:bg-red-500'} text-white`}
                           >
                             {u.is_blocked ? 'Unblock' : 'Block'}
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteUser(u.id, u.email)} 
+                            className="px-3 py-1 bg-red-800 hover:bg-red-700 rounded text-xs text-white font-bold"
+                          >
+                            Delete
                           </button>
                         </td>
                       </tr>
