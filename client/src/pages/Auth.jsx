@@ -29,7 +29,13 @@ export default function Auth() {
 
         navigate('/')
       } else {
-        const { error } = await supabase.auth.signUp({ email: formattedEmail, password })
+        const { error } = await supabase.auth.signUp({ 
+          email: formattedEmail, 
+          password,
+          options: {
+            redirectTo: window.location.origin
+          }
+        })
         if (error) throw error
         setMessage('Check your email for the login link! Or if you disabled email confirmation, try logging in now.')
       }
