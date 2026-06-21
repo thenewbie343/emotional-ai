@@ -24,6 +24,37 @@ exports.deleteUserAccount = async (req, res) => {
 
     console.log(`[Privacy Erasure] Request received to delete user: ${userId}`);
 
+    // Pre-deletion cleanup of all related user data tables to prevent foreign key constraint violations
+    const tables = [
+      'user_subscriptions',
+      'subscription_requests',
+      'messages',
+      'sai_xp',
+      'sai_personality',
+      'study_roadmaps',
+      'study_logs',
+      'sai_timetables',
+      'study_tasks',
+      'sai_pomodoro_sessions',
+      'sai_missions',
+      'sai_subject_mastery',
+      'sai_challenges',
+      'siya_parasite_state',
+      'sai_diary',
+      'sai_memories',
+      'sai_dreams',
+      'sai_wellness',
+      'sai_time_capsules'
+    ];
+
+    for (const table of tables) {
+      try {
+        await supabaseAdmin.from(table).delete().eq('user_id', userId);
+      } catch (err) {
+        console.warn(`[Privacy Erasure Cleanup Warning] Failed to delete from ${table}:`, err.message);
+      }
+    }
+
     // Call Supabase Auth Admin API to delete the user from auth.users
     const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
 

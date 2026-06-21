@@ -14,8 +14,8 @@ export default function Billing({ session }) {
   const [error, setError] = useState(null);
   
   // Replace with actual UPI ID via env or hardcode if preferred
-  const upiId = import.meta.env.VITE_UPI_ID || 'merchant@paytm'; 
-  const payeeName = import.meta.env.VITE_PAYEE_NAME || 'Emotional AI Premium';
+  const upiId = import.meta.env.VITE_UPI_ID || '8770146706@ptaxis'; 
+  const payeeName = import.meta.env.VITE_PAYEE_NAME || 'Neeta Saxena';
   const amount = '60';
 
   useEffect(() => {
@@ -157,8 +157,11 @@ export default function Billing({ session }) {
               <div className="border border-fuchsia-500/30 bg-fuchsia-900/10 backdrop-blur-xl rounded-3xl p-8 flex flex-col items-center relative shadow-[0_0_40px_rgba(217,70,239,0.1)] transform md:-translate-y-4">
                 <div className="absolute -top-4 bg-gradient-to-r from-fuchsia-500 to-cyan-500 text-xs font-bold px-4 py-1 rounded-full uppercase tracking-wider">Most Popular</div>
                 <h2 className="text-2xl font-semibold mb-2 text-white">Soul Link</h2>
-                <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-cyan-400 mb-6">
-                  ₹60 <span className="text-sm font-normal text-gray-400">/ 2 weeks</span>
+                <div className="flex items-baseline gap-2 mb-6">
+                  <span className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-cyan-400">₹60</span>
+                  <span className="text-lg line-through text-gray-500 font-semibold">₹100</span>
+                  <span className="text-xs font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">40% OFF</span>
+                  <span className="text-sm font-normal text-gray-400 ml-1">/ 2 weeks</span>
                 </div>
                 <ul className="space-y-4 mb-8 w-full text-gray-300 text-sm">
                   <li className="flex items-center gap-3"><span className="material-symbols-outlined text-fuchsia-400 text-lg">check_circle</span> Unlimited Messages</li>
@@ -206,9 +209,13 @@ export default function Billing({ session }) {
             <h2 className="text-2xl font-bold mb-2">Complete Payment</h2>
             <p className="text-gray-400 text-sm text-center mb-6">Scan the QR code below using any UPI app (Paytm, GPay, PhonePe) to pay ₹60.</p>
             
-            <div className="bg-white p-4 rounded-2xl mb-6 shadow-inner">
+            <div className="bg-white p-4 rounded-2xl mb-4 shadow-inner">
               <img src={qrCodeUrl} alt="UPI QR Code" className="w-48 h-48" />
             </div>
+            
+            <p className="text-xs text-gray-400 text-center max-w-xs mb-6 px-4 bg-white/5 border border-white/5 rounded-xl py-3 leading-relaxed">
+              <strong>Note:</strong> For tax and billing purposes, payments are securely processed through my finance partner / family account (<strong>Neeta Saxena</strong>). This name will appear on your UPI screen.
+            </p>
             
             <div className="w-full bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
               <div className="flex justify-between text-sm mb-2">

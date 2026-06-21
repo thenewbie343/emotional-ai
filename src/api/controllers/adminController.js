@@ -225,6 +225,37 @@ exports.deleteUser = async (req, res) => {
 
     console.log(`[Admin User Erasure] Admin request to delete user: ${userId}`);
 
+    // Pre-deletion cleanup of all related user data tables to prevent foreign key constraint violations
+    const tables = [
+      'user_subscriptions',
+      'subscription_requests',
+      'messages',
+      'sai_xp',
+      'sai_personality',
+      'study_roadmaps',
+      'study_logs',
+      'sai_timetables',
+      'study_tasks',
+      'sai_pomodoro_sessions',
+      'sai_missions',
+      'sai_subject_mastery',
+      'sai_challenges',
+      'siya_parasite_state',
+      'sai_diary',
+      'sai_memories',
+      'sai_dreams',
+      'sai_wellness',
+      'sai_time_capsules'
+    ];
+
+    for (const table of tables) {
+      try {
+        await supabase.from(table).delete().eq('user_id', userId);
+      } catch (err) {
+        console.warn(`[Admin User Delete Cleanup Warning] Failed to delete from ${table}:`, err.message);
+      }
+    }
+
     // Call Supabase Auth Admin API to delete the user
     const { error } = await supabase.auth.admin.deleteUser(userId);
 
