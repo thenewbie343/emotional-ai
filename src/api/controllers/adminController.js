@@ -245,7 +245,12 @@ exports.deleteUser = async (req, res) => {
       'sai_memories',
       'sai_dreams',
       'sai_wellness',
-      'sai_time_capsules'
+      'sai_time_capsules',
+      'sai_moods',
+      'sai_goals',
+      'sai_streaks',
+      'island_achievements',
+      'quiz_results'
     ];
 
     for (const table of tables) {
