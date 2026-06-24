@@ -32,7 +32,7 @@ export default function SaiDashboard({ session }) {
   });
   const [activeSlot, setActiveSlot] = useState(null); // Slot selected for Pomodoro
   const [editingSlot, setEditingSlot] = useState(null);
-  const [editSlotForm, setEditSlotForm] = useState({ topic: '', suggestedDurationMinutes: 25 });
+  const [editSlotForm, setEditSlotForm] = useState({ topic: '', suggestedDurationMinutes: 25, date: '' });
   const [rankUpData, setRankUpData] = useState(null);
   const [dailyChallenge, setDailyChallenge] = useState(null);
 
@@ -464,12 +464,46 @@ export default function SaiDashboard({ session }) {
       grid[key].push(item);
     });
 
-    const keys = Object.keys(grid).sort((a, b) => {
-      const da = new Date(a);
-      const db = new Date(b);
-      if (!isNaN(da) && !isNaN(db)) return da - db;
-      return 0;
+    let minDate = null;
+    let maxDate = null;
+    activeTimetable.schedule.forEach(item => {
+      if (item.date) {
+        const d = new Date(item.date);
+        if (!isNaN(d)) {
+          if (!minDate || d < minDate) minDate = d;
+          if (!maxDate || d > maxDate) maxDate = d;
+        }
+      }
     });
+
+    const keys = [];
+    if (minDate && maxDate) {
+      const diffTime = Math.abs(maxDate - minDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      // If the schedule spans 2 months or less, fill in all days to allow dragging onto empty days.
+      if (diffDays <= 62) {
+        let current = new Date(minDate);
+        while (current <= maxDate) {
+          const dateStr = current.toISOString().split('T')[0];
+          keys.push(dateStr);
+          if (!grid[dateStr]) grid[dateStr] = [];
+          current.setDate(current.getDate() + 1);
+        }
+      } else {
+        // For longer timeframes, only show days that have study sessions to avoid cluttering,
+        // but user can still reschedule sessions to any date via the Edit Slot modal.
+        Object.keys(grid).forEach(k => {
+          if (!keys.includes(k)) keys.push(k);
+        });
+        keys.sort((a, b) => new Date(a) - new Date(b));
+      }
+    } else {
+      Object.keys(grid).forEach(k => {
+        if (!keys.includes(k)) keys.push(k);
+      });
+      keys.sort((a, b) => new Date(a) - new Date(b));
+    }
 
     return { keys, grid };
   }, [activeTimetable]);
@@ -491,7 +525,12 @@ export default function SaiDashboard({ session }) {
     const updatedSchedule = activeTimetable.schedule.map(item => {
       // Need a way to identify original. We can match by date and originalTopic
       if (item.date === editingSlot.date && item.topic === editingSlot.originalTopic) {
-        return { ...item, topic: editSlotForm.topic, suggestedDurationMinutes: parseInt(editSlotForm.suggestedDurationMinutes, 10) };
+        return { 
+          ...item, 
+          topic: editSlotForm.topic, 
+          suggestedDurationMinutes: parseInt(editSlotForm.suggestedDurationMinutes, 10),
+          date: editSlotForm.date 
+        };
       }
       return item;
     });
@@ -676,7 +715,7 @@ export default function SaiDashboard({ session }) {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setEditingSlot({ ...slot, originalTopic: slot.topic });
-                                      setEditSlotForm({ topic: slot.topic, suggestedDurationMinutes: slot.suggestedDurationMinutes });
+                                      setEditSlotForm({ topic: slot.topic, suggestedDurationMinutes: slot.suggestedDurationMinutes, date: slot.date || '' });
                                     }}
                                     className="p-1.5 text-gray-400 hover:text-white bg-black/70 rounded-md"
                                     title="Edit Slot"
@@ -740,23 +779,23 @@ export default function SaiDashboard({ session }) {
 
               {/* Daily Challenge Highlight */}
               {dailyChallenge && (
-                <div className={`p-6 rounded-3xl border shadow-xl flex items-center justify-between transition-all ${dailyChallenge.completed ? 'bg-emerald-950/20 border-emerald-500/20 opacity-70' : 'bg-gradient-to-r from-[#121214] to-purple-950/20 border-purple-500/30'}`}>
+                <div className={`p-6 rounded-3xl border shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${dailyChallenge.completed ? 'bg-emerald-950/20 border-emerald-500/20 opacity-70' : 'bg-gradient-to-r from-[#121214] to-purple-950/20 border-purple-500/30'}`}>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-[18px] text-amber-400">star</span>
                       <span className="text-[10px] font-bold tracking-widest text-amber-400 uppercase">Daily SAI Challenge</span>
                     </div>
-                    <h3 className={`text-lg font-bold ${dailyChallenge.completed ? 'text-gray-400 line-through' : 'text-white'}`}>
+                    <h3 className={`text-base md:text-lg font-bold ${dailyChallenge.completed ? 'text-gray-400 line-through' : 'text-white'}`}>
                       {dailyChallenge.challenge_text}
                     </h3>
                   </div>
-                  <div className="flex flex-col items-end gap-3">
-                    <div className="text-right">
-                      <div className="text-[10px] text-gray-500 font-bold uppercase">2x XP Bonus</div>
-                      <div className="text-base font-bold text-amber-400">+{dailyChallenge.xp_reward} XP</div>
+                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-start gap-4 border-t border-white/5 md:border-t-0 pt-4 md:pt-0 shrink-0 w-full md:w-auto">
+                    <div className="text-left md:text-right">
+                      <div className="text-[9px] text-gray-500 font-bold uppercase">2x XP Bonus</div>
+                      <div className="text-sm md:text-base font-bold text-amber-400">+{dailyChallenge.xp_reward} XP</div>
                     </div>
                     {!dailyChallenge.completed ? (
-                      <button onClick={handleCompleteDailyChallenge} className="px-5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-400 font-bold text-xs transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(251,191,36,0.15)]">
+                      <button onClick={handleCompleteDailyChallenge} className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-400 font-bold text-xs transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(251,191,36,0.15)] whitespace-nowrap">
                         <span className="material-symbols-outlined text-[16px]">done</span> Complete
                       </button>
                     ) : (
@@ -781,7 +820,7 @@ export default function SaiDashboard({ session }) {
                     return (
                       <div
                         key={mission.id}
-                        className={`p-5 rounded-2xl border flex items-center justify-between transition-all group relative overflow-hidden ${
+                        className={`p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all group relative overflow-hidden ${
                           mission.status === 'completed'
                             ? 'bg-emerald-950/10 border-emerald-500/20 opacity-60'
                             : overdue
@@ -790,7 +829,7 @@ export default function SaiDashboard({ session }) {
                         }`}
                       >
                         {/* Delete Button (Hover) */}
-                        <div className="absolute left-0 inset-y-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity -translate-x-full group-hover:translate-x-0 bg-red-900/80 px-4">
+                        <div className="absolute left-0 inset-y-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity -translate-x-full group-hover:translate-x-0 bg-red-900/80 px-4 z-10">
                           <button onClick={() => handleDeleteMission(mission.id)} className="text-white hover:text-red-200" title="Delete Mission">
                             <span className="material-symbols-outlined text-[24px]">delete</span>
                           </button>
@@ -815,22 +854,22 @@ export default function SaiDashboard({ session }) {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-6">
-                          <div className="text-right">
-                            <div className="text-xs text-gray-500 font-semibold uppercase">Reward</div>
+                        <div className="flex items-center justify-between md:justify-end gap-6 border-t border-white/5 md:border-t-0 pt-3 md:pt-0 shrink-0 w-full md:w-auto">
+                          <div className="text-left md:text-right">
+                            <div className="text-[10px] text-gray-500 font-semibold uppercase">Reward</div>
                             <div className="text-sm font-bold text-amber-400">+{mission.xp_reward} XP</div>
                           </div>
 
                           {mission.status !== 'completed' ? (
                             <button
                               onClick={() => handleCompleteMission(mission.id)}
-                              className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-all active:scale-95 flex items-center gap-2"
+                              className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap"
                             >
                               <span className="material-symbols-outlined text-sm">check_circle</span>
                               Complete
                             </button>
                           ) : (
-                            <span className="text-emerald-400 text-xs font-semibold flex items-center gap-1">
+                            <span className="text-emerald-400 text-xs font-semibold flex items-center gap-1 whitespace-nowrap">
                               <span className="material-symbols-outlined text-sm">done_all</span> Claimed
                             </span>
                           )}
@@ -1164,6 +1203,15 @@ export default function SaiDashboard({ session }) {
                   type="number"
                   value={editSlotForm.suggestedDurationMinutes}
                   onChange={e => setEditSlotForm(prev => ({ ...prev, suggestedDurationMinutes: e.target.value }))}
+                  className="w-full bg-[#1c1c1f] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase">Scheduled Date</label>
+                <input
+                  type="date"
+                  value={editSlotForm.date}
+                  onChange={e => setEditSlotForm(prev => ({ ...prev, date: e.target.value }))}
                   className="w-full bg-[#1c1c1f] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500"
                 />
               </div>

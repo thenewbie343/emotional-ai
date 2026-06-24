@@ -515,10 +515,13 @@ exports.generateTimetable = async (req, res) => {
   }
 
   try {
-    const systemPrompt = `You are SAI, a demanding study coach. Generate a day-by-day study schedule from today until the exam date (${examDate}) for the subject: "${subject}".
+    const systemPrompt = `You are SAI, a demanding study coach. Generate a structured study schedule from today until the exam date (${examDate}) for the subject: "${subject}".
 The user has these available study hours per day of the week: ${JSON.stringify(hoursPerDay)}.
-Generate a structured, logical sequence of topics leading up to the exam.
-CRITICAL: Respond ONLY with a raw JSON array. No markdown code blocks, no explanations.
+CRITICAL GUIDELINES:
+1. Generate a maximum of 15 key study sessions/milestones spread out logically between today and the exam date (${examDate}).
+2. If the exam is far away (e.g., weeks, months, or a year), space the sessions out (e.g. weekly or bi-weekly). Do not generate a session for every single day.
+3. If the exam is very close (e.g., under 2 weeks), make sessions more frequent (e.g., daily).
+4. Respond ONLY with a raw JSON array. No markdown code blocks, no explanations.
 The JSON array structure must be exactly:
 [
   {
