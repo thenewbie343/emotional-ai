@@ -990,6 +990,7 @@ exports.generateDailyChallenge = async (req, res) => {
       .insert([{
         user_id: userId,
         challenge_text: challengeText || "Complete 2 hours of deep work focusing on your weakest subject.",
+        xp_reward: 100,
         completed: false,
         date_key: todayStr
       }])

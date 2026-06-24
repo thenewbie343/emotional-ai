@@ -774,44 +774,76 @@ export default function SaiDashboard({ session }) {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Missions List (Left Column) */}
             <div className="lg:col-span-8 space-y-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-light text-white">Active Missions</h2>
-
-              {/* Daily Challenge Highlight */}
-              {dailyChallenge && (
-                <div className={`p-6 rounded-3xl border shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${dailyChallenge.completed ? 'bg-emerald-950/20 border-emerald-500/20 opacity-70' : 'bg-gradient-to-r from-[#121214] to-purple-950/20 border-purple-500/30'}`}>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px] text-amber-400">star</span>
-                      <span className="text-[10px] font-bold tracking-widest text-amber-400 uppercase">Daily SAI Challenge</span>
-                    </div>
-                    <h3 className={`text-base md:text-lg font-bold ${dailyChallenge.completed ? 'text-gray-400 line-through' : 'text-white'}`}>
-                      {dailyChallenge.challenge_text}
-                    </h3>
-                  </div>
-                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-start gap-4 border-t border-white/5 md:border-t-0 pt-4 md:pt-0 shrink-0 w-full md:w-auto">
-                    <div className="text-left md:text-right">
-                      <div className="text-[9px] text-gray-500 font-bold uppercase">2x XP Bonus</div>
-                      <div className="text-sm md:text-base font-bold text-amber-400">+{dailyChallenge.xp_reward} XP</div>
-                    </div>
-                    {!dailyChallenge.completed ? (
-                      <button onClick={handleCompleteDailyChallenge} className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-400 font-bold text-xs transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(251,191,36,0.15)] whitespace-nowrap">
-                        <span className="material-symbols-outlined text-[16px]">done</span> Complete
-                      </button>
-                    ) : (
-                      <span className="text-emerald-400 text-xs font-bold flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">verified</span> Completed</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-white/5 pb-3">
+                <h2 className="text-xl font-light text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-purple-400">target</span>
+                  Active Missions
+                </h2>
                 <button
                   onClick={handleGenerateDailyMissions}
-                  className="px-4 py-2 rounded-full text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-md"
+                  className="px-4 py-1.5 rounded-full text-xs font-semibold bg-purple-600/10 hover:bg-purple-600 text-purple-400 hover:text-white border border-purple-500/30 transition-all shadow-md shrink-0 w-fit self-start sm:self-auto"
                 >
                   Generate Daily Missions (SAI)
                 </button>
               </div>
+
+              {/* Daily Challenge Highlight */}
+              {dailyChallenge && (
+                <div className={`p-5 sm:p-6 rounded-3xl border shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all duration-300 ${
+                  dailyChallenge.completed 
+                    ? 'bg-[#0f1712] border-emerald-500/20 opacity-75' 
+                    : 'bg-gradient-to-br from-[#121214] via-[#151518] to-purple-950/15 border-purple-500/20 hover:border-purple-500/40 shadow-[0_4px_35px_rgba(0,0,0,0.5)]'
+                }`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${
+                      dailyChallenge.completed
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                        : 'bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.15)] animate-pulse'
+                    }`}>
+                      <span className="material-symbols-outlined text-[24px]">
+                        {dailyChallenge.completed ? 'verified' : 'emoji_events'}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[9px] font-extrabold tracking-widest uppercase bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 ${
+                          dailyChallenge.completed ? 'text-zinc-500 bg-zinc-800/20 border-zinc-700/20' : 'text-amber-400'
+                        }`}>
+                          SAI Daily Challenge
+                        </span>
+                      </div>
+                      <h3 className={`text-base sm:text-lg font-medium leading-snug tracking-wide ${
+                        dailyChallenge.completed ? 'text-zinc-500 line-through' : 'text-white'
+                      }`}>
+                        {dailyChallenge.challenge_text}
+                      </h3>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between md:justify-end gap-6 shrink-0 w-full md:w-auto border-t border-white/5 md:border-t-0 pt-4 md:pt-0">
+                    <div className="text-left md:text-right">
+                      <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Bonus Reward</div>
+                      <div className="text-sm font-black text-amber-400 tracking-wide flex items-center gap-1 sm:justify-end">
+                        <span className="material-symbols-outlined text-xs text-amber-400">bolt</span>
+                        +{dailyChallenge.xp_reward || 100} XP
+                      </div>
+                    </div>
+                    {!dailyChallenge.completed ? (
+                      <button 
+                        onClick={handleCompleteDailyChallenge} 
+                        className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 font-bold text-xs transition-all flex items-center gap-1.5 shadow-[0_4px_15px_rgba(245,158,11,0.2)] hover:shadow-[0_4px_25px_rgba(245,158,11,0.4)] hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
+                      >
+                        <span className="material-symbols-outlined text-[16px] font-bold">done</span> 
+                        Complete
+                      </button>
+                    ) : (
+                      <span className="px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">
+                        <span className="material-symbols-outlined text-[16px]">verified</span> 
+                        Completed
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 {missions.length > 0 ? (
@@ -820,65 +852,76 @@ export default function SaiDashboard({ session }) {
                     return (
                       <div
                         key={mission.id}
-                        className={`p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all group relative overflow-hidden ${
+                        className={`p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-300 relative overflow-hidden ${
                           mission.status === 'completed'
-                            ? 'bg-emerald-950/10 border-emerald-500/20 opacity-60'
+                            ? 'bg-[#0f1712] border-emerald-500/20 opacity-75'
                             : overdue
-                            ? 'bg-red-950/15 border-red-500/30 shadow-md shadow-red-950/10'
-                            : 'bg-[#121214] border-white/5 hover:border-white/10'
+                            ? 'bg-red-950/10 border-red-500/30 shadow-md shadow-red-950/5'
+                            : 'bg-[#121214]/60 backdrop-blur-md border-white/5 hover:border-purple-500/20 hover:bg-[#151518]/80'
                         }`}
                       >
-                        {/* Delete Button (Hover) */}
-                        <div className="absolute left-0 inset-y-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity -translate-x-full group-hover:translate-x-0 bg-red-900/80 px-4 z-10">
-                          <button onClick={() => handleDeleteMission(mission.id)} className="text-white hover:text-red-200" title="Delete Mission">
-                            <span className="material-symbols-outlined text-[24px]">delete</span>
-                          </button>
-                        </div>
-                        <div className="space-y-2 group-hover:ml-12 transition-all">
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider ${
-                              mission.auto_generated ? 'bg-amber-500/10 text-amber-400' : 'bg-purple-500/10 text-purple-400'
+                        <div className="space-y-2 flex-grow">
+                          <div className="flex items-center flex-wrap gap-2">
+                            <span className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider ${
+                              mission.auto_generated 
+                                ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400' 
+                                : 'bg-purple-500/10 border border-purple-500/20 text-purple-400'
                             }`}>
                               {mission.auto_generated ? 'DAILY' : 'CAMPAIGN'}
                             </span>
-                            <span className="text-xs text-gray-500 font-bold">{mission.subject}</span>
+                            <span className="text-xs text-zinc-400 font-bold uppercase tracking-wider">
+                              {mission.subject}
+                            </span>
                           </div>
-                          <h4 className={`text-base font-bold ${mission.status === 'completed' ? 'line-through text-gray-500' : 'text-white'}`}>
+                          <h4 className={`text-base font-semibold tracking-wide ${
+                            mission.status === 'completed' ? 'line-through text-zinc-500' : 'text-white'
+                          }`}>
                             {mission.title}
                           </h4>
                           {mission.due_date && (
-                            <div className={`text-[11px] flex items-center gap-1 ${overdue ? 'text-red-400 font-semibold' : 'text-gray-400'}`}>
+                            <div className={`text-[11px] flex items-center gap-1.5 ${overdue ? 'text-red-400 font-semibold' : 'text-zinc-400'}`}>
                               <span className="material-symbols-outlined text-[14px]">event</span>
-                              Due: {new Date(mission.due_date).toLocaleDateString()} {overdue && '(OVERDUE)'}
+                              <span>Due: {new Date(mission.due_date).toLocaleDateString()}</span>
+                              {overdue && <span className="text-xs text-red-500 ml-1 font-bold">(OVERDUE)</span>}
                             </div>
                           )}
                         </div>
 
-                        <div className="flex items-center justify-between md:justify-end gap-6 border-t border-white/5 md:border-t-0 pt-3 md:pt-0 shrink-0 w-full md:w-auto">
+                        <div className="flex items-center justify-between md:justify-end gap-5 border-t border-white/5 md:border-t-0 pt-3 md:pt-0 shrink-0 w-full md:w-auto">
                           <div className="text-left md:text-right">
-                            <div className="text-[10px] text-gray-500 font-semibold uppercase">Reward</div>
-                            <div className="text-sm font-bold text-amber-400">+{mission.xp_reward} XP</div>
+                            <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Reward</div>
+                            <div className="text-sm font-black text-amber-400">+{mission.xp_reward} XP</div>
                           </div>
 
-                          {mission.status !== 'completed' ? (
+                          <div className="flex items-center gap-2">
+                            {mission.status !== 'completed' ? (
+                              <button
+                                onClick={() => handleCompleteMission(mission.id)}
+                                className="px-4 py-2.5 rounded-xl bg-purple-600/10 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 hover:border-purple-500/50 text-xs font-bold transition-all active:scale-[0.97] flex items-center gap-1.5 whitespace-nowrap hover:shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+                              >
+                                <span className="material-symbols-outlined text-sm font-bold">check_circle</span>
+                                Complete
+                              </button>
+                            ) : (
+                              <span className="px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">
+                                <span className="material-symbols-outlined text-sm">done_all</span> Claimed
+                              </span>
+                            )}
+                            
                             <button
-                              onClick={() => handleCompleteMission(mission.id)}
-                              className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap"
+                              onClick={() => handleDeleteMission(mission.id)}
+                              className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
+                              title="Delete Mission"
                             >
-                              <span className="material-symbols-outlined text-sm">check_circle</span>
-                              Complete
+                              <span className="material-symbols-outlined text-[18px]">delete</span>
                             </button>
-                          ) : (
-                            <span className="text-emerald-400 text-xs font-semibold flex items-center gap-1 whitespace-nowrap">
-                              <span className="material-symbols-outlined text-sm">done_all</span> Claimed
-                            </span>
-                          )}
+                          </div>
                         </div>
                       </div>
                     );
                   })
                 ) : (
-                  <div className="p-12 text-center text-gray-500 bg-[#121214] border border-white/5 rounded-3xl">
+                  <div className="p-12 text-center text-zinc-500 bg-[#121214]/60 backdrop-blur-md border border-white/5 rounded-3xl">
                     ⚔️ No missions logged. Create a custom mission or click the button above to generate daily challenges!
                   </div>
                 )}
@@ -886,38 +929,41 @@ export default function SaiDashboard({ session }) {
             </div>
 
             {/* Custom Mission Form (Right Column) */}
-            <div className="lg:col-span-4 bg-[#121214] border border-white/5 rounded-3xl p-6 shadow-xl h-fit">
-              <h3 className="text-base font-bold text-white mb-4">Launch New Mission</h3>
+            <div className="lg:col-span-4 bg-[#121214]/60 backdrop-blur-md border border-white/5 rounded-3xl p-6 shadow-xl h-fit">
+              <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-purple-400">rocket_launch</span>
+                Launch New Mission
+              </h3>
               <form onSubmit={handleCreateMission} className="space-y-5">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase">Mission Title</label>
+                  <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">Mission Title</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Solve physics problem set"
                     value={newMissionForm.title}
                     onChange={e => setNewMissionForm(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full bg-[#1c1c1f] border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500"
+                    className="w-full bg-[#1c1c1f] border border-white/10 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 text-white rounded-xl px-4 py-3 text-xs transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase">Subject</label>
+                  <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">Subject</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Physics, Math"
                     value={newMissionForm.subject}
                     onChange={e => setNewMissionForm(prev => ({ ...prev, subject: e.target.value }))}
-                    className="w-full bg-[#1c1c1f] border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500"
+                    className="w-full bg-[#1c1c1f] border border-white/10 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 text-white rounded-xl px-4 py-3 text-xs transition-all"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase">XP Reward</label>
+                    <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">XP Reward</label>
                     <select
                       value={newMissionForm.xpReward}
                       onChange={e => setNewMissionForm(prev => ({ ...prev, xpReward: parseInt(e.target.value, 10) }))}
-                      className="w-full bg-[#1c1c1f] border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500"
+                      className="w-full bg-[#1c1c1f] border border-white/10 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 text-white rounded-xl px-4 py-3 text-xs transition-all"
                     >
                       <option value="25">25 XP (Quick)</option>
                       <option value="50">50 XP (Normal)</option>
@@ -925,18 +971,18 @@ export default function SaiDashboard({ session }) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase">Due Date</label>
+                    <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">Due Date</label>
                     <input
                       type="date"
                       value={newMissionForm.dueDate}
                       onChange={e => setNewMissionForm(prev => ({ ...prev, dueDate: e.target.value }))}
-                      className="w-full bg-[#1c1c1f] border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500"
+                      className="w-full bg-[#1c1c1f] border border-white/10 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 text-white rounded-xl px-4 py-3 text-xs transition-all"
                     />
                   </div>
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs transition-all active:scale-95"
+                  className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs transition-all hover:scale-[1.01] active:scale-[0.99] shadow-[0_4px_15px_rgba(168,85,247,0.15)]"
                 >
                   Create Mission
                 </button>
