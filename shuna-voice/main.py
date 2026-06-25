@@ -54,6 +54,14 @@ async def lifespan(app: FastAPI):
 # ── FastAPI App ──────────────────────────────────────────────────────────────
 app = FastAPI(title="Shuna Voice Relay", version="1.0.0", lifespan=lifespan)
 
+@app.get("/")
+async def health_check():
+    """
+    Responds to Render's automated pings to keep the logs clean 
+    and confirm the server is awake.
+    """
+    return {"status": "online", "message": "Shuna Voice Engine Active"}
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
