@@ -23,7 +23,7 @@ logger = logging.getLogger("shuna-voice")
 
 # ── Configuration ────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-2.0-flash-exp"
+GEMINI_MODEL = "gemini-2.5-flash-live-preview"
 VOICE_NAME = "Aoede"
 SAMPLE_RATE_HZ = 24000
 

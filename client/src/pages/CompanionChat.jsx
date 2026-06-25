@@ -80,7 +80,7 @@ const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isG
 
   return (
     <motion.form 
-      className={`absolute bottom-10 left-1/2 -translate-x-1/2 w-full max-w-lg flex items-center gap-4 bg-black/40 border backdrop-blur-xl rounded-full p-2 pl-6 shadow-2xl z-50`}
+      className={`absolute bottom-10 left-1/2 -translate-x-1/2 w-[92%] max-w-lg flex items-center gap-2 bg-black/40 border backdrop-blur-xl rounded-full p-2 pl-4 pr-2 shadow-2xl z-50`}
       style={{ borderColor: MODES.find(m => m.key === activeMode).color + '40' }}
       animate={isGlitching ? { x: [-2, 2, -2, 0], filter: ["hue-rotate(0deg)", "hue-rotate(90deg)", "hue-rotate(0deg)"] } : {}}
       transition={{ repeat: Infinity, duration: 0.1 }}
@@ -90,7 +90,7 @@ const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isG
         type="button" 
         onClick={onToggleVoice} 
         className="text-xl relative flex items-center justify-center w-8 h-8 rounded-full transition-all"
-        style={{ color: micColor }}
+        style={{ color: micColor, flexShrink: 0 }}
         title={isVoiceEnabled ? `Shuna Live Voice: ${voiceState.toUpperCase()}` : "Turn on Shuna Live Voice"}
       >
         {isVoiceEnabled && (voiceState === 'listening' || voiceState === 'speaking') && (
@@ -104,15 +104,21 @@ const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isG
           voiceError
             ? `Error: ${voiceError}`
             : isVoiceEnabled
-              ? `Speak or Transmit to SHUNA [${voiceState.toUpperCase()}]...`
-              : `Transmit to SHUNA [${activeMode.toUpperCase()}]...`
+              ? `Voice: ${voiceState.toUpperCase()}...`
+              : `Transmit [${activeMode.toUpperCase()}]...`
         }
         value={inputText}
         disabled={isVoiceEnabled && voiceState === 'connecting'}
         onChange={(e) => setInputText(e.target.value)}
         className="flex-1 bg-transparent text-white placeholder:text-gray-500 focus:outline-none tracking-widest text-sm"
+        style={{ minWidth: 0 }}
       />
-      <button type="submit" disabled={!inputText.trim()} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20">
+      <button 
+        type="submit" 
+        disabled={!inputText.trim()} 
+        className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20"
+        style={{ flexShrink: 0 }}
+      >
         <span className="material-symbols-outlined text-sm">send</span>
       </button>
     </motion.form>
