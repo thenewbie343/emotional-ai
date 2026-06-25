@@ -119,14 +119,10 @@ async def live_chat(ws: WebSocket):
                         # Handle binary audio data
                         if "bytes" in data and data["bytes"]:
                             audio_bytes = data["bytes"]
-                            await session.send(
-                                input=types.LiveClientRealtimeInput(
-                                    media_chunks=[
-                                        types.Blob(
-                                            data=audio_bytes,
-                                            mime_type=f"audio/pcm;rate=16000",
-                                        )
-                                    ]
+                            await session.send_realtime_input(
+                                audio=types.Blob(
+                                    data=audio_bytes,
+                                    mime_type="audio/pcm;rate=16000",
                                 )
                             )
 
