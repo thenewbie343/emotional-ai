@@ -350,6 +350,9 @@ const ShunaVoiceChat = forwardRef(({ isActive, onStateChange, onError, onTextMes
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.send("__ping__");
       }
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(console.error);
+      }
     }, 25000);
 
     return () => clearInterval(interval);

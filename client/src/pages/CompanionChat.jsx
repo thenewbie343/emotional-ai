@@ -102,16 +102,16 @@ const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isG
         type="text"
         placeholder={
           voiceError
-            ? `Error: ${voiceError}`
+            ? `Err: ${voiceError}`
             : isVoiceEnabled
-              ? `Voice: ${voiceState.toUpperCase()}...`
-              : `Transmit [${activeMode.toUpperCase()}]...`
+              ? `${voiceState.toUpperCase()}...`
+              : `Transmit...`
         }
         value={inputText}
         disabled={isVoiceEnabled && voiceState === 'connecting'}
         onChange={(e) => setInputText(e.target.value)}
-        className="flex-1 bg-transparent text-white placeholder:text-gray-500 focus:outline-none tracking-widest text-sm"
-        style={{ minWidth: 0 }}
+        className="flex-1 bg-transparent text-white placeholder:text-gray-500 focus:outline-none tracking-wide text-sm"
+        style={{ minWidth: 0, width: '100%' }}
       />
       <button 
         type="submit" 
