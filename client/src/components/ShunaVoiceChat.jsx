@@ -139,6 +139,13 @@ const ShunaVoiceChat = forwardRef(({ isActive, onStateChange, onError, onTextMes
     },
     resetReconnectCounter() {
       reconnectAttemptRef.current = 0;
+    },
+    connect() {
+      reconnectAttemptRef.current = 0;
+      connect();
+    },
+    cleanup() {
+      cleanup();
     }
   }));
 
@@ -192,6 +199,9 @@ const ShunaVoiceChat = forwardRef(({ isActive, onStateChange, onError, onTextMes
       nextStartTimeRef.current = 0;
 
       // 2. Get microphone access
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Microphone API not supported by this browser. Ensure HTTPS is used.");
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
@@ -325,13 +335,10 @@ const ShunaVoiceChat = forwardRef(({ isActive, onStateChange, onError, onTextMes
 
   // ── Effect to control connection based on isActive prop ────────────────
   useEffect(() => {
-    if (isActive) {
-      reconnectAttemptRef.current = 0;
-      connect();
-    } else {
+    if (!isActive) {
       cleanup();
     }
-  }, [isActive, connect, cleanup]);
+  }, [isActive, cleanup]);
 
   // Unmount Safety
   useEffect(() => {

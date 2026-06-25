@@ -499,8 +499,10 @@ export default function CompanionChat({ session }) {
           onToggleVoice={() => {
             if (isVoiceEnabled) {
               setIsVoiceEnabled(false);
+              voiceChatRef.current?.cleanup();
             } else {
               setIsVoiceEnabled(true);
+              voiceChatRef.current?.connect();
             }
           }} 
           isGlitching={isGlitching}
