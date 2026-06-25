@@ -145,10 +145,9 @@ async def live_chat(ws: WebSocket):
             async def relay_gemini_to_browser():
                 """Read audio chunks from Gemini, forward to browser."""
                 try:
-                    while True:
-                        response = await session.receive()
+                    async for response in session.receive():
                         if response is None:
-                            break
+                            continue
 
                         # Stream audio data chunks immediately
                         server_content = response.server_content
