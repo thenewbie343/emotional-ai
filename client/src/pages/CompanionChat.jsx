@@ -5,6 +5,7 @@ import { useSubscription } from '../hooks/useSubscription';
 import Companion3D from '../components/Companion3D';
 import { detectSiyaEmotion } from '../components/siya/PersonalityResponses';
 import ParasiteSIYA, { useSIYATierBehavior } from '../components/siya/ParasiteSIYA';
+import ShunaVoiceChat from '../components/ShunaVoiceChat';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MODES = [
@@ -453,6 +454,7 @@ export default function CompanionChat({ session }) {
             </motion.div>
           )}
         </AnimatePresence>
+        <ShunaVoiceChat />
       </div>
     </ParasiteSIYA>
   );
