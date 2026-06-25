@@ -1,19 +1,15 @@
 /**
- * ShunaVoiceChat.jsx — Real-Time Voice Interface for Shuna
- * =========================================================
+ * ShunaVoiceChat.jsx — Headless Real-Time Voice Interface for Shuna
+ * ==================================================================
  * High-performance bidirectional audio pipeline:
  *   Browser Mic → 16kHz PCM → WebSocket → FastAPI → Gemini Live
  *   Gemini Live → 24kHz PCM → WebSocket → Float32 AudioBuffer → Speaker
  *
- * Key guarantees:
- *   - Zero audio gaps/overlaps via nextStartTimeRef absolute scheduling
- *   - No AudioContext before user interaction (browser policy compliant)
- *   - Full resource cleanup on unmount (no memory leaks)
- *   - Auto-reconnect with exponential backoff on socket drops
+ * Implements React.forwardRef to allow sending text messages over the same WebSocket,
+ * and calls callback props to notify the parent of state and transcript changes.
  */
 
-import React, { useState, useRef, useCallback, useEffect } from "react";
-import "./ShunaVoiceChat.css";
+import React, { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 
 // ── Configuration ───────────────────────────────────────────────────────────
 const WS_URL = "wss://shuna-backend.onrender.com/ws/v1/shuna/live-chat";
@@ -25,10 +21,6 @@ const RECONNECT_BASE_DELAY_MS = 1000;
 
 // ── PCM Conversion Utilities ────────────────────────────────────────────────
 
-/**
- * Convert Float32 audio samples to Int16 PCM bytes.
- * Used for mic capture → WebSocket transmission.
- */
 function float32ToInt16(float32Array) {
   const int16 = new Int16Array(float32Array.length);
   for (let i = 0; i < float32Array.length; i++) {
@@ -38,10 +30,6 @@ function float32ToInt16(float32Array) {
   return int16.buffer;
 }
 
-/**
- * Convert raw Int16 PCM bytes from Gemini to Float32 for AudioBuffer.
- * Used for WebSocket reception → speaker playback.
- */
 function int16ToFloat32(arrayBuffer) {
   const int16 = new Int16Array(arrayBuffer);
   const float32 = new Float32Array(int16.length);
@@ -51,10 +39,6 @@ function int16ToFloat32(arrayBuffer) {
   return float32;
 }
 
-/**
- * Downsample from browser's native sample rate to target rate.
- * Uses simple linear interpolation — lightweight, no FFT overhead.
- */
 function downsample(buffer, fromRate, toRate) {
   if (fromRate === toRate) return buffer;
   const ratio = fromRate / toRate;
@@ -70,13 +54,11 @@ function downsample(buffer, fromRate, toRate) {
   return result;
 }
 
-// ── Component ───────────────────────────────────────────────────────────────
-export default function ShunaVoiceChat() {
-  const [isOpen, setIsOpen] = useState(false);
+// ── Headless Component ──────────────────────────────────────────────────────
+const ShunaVoiceChat = forwardRef(({ isActive, onStateChange, onError, onTextMessageReceived }, ref) => {
   const [state, setState] = useState("idle"); // idle | connecting | listening | speaking | error
-  const [errorMsg, setErrorMsg] = useState("");
 
-  // Refs for mutable state that must survive re-renders without triggering them
+  // Refs for audio and websocket resources
   const wsRef = useRef(null);
   const audioCtxRef = useRef(null);
   const mediaStreamRef = useRef(null);
@@ -88,7 +70,14 @@ export default function ShunaVoiceChat() {
   const isMountedRef = useRef(true);
   const isCleaningUpRef = useRef(false);
 
-  // ── Cleanup Everything ──────────────────────────────────────────────────
+  // Notify parent of state changes
+  useEffect(() => {
+    if (onStateChange) {
+      onStateChange(state);
+    }
+  }, [state, onStateChange]);
+
+  // ── Cleanup Resources ───────────────────────────────────────────────────
   const cleanup = useCallback(() => {
     if (isCleaningUpRef.current) return;
     isCleaningUpRef.current = true;
@@ -131,14 +120,27 @@ export default function ShunaVoiceChat() {
     }
 
     nextStartTimeRef.current = 0;
-    reconnectAttemptRef.current = 0;
     isCleaningUpRef.current = false;
 
     if (isMountedRef.current) {
       setState("idle");
-      setErrorMsg("");
     }
   }, []);
+
+  // Expose API to parent component
+  useImperativeHandle(ref, () => ({
+    sendTextMessage(text) {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        // Send raw text to WebSocket (FastAPI parses as type=text)
+        wsRef.current.send(text);
+      } else {
+        console.warn("Shuna Voice WebSocket is not open. Cannot send text message.");
+      }
+    },
+    resetReconnectCounter() {
+      reconnectAttemptRef.current = 0;
+    }
+  }));
 
   // ── Schedule PCM Playback on Speaker ────────────────────────────────────
   const schedulePlayback = useCallback((pcmArrayBuffer) => {
@@ -174,11 +176,11 @@ export default function ShunaVoiceChat() {
 
     if (isMountedRef.current) {
       setState("connecting");
-      setErrorMsg("");
+      if (onError) onError("");
     }
 
     try {
-      // 1. Initialize AudioContext (requires user gesture — called from button)
+      // 1. Initialize AudioContext (requires user gesture)
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)({
         sampleRate: OUTPUT_SAMPLE_RATE,
       });
@@ -206,6 +208,7 @@ export default function ShunaVoiceChat() {
         if (!isMountedRef.current) return;
         reconnectAttemptRef.current = 0;
         setState("listening");
+        if (onError) onError("");
 
         // 4. Wire mic → ScriptProcessor → WebSocket
         const micSource = audioCtx.createMediaStreamSource(stream);
@@ -223,7 +226,6 @@ export default function ShunaVoiceChat() {
         };
 
         micSource.connect(scriptNode);
-        // Connect to destination to keep the processor alive (outputs silence)
         scriptNode.connect(audioCtx.destination);
       };
 
@@ -231,17 +233,22 @@ export default function ShunaVoiceChat() {
         if (!isMountedRef.current) return;
 
         if (typeof event.data === "string") {
+          // Check for text transcriptions forwarded by the backend
+          if (event.data.startsWith("__text__:")) {
+            const transcript = event.data.substring(9);
+            if (onTextMessageReceived) {
+              onTextMessageReceived(transcript);
+            }
+            return;
+          }
+
           // Control messages
           if (event.data === "__turn_done__") {
-            // Shuna finished speaking — switch back to listening after audio drains
             const remainingAudio = Math.max(0, nextStartTimeRef.current - (audioCtxRef.current?.currentTime || 0));
             setTimeout(() => {
               if (isMountedRef.current) setState("listening");
             }, remainingAudio * 1000 + 150);
             return;
-          }
-          if (event.data === "__pong__" || event.data === "__heartbeat__") {
-            return; // Swallow keepalive messages
           }
           return;
         }
@@ -256,48 +263,63 @@ export default function ShunaVoiceChat() {
         if (!isMountedRef.current || isCleaningUpRef.current) return;
 
         if (event.code === 1000) {
-          // Clean close (user initiated)
           setState("idle");
           return;
         }
 
-        // Unexpected close — attempt reconnect
+        console.error("Shuna voice WebSocket closed abnormally. Code:", event.code, "Reason:", event.reason);
+        
+        let reasonText = event.reason || "";
+        if (event.code === 1006) {
+          reasonText = "abnormal closure (check server status)";
+        } else if (event.code === 1011) {
+          reasonText = `server session error (${event.reason || 'Check GEMINI_API_KEY environment variable on Render'})`;
+        }
+
         if (reconnectAttemptRef.current < MAX_RECONNECT_ATTEMPTS) {
           const delay = RECONNECT_BASE_DELAY_MS * Math.pow(2, reconnectAttemptRef.current);
           reconnectAttemptRef.current++;
           setState("connecting");
-          setErrorMsg(`Connection lost. Reconnecting in ${Math.round(delay / 1000)}s...`);
+          if (onError) {
+            onError(`Connection lost (${reasonText}). Reconnecting in ${Math.round(delay / 1000)}s...`);
+          }
           reconnectTimerRef.current = setTimeout(() => {
             if (isMountedRef.current) connect();
           }, delay);
         } else {
           setState("error");
-          setErrorMsg("Unable to connect to Shuna's voice server. Please try again later.");
+          if (onError) {
+            onError(`Failed to connect to Shuna voice server: ${reasonText || 'Service unavailable'}.`);
+          }
         }
       };
 
-      ws.onerror = () => {
-        // onclose will fire after this — handle reconnect there
+      ws.onerror = (err) => {
+        console.error("WebSocket error:", err);
       };
     } catch (err) {
       if (isMountedRef.current) {
         setState("error");
         if (err.name === "NotAllowedError") {
-          setErrorMsg("Microphone access denied. Please allow mic permissions and try again.");
+          if (onError) onError("Microphone access denied. Please grant permissions and try again.");
         } else {
-          setErrorMsg(err.message || "Failed to connect to voice server.");
+          if (onError) onError(err.message || "Failed to connect to voice server.");
         }
       }
     }
-  }, [cleanup, schedulePlayback]);
+  }, [cleanup, schedulePlayback, onError, onTextMessageReceived]);
 
-  // ── Disconnect ──────────────────────────────────────────────────────────
-  const disconnect = useCallback(() => {
-    cleanup();
-    setIsOpen(false);
-  }, [cleanup]);
+  // ── Effect to control connection based on isActive prop ────────────────
+  useEffect(() => {
+    if (isActive) {
+      reconnectAttemptRef.current = 0;
+      connect();
+    } else {
+      cleanup();
+    }
+  }, [isActive, connect, cleanup]);
 
-  // ── Unmount Safety ──────────────────────────────────────────────────────
+  // Unmount Safety
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -306,7 +328,7 @@ export default function ShunaVoiceChat() {
     };
   }, [cleanup]);
 
-  // ── Heartbeat Ping (client side) ────────────────────────────────────────
+  // Heartbeat Ping (client side)
   useEffect(() => {
     if (state !== "listening" && state !== "speaking") return;
 
@@ -319,66 +341,7 @@ export default function ShunaVoiceChat() {
     return () => clearInterval(interval);
   }, [state]);
 
-  // ── Render ──────────────────────────────────────────────────────────────
-  const statusLabels = {
-    idle: "Tap to connect",
-    connecting: "Connecting...",
-    listening: "Listening to you...",
-    speaking: "Shuna is speaking...",
-    error: "Connection error",
-  };
+  return null; // Headless component, renders no UI itself
+});
 
-  // Closed state — show floating action button
-  if (!isOpen) {
-    return (
-      <div className="shuna-voice-overlay">
-        <button
-          className="shuna-voice-fab"
-          onClick={() => {
-            setIsOpen(true);
-            connect();
-          }}
-          title="Talk to Shuna"
-        >
-          <span className="material-symbols-outlined">mic</span>
-        </button>
-      </div>
-    );
-  }
-
-  // Open state — show voice panel
-  return (
-    <div className="shuna-voice-overlay">
-      <div className="shuna-voice-panel">
-        {/* Header */}
-        <div className="shuna-voice-header">
-          <div className="shuna-voice-title">
-            <div className={`status-dot ${state}`} />
-            <h3>Shuna Voice</h3>
-          </div>
-          <button className="shuna-voice-close" onClick={disconnect} title="Close">
-            <span className="material-symbols-outlined">close</span>
-          </button>
-        </div>
-
-        {/* Orb Visualizer */}
-        <div className="shuna-voice-orb-container">
-          <div className="shuna-voice-ring" />
-          <div className="shuna-voice-ring" />
-          <div className="shuna-voice-ring" />
-          <div className={`shuna-voice-orb ${state}`} />
-        </div>
-
-        {/* Status */}
-        <div className={`shuna-voice-status ${state}`}>
-          {statusLabels[state]}
-        </div>
-
-        {/* Error Message */}
-        {errorMsg && (
-          <div className="shuna-voice-error">{errorMsg}</div>
-        )}
-      </div>
-    </div>
-  );
-}
+export default ShunaVoiceChat;

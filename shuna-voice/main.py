@@ -23,7 +23,7 @@ logger = logging.getLogger("shuna-voice")
 
 # ── Configuration ────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-2.0-flash-live-001"
+GEMINI_MODEL = "gemini-2.0-flash-exp"
 VOICE_NAME = "Aoede"
 SAMPLE_RATE_HZ = 24000
 
@@ -161,6 +161,9 @@ async def live_chat(ws: WebSocket):
                                 if part.inline_data and part.inline_data.data:
                                     # Send raw PCM bytes directly to browser
                                     await ws.send_bytes(part.inline_data.data)
+                                if part.text:
+                                    # Send text transcription chunk to browser
+                                    await ws.send_text(f"__text__:{part.text}")
 
                         # Signal turn completion to frontend
                         if server_content and server_content.turn_complete:

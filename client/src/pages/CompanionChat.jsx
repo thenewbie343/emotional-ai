@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, memo, useMemo } from 'react';
+import { useState, useRef, useEffect, memo, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useSubscription } from '../hooks/useSubscription';
@@ -15,11 +15,6 @@ const MODES = [
 ];
 
 const MODE_TO_PERSONALITY = { analytical: 'romantic', direct: 'sexy', unhinged: 'unhinged' };
-
-function getFeminineVoice() {
-  const voices = window.speechSynthesis.getVoices();
-  return voices.find(v => v.name.includes('Samantha')) || voices.find(v => v.lang.startsWith('en')) || null;
-}
 
 // ==========================================
 // THE ORBIT RING - UI Layout
@@ -64,7 +59,7 @@ const OrbitalItem = ({ angle, radius, reverseDuration, children }) => {
 // ==========================================
 // CHAT INPUT (Orbital Centerpiece)
 // ==========================================
-const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isGlitching }) => {
+const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isGlitching, voiceState, voiceError }) => {
   const [inputText, setInputText] = useState('');
 
   const handleSubmit = (e) => {
@@ -74,6 +69,15 @@ const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isG
     setInputText('');
   };
 
+  // Dynamic mic icon and color according to voice state
+  const micIcon = isVoiceEnabled 
+    ? (voiceState === 'listening' ? 'mic' : voiceState === 'speaking' ? 'record_voice_over' : 'pending')
+    : 'mic_off';
+
+  const micColor = isVoiceEnabled
+    ? (voiceState === 'listening' ? '#39ff14' : voiceState === 'speaking' ? '#f50057' : '#ffb300')
+    : '#6b7280';
+
   return (
     <motion.form 
       className={`absolute bottom-10 left-1/2 -translate-x-1/2 w-full max-w-lg flex items-center gap-4 bg-black/40 border backdrop-blur-xl rounded-full p-2 pl-6 shadow-2xl z-50`}
@@ -82,13 +86,29 @@ const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isG
       transition={{ repeat: Infinity, duration: 0.1 }}
       onSubmit={handleSubmit}
     >
-      <button type="button" onClick={onToggleVoice} className={`text-xl ${isVoiceEnabled ? 'text-white' : 'text-gray-500'}`}>
-        <span className="material-symbols-outlined">{isVoiceEnabled ? 'mic' : 'mic_off'}</span>
+      <button 
+        type="button" 
+        onClick={onToggleVoice} 
+        className="text-xl relative flex items-center justify-center w-8 h-8 rounded-full transition-all"
+        style={{ color: micColor }}
+        title={isVoiceEnabled ? `Shuna Live Voice: ${voiceState.toUpperCase()}` : "Turn on Shuna Live Voice"}
+      >
+        {isVoiceEnabled && (voiceState === 'listening' || voiceState === 'speaking') && (
+          <span className="absolute inset-0 rounded-full animate-ping opacity-30" style={{ backgroundColor: micColor }} />
+        )}
+        <span className="material-symbols-outlined">{micIcon}</span>
       </button>
       <input
         type="text"
-        placeholder={`Transmit to SHUNA [${activeMode.toUpperCase()}]...`}
+        placeholder={
+          voiceError
+            ? `Error: ${voiceError}`
+            : isVoiceEnabled
+              ? `Speak or Transmit to SHUNA [${voiceState.toUpperCase()}]...`
+              : `Transmit to SHUNA [${activeMode.toUpperCase()}]...`
+        }
         value={inputText}
+        disabled={isVoiceEnabled && voiceState === 'connecting'}
         onChange={(e) => setInputText(e.target.value)}
         className="flex-1 bg-transparent text-white placeholder:text-gray-500 focus:outline-none tracking-widest text-sm"
       />
@@ -104,16 +124,27 @@ export default function CompanionChat({ session }) {
   const { isPremium } = useSubscription(session);
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false); // default to false (off)
+  const [voiceState, setVoiceState] = useState('idle');
+  const [voiceError, setVoiceError] = useState('');
   const [activeMode, setActiveMode] = useState('analytical');
   const [characterAnim, setCharacterAnim] = useState('idle');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  
   const bottomRef = useRef(null);
+  const voiceChatRef = useRef(null);
+  const activeVoiceResponseIdRef = useRef(null);
+  const prevVoiceStateRef = useRef('idle');
+  const messagesRef = useRef([]);
 
   const { applyTierBehavior, recordEngagement } = useSIYATierBehavior();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
   }, [messages]);
 
   const handleDeleteMessage = async (msgId) => {
@@ -159,11 +190,50 @@ export default function CompanionChat({ session }) {
     }
   };
 
-  useEffect(() => {
-    const load = () => window.speechSynthesis.getVoices();
-    load();
-    window.speechSynthesis.onvoiceschanged = load;
+  // Accumulate streaming text transcription from Shuna's Gemini Live session
+  const handleVoiceTextMessage = useCallback((chunk) => {
+    setMessages(prev => {
+      const activeId = activeVoiceResponseIdRef.current;
+      if (activeId && prev.some(m => m.id === activeId)) {
+        return prev.map(m => m.id === activeId ? { ...m, text: m.text + chunk } : m);
+      } else {
+        const newId = crypto.randomUUID();
+        activeVoiceResponseIdRef.current = newId;
+        return [...prev, { id: newId, text: chunk, sender: 'ai' }];
+      }
+    });
   }, []);
+
+  // Monitor voice state changes for animation and database save trigger
+  useEffect(() => {
+    const prev = prevVoiceStateRef.current;
+    prevVoiceStateRef.current = voiceState;
+
+    if (voiceState === 'speaking') {
+      setCharacterAnim('talk');
+    } else if (voiceState === 'listening') {
+      setCharacterAnim('idle');
+    }
+
+    // Save completed voice response to database when Shuna finishes speaking
+    if (prev === 'speaking' && (voiceState === 'listening' || voiceState === 'idle')) {
+      const activeId = activeVoiceResponseIdRef.current;
+      if (activeId) {
+        const latestMsgs = messagesRef.current;
+        const msg = latestMsgs.find(m => m.id === activeId);
+        if (msg && session?.user?.id) {
+          saveMessageToDB({
+            id: msg.id,
+            user_id: session.user.id,
+            text: msg.text,
+            sender: 'ai',
+            source: 'aria'
+          });
+        }
+        activeVoiceResponseIdRef.current = null;
+      }
+    }
+  }, [voiceState, session]);
 
   useEffect(() => {
     // Prevent body scrolling on mobile
@@ -195,20 +265,7 @@ export default function CompanionChat({ session }) {
     fetchMessages();
   }, [session]);
 
-  const speakText = (text) => {
-    if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voice = getFeminineVoice();
-    if (voice) utterance.voice = voice;
-    utterance.pitch = 1.12;
-    utterance.rate = activeMode === 'unhinged' ? 1.08 : activeMode === 'direct' ? 0.97 : 1.02;
-    window.speechSynthesis.speak(utterance);
-  };
-
   const handleSend = async (text) => {
-    window.speechSynthesis.cancel();
-
     if (session?.user?.user_metadata?.is_blocked) {
       alert("Your account has been blocked by the admin.");
       await supabase.auth.signOut();
@@ -239,6 +296,12 @@ export default function CompanionChat({ session }) {
 
     if (session?.user?.id) {
       saveMessageToDB({ id: newUserMsg.id, user_id: session.user.id, text, sender: 'user', source: 'aria' }, newUserMsg.id);
+    }
+
+    // If Shuna Voice is active, bypass REST and transmit raw text over the WebSocket connection
+    if (isVoiceEnabled && voiceChatRef.current) {
+      voiceChatRef.current.sendTextMessage(text);
+      return;
     }
 
     setIsTyping(true);
@@ -292,7 +355,6 @@ export default function CompanionChat({ session }) {
       }
 
       setIsTyping(false);
-      speakText(tieredText);
       
       if (emotionKey === 'angry' || activeMode === 'unhinged') setCharacterAnim('arguing');
       else setCharacterAnim('talk');
@@ -365,8 +427,15 @@ export default function CompanionChat({ session }) {
             <div className="flex flex-col">
               <span className="text-sm tracking-[0.2em] font-light text-gray-300">SHUNA</span>
               <span className="text-[10px] tracking-widest uppercase text-fuchsia-400 flex items-center gap-2">
-                <span className={`w-1.5 h-1.5 rounded-full ${isTyping ? 'bg-fuchsia-400 animate-pulse' : 'bg-white/30'}`}></span>
-                {isTyping ? 'Transmitting' : 'Idle in void'}
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  isVoiceEnabled
+                    ? (voiceState === 'listening' ? 'bg-[#39ff14] shadow-[0_0_8px_#39ff14]' : voiceState === 'speaking' ? 'bg-[#f50057] shadow-[0_0_8px_#f50057]' : 'bg-[#ffb300] shadow-[0_0_8px_#ffb300]')
+                    : (isTyping ? 'bg-fuchsia-400 animate-pulse' : 'bg-white/30')
+                }`}></span>
+                {isVoiceEnabled 
+                  ? `Voice: ${voiceState}`
+                  : (isTyping ? 'Transmitting' : 'Idle in void')
+                }
               </span>
             </div>
           </div>
@@ -377,7 +446,7 @@ export default function CompanionChat({ session }) {
         </header>
 
         {/* Floating Messages - Non-obstructive display */}
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-full max-w-2xl max-h-[60vh] overflow-y-auto pointer-events-auto z-20 flex flex-col p-4 mask-image-b companion-scrollbar">
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-full max-w-2xl max-h-[60vh] overflow-y-auto pointer-events-auto z-20 flex flex-col p-4 companion-scrollbar">
           <AnimatePresence initial={false}>
             {messages.map((msg) => (
               <motion.div 
@@ -385,8 +454,8 @@ export default function CompanionChat({ session }) {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
                 style={{ willChange: 'transform, opacity' }}
+                transition={{ duration: 0.2 }}
                 className={`mb-4 w-fit max-w-[80%] flex items-center gap-2 ${msg.sender === 'ai' ? 'self-start' : 'self-end'}`}
               >
                 {msg.sender === 'user' && (
@@ -417,7 +486,21 @@ export default function CompanionChat({ session }) {
         </div>
 
         {/* Input area */}
-        <ChatInput onSend={handleSend} activeMode={activeMode} isVoiceEnabled={isVoiceEnabled} onToggleVoice={() => setIsVoiceEnabled(!isVoiceEnabled)} isGlitching={isGlitching} />
+        <ChatInput 
+          onSend={handleSend} 
+          activeMode={activeMode} 
+          isVoiceEnabled={isVoiceEnabled} 
+          onToggleVoice={() => {
+            if (isVoiceEnabled) {
+              setIsVoiceEnabled(false);
+            } else {
+              setIsVoiceEnabled(true);
+            }
+          }} 
+          isGlitching={isGlitching}
+          voiceState={voiceState}
+          voiceError={voiceError}
+        />
 
         {/* Clear Chat Confirmation Modal */}
         <AnimatePresence>
@@ -454,7 +537,15 @@ export default function CompanionChat({ session }) {
             </motion.div>
           )}
         </AnimatePresence>
-        <ShunaVoiceChat />
+        
+        {/* Headless ShunaVoiceChat engine */}
+        <ShunaVoiceChat 
+          ref={voiceChatRef}
+          isActive={isVoiceEnabled} 
+          onStateChange={setVoiceState}
+          onError={setVoiceError}
+          onTextMessageReceived={handleVoiceTextMessage}
+        />
       </div>
     </ParasiteSIYA>
   );
