@@ -184,6 +184,10 @@ const ShunaVoiceChat = forwardRef(({ isActive, onStateChange, onError, onTextMes
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)({
         sampleRate: OUTPUT_SAMPLE_RATE,
       });
+      if (audioCtx.state === "suspended") {
+        await audioCtx.resume();
+        console.log("AudioContext resumed successfully.");
+      }
       audioCtxRef.current = audioCtx;
       nextStartTimeRef.current = 0;
 
@@ -204,9 +208,19 @@ const ShunaVoiceChat = forwardRef(({ isActive, onStateChange, onError, onTextMes
       ws.binaryType = "arraybuffer";
       wsRef.current = ws;
 
-      ws.onopen = () => {
+      ws.onopen = async () => {
         if (!isMountedRef.current) return;
         reconnectAttemptRef.current = 0;
+
+        try {
+          if (audioCtx.state === "suspended") {
+            await audioCtx.resume();
+            console.log("Resumed AudioContext on WebSocket open.");
+          }
+        } catch (e) {
+          console.error("Failed to resume AudioContext on WS open:", e);
+        }
+
         setState("listening");
         if (onError) onError("");
 
