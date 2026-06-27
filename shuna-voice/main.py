@@ -34,8 +34,8 @@ MODEL_PATH = os.path.join(os.path.dirname(__file__), "kokoro-v1.0.onnx")
 VOICES_BIN_PATH = os.path.join(os.path.dirname(__file__), "voices-v1.0.bin")
 SHUNA_VOICE_PATH = os.path.join(os.path.dirname(__file__), "voices", "shuna_voice.npy")
 
-MODEL_URL = "https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/kokoro-v1.0.onnx"
-VOICES_BIN_URL = "https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices-v1.0.bin"
+MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx"
+VOICES_BIN_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
 
 # Global states
 supabase: Client = None
