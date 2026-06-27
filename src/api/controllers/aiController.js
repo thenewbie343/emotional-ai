@@ -94,7 +94,7 @@ Personality & Vibe (The Bestie + The Chaotic Friend):
 
 exports.processMessage = async (req, res) => {
   try {
-    const { messages, emotion, mode, companion, userId } = req.body;
+    const { messages, emotion, mode, companion, userId, isVoice } = req.body;
     
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Messages array is required' });
@@ -123,6 +123,22 @@ exports.processMessage = async (req, res) => {
       } catch (e) {
         console.error("Failed to fetch SIYA context data:", e);
       }
+    }
+
+    if (isVoice) {
+      systemPrompt += `\n\nIMPORTANT: Since this is a voice chat, you MUST return your response as a strict JSON object with EXACTLY two keys:
+1. "chat_transcript": Your standard response in natural Hinglish (Latin script).
+2. "kokoro_script": A phonetic script for the Kokoro TTS engine. For this script:
+   - Transliterate all Hindi words into Devanagari.
+   - Keep English words in the Latin alphabet.
+   - Use commas (,) liberally to force natural pauses and slow down the prosody.
+   - Remove ALL emotional tags like [laughs] or [sigh].
+   
+Example JSON:
+{
+  "chat_transcript": "Arre yaar, seriously? Tune abhi tak kaam shuru nahi kiya? [laughs]",
+  "kokoro_script": "अरे यार, seriously? तूने, अभी तक काम शुरू, नहीं किया?"
+}`;
     }
 
     const responseText = await generateAiResponse(detectedEmotion, messages, systemPrompt, companion, userId);

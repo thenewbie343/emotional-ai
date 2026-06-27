@@ -1,6 +1,8 @@
 fastapi
 uvicorn[standard]
-google-genai>=1.14.0
 supabase>=2.30.0
-python-multipart
 httpx
+kokoro-onnx
+onnxruntime
+soundfile
+numpy<2.0.0
