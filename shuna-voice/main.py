@@ -23,6 +23,7 @@ import onnxruntime as rt
 _original_InferenceSession = rt.InferenceSession
 
 def custom_InferenceSession(model_path, *args, **kwargs):
+    logger.info(f"custom_InferenceSession called with args: {args}, kwargs: {kwargs}")
     sess_options = rt.SessionOptions()
     # Disable caching of memory allocation patterns (saves RAM for dynamic voice sizes)
     sess_options.enable_mem_pattern = False
@@ -65,11 +66,11 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 MAIN_BACKEND_URL = os.environ.get("MAIN_BACKEND_URL", "https://emotional-ai-18zi.onrender.com")
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "kokoro-v1.0.int8.onnx")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "kokoro-v1.0.onnx")
 VOICES_BIN_PATH = os.path.join(os.path.dirname(__file__), "voices-v1.0.bin")
 SHUNA_VOICE_PATH = os.path.join(os.path.dirname(__file__), "voices", "shuna_voice.npy")
 
-MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.int8.onnx"
+MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx"
 VOICES_BIN_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
 
 # Global states
