@@ -139,8 +139,10 @@ async def lifespan(app: FastAPI):
         kokoro_engine = Kokoro(MODEL_PATH, VOICES_BIN_PATH)
         logger.info("Kokoro ONNX Engine initialized successfully.")
     except Exception as e:
-        logger.critical(f"Failed to initialize Kokoro ONNX engine: {e}", exc_info=True)
-        init_error = str(e)
+        import traceback
+        tb_str = traceback.format_exc()
+        logger.critical(f"Failed to initialize Kokoro ONNX engine: {e}\n{tb_str}", exc_info=True)
+        init_error = f"{e}\n{tb_str}"
         
     gc.collect()  # Final garbage collection to free up memory from startup/downloads
     yield
