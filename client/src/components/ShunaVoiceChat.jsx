@@ -54,6 +54,7 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
   const sendTextToBackend = useCallback(async (transcript) => {
     if (!isActiveRef.current) return;
     setState("thinking");
+    console.log("[ShunaVoice] VAD silence triggered. Sending text to backend:", transcript);
 
     try {
       const payload = {
@@ -64,27 +65,31 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
         companion: companion || "siya"
       };
 
+      console.log("[ShunaVoice] Fetching:", `${API_BASE}/api/v1/shuna/voice-chat`);
       const response = await fetch(`${API_BASE}/api/v1/shuna/voice-chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
+      console.log("[ShunaVoice] Response status:", response.status);
       if (!response.ok) throw new Error(`Server error: status ${response.status}`);
       const result = await response.json();
+      console.log("[ShunaVoice] Result data:", result);
 
       if (onTranscriptsReceived && (result.user_transcript || result.ai_transcript)) {
         onTranscriptsReceived(result.user_transcript, result.ai_transcript);
       }
 
       if (!result.success || !result.audio) {
-        console.warn("TTS failed or empty audio. Transitioning to idle.");
+        console.warn("[ShunaVoice] TTS failed or empty audio returned.");
         setState("idle");
         // Safe delayed restart handled via connection reset
         setTimeout(() => { if (isActiveRef.current) startRecognition(); }, 1500);
         return;
       }
 
+      console.log("[ShunaVoice] Decoding audio...");
       const audioBytes = atob(result.audio);
       const array = new Uint8Array(audioBytes.length);
       for (let i = 0; i < audioBytes.length; i++) array[i] = audioBytes.charCodeAt(i);
@@ -93,19 +98,25 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
 
       const audio = new Audio(playUrl);
       audioElementRef.current = audio;
-      audio.onplay = () => { if (isMountedRef.current) setState("speaking"); };
+      audio.onplay = () => { 
+        console.log("[ShunaVoice] Audio playing...");
+        if (isMountedRef.current) setState("speaking"); 
+      };
       audio.onended = () => {
+        console.log("[ShunaVoice] Audio playback ended.");
         URL.revokeObjectURL(playUrl);
         if (isActiveRef.current) startRecognition();
         else if (isMountedRef.current) setState("idle");
       };
       audio.onerror = (e) => {
+        console.error("[ShunaVoice] Audio element error:", e);
         URL.revokeObjectURL(playUrl);
         if (isActiveRef.current) startRecognition();
       };
 
       await audio.play();
     } catch (err) {
+      console.error("[ShunaVoice] sendTextToBackend failed:", err);
       if (onError) onError(err.message || "Failed to process voice response");
       if (isMountedRef.current) setState("error");
       setTimeout(() => { if (isActiveRef.current) startRecognition(); }, 3000);
@@ -142,10 +153,14 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
       }
       
       if (accumulated.trim()) {
+        console.log("[ShunaVoice] Speech heard (accumulated):", accumulated);
         transcriptRef.current = accumulated;
         
         // Reset the silence timer on every new speech fragment heard
-        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        if (silenceTimerRef.current) {
+          console.log("[ShunaVoice] Resetting VAD timer (speaking...)");
+          clearTimeout(silenceTimerRef.current);
+        }
         
         silenceTimerRef.current = setTimeout(() => {
           if (isActiveRef.current && transcriptRef.current.trim() && stateRef.current === "listening") {
@@ -156,6 +171,7 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
             
             // Abort current session to release mic
             if (recognitionRef.current) {
+              console.log("[ShunaVoice] VAD silence threshold met. Aborting session...");
               try { recognitionRef.current.abort(); } catch (e) {}
             }
             
