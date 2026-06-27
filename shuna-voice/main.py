@@ -217,6 +217,12 @@ async def voice_chat(
             logger.error(f"TTS Error: {tts_err}")
             error_tts = str(tts_err)
 
+        # Check for 429 rate limit errors in STT, LLM, or TTS steps
+        for step_name, err in [("STT", error_stt), ("LLM", error_llm), ("TTS", error_tts)]:
+            if err and ("429" in err or "RESOURCE_EXHAUSTED" in err):
+                logger.error(f"Rate Limit Exceeded during {step_name}: {err}")
+                raise HTTPException(status_code=429, detail=f"Gemini API rate limit exceeded during {step_name}. Please try again later.")
+
         # ── Step 5: Save Records to Supabase ──
         if supabase and user_id:
             try:
