@@ -166,7 +166,7 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, onStateChange, onError, o
         }
       }, 3000);
     }
-  }, [userId, onTextMessageReceived, onError]);
+  }, [userId, onTranscriptsReceived, onError]);
 
   // ── Start Recording ─────────────────────────────────────────────────────
   const startRecording = useCallback(async () => {
