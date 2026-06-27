@@ -197,7 +197,7 @@ export default function CompanionChat({ session }) {
   };
 
   // Handle completed transcription response from Shuna's stateless voice engine
-  const handleVoiceChatResponse = useCallback((userText, aiText) => {
+  const handleVoiceTranscripts = useCallback((userText, aiText) => {
     setMessages(prev => {
       const newMsgs = [...prev];
       if (userText) {
@@ -534,7 +534,7 @@ export default function CompanionChat({ session }) {
           userId={session?.user?.id}
           onStateChange={setVoiceState}
           onError={setVoiceError}
-          onVoiceChatResponse={handleVoiceChatResponse}
+          onTranscriptsReceived={handleVoiceTranscripts}
         />
       </div>
     </ParasiteSIYA>

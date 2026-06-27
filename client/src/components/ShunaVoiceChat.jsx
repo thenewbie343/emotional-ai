@@ -12,7 +12,7 @@ const API_BASE = "https://shuna-backend.onrender.com";
 const SPEECH_THRESHOLD = 12;      // Average volume threshold to detect voice activity
 const SILENCE_TIMEOUT_MS = 1600;   // Auto-stop recording after 1.6s of silence
 
-const ShunaVoiceChat = forwardRef(({ isActive, userId, onStateChange, onError, onVoiceChatResponse }, ref) => {
+const ShunaVoiceChat = forwardRef(({ isActive, userId, onStateChange, onError, onTranscriptsReceived }, ref) => {
   const [state, setState] = useState("idle"); // idle | connecting | listening | thinking | speaking | error
 
   // Audio/Recording refs
@@ -114,8 +114,8 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, onStateChange, onError, o
         throw new Error("Invalid server voice response");
       }
 
-      if (onVoiceChatResponse) {
-        onVoiceChatResponse(result.user_transcript, result.ai_transcript);
+      if (onTranscriptsReceived) {
+        onTranscriptsReceived(result.user_transcript, result.ai_transcript);
       }
 
       // Decode base64 audio response to blob URL
