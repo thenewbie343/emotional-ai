@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 
-const API_BASE = "https://shuna-backend.onrender.com";
+const API_BASE = "https://emotional-ai-1-cfrn.onrender.com";
 
 const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companion, onStateChange, onError, onTranscriptsReceived }, ref) => {
   const [state, setState] = useState("idle");
