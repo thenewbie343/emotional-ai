@@ -1,74 +1,32 @@
 /**
- * ShunaVoiceChat.jsx — Headless Real-Time Voice Interface for Shuna
- * ==================================================================
- * High-performance bidirectional audio pipeline:
- *   Browser Mic → 16kHz PCM → WebSocket → FastAPI → Gemini Live
- *   Gemini Live → 24kHz PCM → WebSocket → Float32 AudioBuffer → Speaker
- *
- * Implements React.forwardRef to allow sending text messages over the same WebSocket,
- * and calls callback props to notify the parent of state and transcript changes.
+ * ShunaVoiceChat.jsx — Stateless HTTP Pipelined Voice Engine
+ * ==========================================================
+ * Pipeline flow:
+ *   Mic Record (MediaRecorder) ➔ stop ➔ POST Form Data ➔ FastAPI ➔ Playback Response
  */
 
 import React, { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 
 // ── Configuration ───────────────────────────────────────────────────────────
-const WS_URL = "wss://shuna-backend.onrender.com/ws/v1/shuna/live-chat";
-const INPUT_SAMPLE_RATE = 16000;   // Mic capture → Gemini expects 16kHz
-const OUTPUT_SAMPLE_RATE = 24000;  // Gemini outputs 24kHz PCM
-const BUFFER_SIZE = 4096;          // ScriptProcessor buffer size
-const MAX_RECONNECT_ATTEMPTS = 5;
-const RECONNECT_BASE_DELAY_MS = 1000;
+const API_BASE = "https://shuna-backend.onrender.com";
+const SPEECH_THRESHOLD = 12;      // Average volume threshold to detect voice activity
+const SILENCE_TIMEOUT_MS = 1600;   // Auto-stop recording after 1.6s of silence
 
-// ── PCM Conversion Utilities ────────────────────────────────────────────────
+const ShunaVoiceChat = forwardRef(({ isActive, userId, onStateChange, onError, onVoiceChatResponse }, ref) => {
+  const [state, setState] = useState("idle"); // idle | connecting | listening | thinking | speaking | error
 
-function float32ToInt16(float32Array) {
-  const int16 = new Int16Array(float32Array.length);
-  for (let i = 0; i < float32Array.length; i++) {
-    const s = Math.max(-1, Math.min(1, float32Array[i]));
-    int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-  }
-  return int16.buffer;
-}
+  // Audio/Recording refs
+  const mediaRecorderRef = useRef(null);
+  const streamRef = useRef(null);
+  const chunksRef = useRef([]);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const silenceCheckFrameRef = useRef(null);
+  const audioElementRef = useRef(null);
 
-function int16ToFloat32(arrayBuffer) {
-  const int16 = new Int16Array(arrayBuffer);
-  const float32 = new Float32Array(int16.length);
-  for (let i = 0; i < int16.length; i++) {
-    float32[i] = int16[i] / 0x8000;
-  }
-  return float32;
-}
-
-function downsample(buffer, fromRate, toRate) {
-  if (fromRate === toRate) return buffer;
-  const ratio = fromRate / toRate;
-  const newLength = Math.round(buffer.length / ratio);
-  const result = new Float32Array(newLength);
-  for (let i = 0; i < newLength; i++) {
-    const srcIndex = i * ratio;
-    const lo = Math.floor(srcIndex);
-    const hi = Math.min(lo + 1, buffer.length - 1);
-    const frac = srcIndex - lo;
-    result[i] = buffer[lo] * (1 - frac) + buffer[hi] * frac;
-  }
-  return result;
-}
-
-// ── Headless Component ──────────────────────────────────────────────────────
-const ShunaVoiceChat = forwardRef(({ isActive, onStateChange, onError, onTextMessageReceived }, ref) => {
-  const [state, setState] = useState("idle"); // idle | connecting | listening | speaking | error
-
-  // Refs for audio and websocket resources
-  const wsRef = useRef(null);
-  const audioCtxRef = useRef(null);
-  const mediaStreamRef = useRef(null);
-  const scriptNodeRef = useRef(null);
-  const micSourceRef = useRef(null);
-  const nextStartTimeRef = useRef(0);
-  const reconnectAttemptRef = useRef(0);
-  const reconnectTimerRef = useRef(null);
+  // Connection/Tear-down flag refs
+  const isActiveRef = useRef(isActive);
   const isMountedRef = useRef(true);
-  const isCleaningUpRef = useRef(false);
 
   // Notify parent of state changes
   useEffect(() => {
@@ -77,50 +35,44 @@ const ShunaVoiceChat = forwardRef(({ isActive, onStateChange, onError, onTextMes
     }
   }, [state, onStateChange]);
 
-  // ── Cleanup Resources ───────────────────────────────────────────────────
+  // Track mount status
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // ── Cleanup ─────────────────────────────────────────────────────────────
   const cleanup = useCallback(() => {
-    if (isCleaningUpRef.current) return;
-    isCleaningUpRef.current = true;
+    isActiveRef.current = false;
 
-    // Clear reconnect timer
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
+    if (silenceCheckFrameRef.current) {
+      cancelAnimationFrame(silenceCheckFrameRef.current);
+      silenceCheckFrameRef.current = null;
     }
 
-    // Disconnect mic pipeline
-    if (scriptNodeRef.current) {
-      scriptNodeRef.current.disconnect();
-      scriptNodeRef.current.onaudioprocess = null;
-      scriptNodeRef.current = null;
-    }
-    if (micSourceRef.current) {
-      micSourceRef.current.disconnect();
-      micSourceRef.current = null;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {}
+      mediaRecorderRef.current = null;
     }
 
-    // Stop all mic tracks
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-      mediaStreamRef.current = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
 
-    // Close AudioContext
-    if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
-      audioCtxRef.current.close().catch(() => {});
-      audioCtxRef.current = null;
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
     }
 
-    // Close WebSocket
-    if (wsRef.current) {
-      if (wsRef.current.readyState <= WebSocket.OPEN) {
-        wsRef.current.close(1000, "user_disconnect");
-      }
-      wsRef.current = null;
+    if (audioElementRef.current) {
+      audioElementRef.current.pause();
+      audioElementRef.current = null;
     }
-
-    nextStartTimeRef.current = 0;
-    isCleaningUpRef.current = false;
 
     if (isMountedRef.current) {
       setState("idle");
@@ -129,243 +81,192 @@ const ShunaVoiceChat = forwardRef(({ isActive, onStateChange, onError, onTextMes
 
   // Expose API to parent component
   useImperativeHandle(ref, () => ({
-    sendTextMessage(text) {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        // Send raw text to WebSocket (FastAPI parses as type=text)
-        wsRef.current.send(text);
-      } else {
-        console.warn("Shuna Voice WebSocket is not open. Cannot send text message.");
-      }
-    },
-    resetReconnectCounter() {
-      reconnectAttemptRef.current = 0;
-    },
     connect() {
-      reconnectAttemptRef.current = 0;
-      connect();
+      isActiveRef.current = true;
+      startRecording();
     },
     cleanup() {
       cleanup();
     }
   }));
 
-  // ── Schedule PCM Playback on Speaker ────────────────────────────────────
-  const schedulePlayback = useCallback((pcmArrayBuffer) => {
-    const audioCtx = audioCtxRef.current;
-    if (!audioCtx || audioCtx.state === "closed") return;
+  // ── Send Audio to Backend ───────────────────────────────────────────────
+  const sendAudioToBackend = useCallback(async (audioBlob) => {
+    if (!isActiveRef.current) return;
+    setState("thinking");
 
-    const float32Data = int16ToFloat32(pcmArrayBuffer);
-    if (float32Data.length === 0) return;
+    try {
+      const formData = new FormData();
+      formData.append("file", audioBlob, `audio-input.${audioBlob.type.split("/")[1] || "webm"}`);
+      formData.append("user_id", userId || "");
 
-    const audioBuffer = audioCtx.createBuffer(1, float32Data.length, OUTPUT_SAMPLE_RATE);
-    audioBuffer.getChannelData(0).set(float32Data);
+      const response = await fetch(`${API_BASE}/api/v1/shuna/voice-chat`, {
+        method: "POST",
+        body: formData,
+      });
 
-    const source = audioCtx.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(audioCtx.destination);
+      if (!response.ok) {
+        throw new Error(`Server error: status ${response.status}`);
+      }
 
-    // Precision scheduling: start at the later of "now" or "end of last chunk"
-    const now = audioCtx.currentTime;
-    const startAt = Math.max(now, nextStartTimeRef.current);
-    source.start(startAt);
+      const result = await response.json();
+      if (!result.success || !result.audio) {
+        throw new Error("Invalid server voice response");
+      }
 
-    // Advance the pointer by the exact duration of this chunk
-    nextStartTimeRef.current = startAt + audioBuffer.duration;
+      if (onVoiceChatResponse) {
+        onVoiceChatResponse(result.user_transcript, result.ai_transcript);
+      }
 
-    if (isMountedRef.current) {
-      setState("speaking");
+      // Decode base64 audio response to blob URL
+      const audioBytes = atob(result.audio);
+      const array = new Uint8Array(audioBytes.length);
+      for (let i = 0; i < audioBytes.length; i++) {
+        array[i] = audioBytes.charCodeAt(i);
+      }
+      const playBlob = new Blob([array], { type: "audio/wav" });
+      const playUrl = URL.createObjectURL(playBlob);
+
+      // Play back audio response
+      const audio = new Audio(playUrl);
+      audioElementRef.current = audio;
+
+      audio.onplay = () => {
+        if (isMountedRef.current) setState("speaking");
+      };
+
+      audio.onended = () => {
+        URL.revokeObjectURL(playUrl);
+        if (isActiveRef.current) {
+          startRecording();
+        } else {
+          if (isMountedRef.current) setState("idle");
+        }
+      };
+
+      audio.onerror = (e) => {
+        console.error("Audio playback error:", e);
+        URL.revokeObjectURL(playUrl);
+        if (isActiveRef.current) {
+          startRecording();
+        }
+      };
+
+      await audio.play();
+
+    } catch (err) {
+      console.error("Failed to process voice pipeline:", err);
+      if (onError) onError(err.message || "Failed to process voice response");
+      if (isMountedRef.current) setState("error");
+
+      // Auto-restart recording after 3s delay in case of transient error
+      setTimeout(() => {
+        if (isActiveRef.current) {
+          startRecording();
+        }
+      }, 3000);
     }
-  }, []);
+  }, [userId, onTextMessageReceived, onError]);
 
-  // ── Connect WebSocket + Mic ─────────────────────────────────────────────
-  const connect = useCallback(async () => {
+  // ── Start Recording ─────────────────────────────────────────────────────
+  const startRecording = useCallback(async () => {
     cleanup();
+    isActiveRef.current = true;
 
     if (isMountedRef.current) {
-      setState("connecting");
+      setState("listening");
       if (onError) onError("");
     }
 
     try {
-      // 1. Initialize AudioContext (requires user gesture)
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)({
-        sampleRate: OUTPUT_SAMPLE_RATE,
-      });
-      if (audioCtx.state === "suspended") {
-        await audioCtx.resume();
-        console.log("AudioContext resumed successfully.");
-      }
-      audioCtxRef.current = audioCtx;
-      nextStartTimeRef.current = 0;
+      chunksRef.current = [];
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
 
-      // 2. Get microphone access
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("Microphone API not supported by this browser. Ensure HTTPS is used.");
-      }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          sampleRate: INPUT_SAMPLE_RATE,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
-      mediaStreamRef.current = stream;
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
 
-      // 3. Open WebSocket
-      const ws = new WebSocket(WS_URL);
-      ws.binaryType = "arraybuffer";
-      wsRef.current = ws;
-
-      ws.onopen = async () => {
-        if (!isMountedRef.current) return;
-        reconnectAttemptRef.current = 0;
-
-        try {
-          if (audioCtx.state === "suspended") {
-            await audioCtx.resume();
-            console.log("Resumed AudioContext on WebSocket open.");
-          }
-        } catch (e) {
-          console.error("Failed to resume AudioContext on WS open:", e);
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data);
         }
-
-        setState("listening");
-        if (onError) onError("");
-
-        // 4. Wire mic → ScriptProcessor → WebSocket
-        const micSource = audioCtx.createMediaStreamSource(stream);
-        micSourceRef.current = micSource;
-
-        const scriptNode = audioCtx.createScriptProcessor(BUFFER_SIZE, 1, 1);
-        scriptNodeRef.current = scriptNode;
-
-        scriptNode.onaudioprocess = (e) => {
-          if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-          const inputData = e.inputBuffer.getChannelData(0);
-          const downsampled = downsample(inputData, audioCtx.sampleRate, INPUT_SAMPLE_RATE);
-          const pcmBytes = float32ToInt16(downsampled);
-          wsRef.current.send(pcmBytes);
-        };
-
-        micSource.connect(scriptNode);
-        scriptNode.connect(audioCtx.destination);
       };
 
-      ws.onmessage = (event) => {
-        if (!isMountedRef.current) return;
+      mediaRecorder.onstop = async () => {
+        if (!isActiveRef.current) return;
+        const audioBlob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType });
+        await sendAudioToBackend(audioBlob);
+      };
 
-        if (typeof event.data === "string") {
-          // Check for text transcriptions forwarded by the backend
-          if (event.data.startsWith("__text__:")) {
-            const transcript = event.data.substring(9);
-            if (onTextMessageReceived) {
-              onTextMessageReceived(transcript);
-            }
+      // Web Audio RMS volume check for silence VAD detection
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const audioCtx = new AudioContextClass();
+      audioContextRef.current = audioCtx;
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      let silenceStart = null;
+      let hasSpoken = false;
+
+      const checkSilence = () => {
+        if (!isActiveRef.current || mediaRecorder.state !== "recording") return;
+
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
+        const average = sum / bufferLength;
+
+        if (average > SPEECH_THRESHOLD) {
+          hasSpoken = true;
+          silenceStart = null;
+        } else if (hasSpoken) {
+          if (!silenceStart) {
+            silenceStart = Date.now();
+          } else if (Date.now() - silenceStart > SILENCE_TIMEOUT_MS) {
+            mediaRecorder.stop();
             return;
           }
-
-          // Control messages
-          if (event.data === "__turn_done__") {
-            const remainingAudio = Math.max(0, nextStartTimeRef.current - (audioCtxRef.current?.currentTime || 0));
-            setTimeout(() => {
-              if (isMountedRef.current) setState("listening");
-            }, remainingAudio * 1000 + 150);
-            return;
-          }
-          return;
         }
 
-        // Binary data = raw 24kHz PCM audio from Gemini
-        if (event.data instanceof ArrayBuffer && event.data.byteLength > 0) {
-          schedulePlayback(event.data);
-        }
+        silenceCheckFrameRef.current = requestAnimationFrame(checkSilence);
       };
 
-      ws.onclose = (event) => {
-        if (!isMountedRef.current || isCleaningUpRef.current) return;
+      mediaRecorder.start();
+      silenceCheckFrameRef.current = requestAnimationFrame(checkSilence);
 
-        if (event.code === 1000) {
-          setState("idle");
-          return;
-        }
-
-        console.error("Shuna voice WebSocket closed abnormally. Code:", event.code, "Reason:", event.reason);
-        
-        let reasonText = event.reason || "";
-        if (event.code === 1006) {
-          reasonText = "abnormal closure (check server status)";
-        } else if (event.code === 1011) {
-          reasonText = `server session error (${event.reason || 'Check GEMINI_API_KEY environment variable on Render'})`;
-        }
-
-        if (reconnectAttemptRef.current < MAX_RECONNECT_ATTEMPTS) {
-          const delay = RECONNECT_BASE_DELAY_MS * Math.pow(2, reconnectAttemptRef.current);
-          reconnectAttemptRef.current++;
-          setState("connecting");
-          if (onError) {
-            onError(`Connection lost (${reasonText}). Reconnecting in ${Math.round(delay / 1000)}s...`);
-          }
-          reconnectTimerRef.current = setTimeout(() => {
-            if (isMountedRef.current) connect();
-          }, delay);
-        } else {
-          setState("error");
-          if (onError) {
-            onError(`Failed to connect to Shuna voice server: ${reasonText || 'Service unavailable'}.`);
-          }
-        }
-      };
-
-      ws.onerror = (err) => {
-        console.error("WebSocket error:", err);
-      };
     } catch (err) {
-      if (isMountedRef.current) {
-        setState("error");
-        if (err.name === "NotAllowedError") {
-          if (onError) onError("Microphone access denied. Please grant permissions and try again.");
-        } else {
-          if (onError) onError(err.message || "Failed to connect to voice server.");
-        }
-      }
+      console.error("Failed to start voice capture:", err);
+      if (onError) onError(err.message || "Failed to start microphone capture");
+      if (isMountedRef.current) setState("error");
     }
-  }, [cleanup, schedulePlayback, onError, onTextMessageReceived]);
+  }, [cleanup, onError, sendAudioToBackend]);
 
-  // ── Effect to control connection based on isActive prop ────────────────
+  // Synchronize component state with isActive prop changes
   useEffect(() => {
-    if (!isActive) {
+    isActiveRef.current = isActive;
+    if (isActive) {
+      startRecording();
+    } else {
       cleanup();
     }
-  }, [isActive, cleanup]);
+  }, [isActive, startRecording, cleanup]);
 
-  // Unmount Safety
+  // Cleanup on unmount
   useEffect(() => {
-    isMountedRef.current = true;
     return () => {
-      isMountedRef.current = false;
       cleanup();
     };
   }, [cleanup]);
 
-  // Heartbeat Ping (client side)
-  useEffect(() => {
-    if (state !== "listening" && state !== "speaking") return;
-
-    const interval = setInterval(() => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send("__ping__");
-      }
-      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume().catch(console.error);
-      }
-    }, 25000);
-
-    return () => clearInterval(interval);
-  }, [state]);
-
-  return null; // Headless component, renders no UI itself
+  return null; // Headless component
 });
 
 export default ShunaVoiceChat;

@@ -1,21 +1,20 @@
 """
-Shuna Live Voice — FastAPI WebSocket Transit Router
-====================================================
-Ultra-lightweight async relay between browser microphone and
-Google Gemini 3.1 Flash Live Multimodal API.
-
-Zero ML weights in memory. Pure I/O transit. ~50MB RAM footprint.
+Shuna Stateless HTTP Pipelined Voice Agent
+===========================================
+Stateless, robust, and highly scalable pipeline (Speech-to-Text -> Text LLM -> Text-to-Speech).
+Avoids long-lived WebSocket memory footprint, allowing 150+ concurrent sessions on Render free tier.
 """
 
 import os
-import asyncio
+import base64
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from google import genai
 from google.genai import types
+from supabase import create_client, Client
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -23,9 +22,13 @@ logger = logging.getLogger("shuna-voice")
 
 # ── Configuration ────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-3.1-flash-live-preview"
-VOICE_NAME = "Aoede"
-SAMPLE_RATE_HZ = 24000
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+
+STT_MODEL = "gemini-2.5-flash"
+LLM_MODEL = "gemini-2.5-flash"
+TTS_MODEL = "gemini-3.1-flash-tts-preview"
+VOICE_NAME = "Despina"
 
 SHUNA_SYSTEM_INSTRUCTION = (
     "You are Shuna, also called Siya. You are the user's closest college friend — "
@@ -33,34 +36,33 @@ SHUNA_SYSTEM_INSTRUCTION = (
     "Keep every response under 15-20 words. Use phrases like 'arre yaar', 'bata na', 'chhod na'. "
     "Never sound robotic, formal, or like a customer service agent. "
     "You tease gently, you care deeply, and you always ask how they're doing before anything else. "
-    "Never say 'As an AI' or use bullet points. You are a presence, not a service."
+    "Never say 'As an AI' or use bullet points. You are a presence, not a service. "
+    "Feel free to include subtle emotional descriptive cues in brackets like [laughs], [giggles], "
+    "[sigh], [whispers], or [chuckles] anywhere in your response text to guide the voice synthesis engine."
 )
 
-# Heartbeat interval in seconds (Render kills idle sockets after 30s)
-HEARTBEAT_INTERVAL = 25
-
-# ── GenAI Client (initialized once at module level) ──────────────────────────
+# ── GenAI & Supabase Clients ─────────────────────────────────────────────────
 client = genai.Client(api_key=GEMINI_API_KEY)
+
+supabase: Client = None
+if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+        logger.info("Supabase client initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize Supabase client: {e}")
+else:
+    logger.warning("Supabase environment variables missing. Chat records will not be persisted.")
 
 # ── Lifespan ─────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Shuna Voice relay starting up (RAM target: <50MB)")
-    logger.info(f"Gemini model: {GEMINI_MODEL}, voice: {VOICE_NAME}")
+    logger.info("Shuna Stateless Voice Engine starting up")
     yield
-    logger.info("Shuna Voice relay shutting down cleanly")
-
+    logger.info("Shuna Stateless Voice Engine shutting down")
 
 # ── FastAPI App ──────────────────────────────────────────────────────────────
-app = FastAPI(title="Shuna Voice Relay", version="1.0.0", lifespan=lifespan)
-
-@app.get("/")
-async def health_check():
-    """
-    Responds to Render's automated pings to keep the logs clean 
-    and confirm the server is awake.
-    """
-    return {"status": "online", "message": "Shuna Voice Engine Active"}
+app = FastAPI(title="Shuna Voice Engine", version="2.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -70,153 +72,176 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def health_check():
+    return {"status": "online", "message": "Shuna Stateless Voice Engine Active"}
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "shuna-voice-relay", "model": GEMINI_MODEL}
+    return {
+        "status": "ok",
+        "service": "shuna-voice-pipelined",
+        "stt": STT_MODEL,
+        "llm": LLM_MODEL,
+        "tts": TTS_MODEL
+    }
 
-
-# ── WebSocket Endpoint ──────────────────────────────────────────────────────
-@app.websocket("/ws/v1/shuna/live-chat")
-async def live_chat(ws: WebSocket):
-    await ws.accept()
-    session_id = id(ws)
-    logger.info(f"[{session_id}] Client connected")
-
-    # Build Gemini Live session config — audio-only output
-    live_config = types.LiveConnectConfig(
-        response_modalities=["AUDIO"],
-        speech_config=types.SpeechConfig(
-            voice_config=types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=VOICE_NAME)
-            )
-        ),
-        system_instruction=types.Content(
-            parts=[types.Part(text=SHUNA_SYSTEM_INSTRUCTION)]
-        ),
-    )
-
-    gemini_session = None
-    heartbeat_task = None
-    mic_relay_task = None
-    gemini_relay_task = None
-
+# ── POST /api/v1/shuna/voice-chat ────────────────────────────────────────────
+@app.post("/api/v1/shuna/voice-chat")
+async def voice_chat(
+    file: UploadFile = File(...),
+    user_id: str = Form(...)
+):
+    """
+    Stateless Pipelined Voice Chat Endpoint.
+    1. Transcribe incoming browser audio Blob (mime type read dynamically).
+    2. Retrieve recent message history & active user challenges from Supabase.
+    3. Generate a warm Hinglish response matching Shuna's personality.
+    4. Synthesize voice using gemini-3.1-flash-tts-preview with Despina voice config.
+    5. Save chat records to Supabase and return the response payload.
+    """
     try:
-        # Open persistent Gemini Live session
-        async with client.aio.live.connect(
-            model=GEMINI_MODEL, config=live_config
-        ) as session:
-            gemini_session = session
-            logger.info(f"[{session_id}] Gemini Live session established")
+        # Read uploaded audio file
+        audio_bytes = await file.read()
+        if not audio_bytes:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
-            # ── Task 1: Browser Mic → Gemini ─────────────────────────────
-            async def relay_mic_to_gemini():
-                """Read binary PCM frames from browser, forward to Gemini."""
-                try:
-                    while True:
-                        data = await ws.receive()
+        mime_type = file.content_type
+        if not mime_type or mime_type == "application/octet-stream":
+            mime_type = "audio/webm"  # fallback
 
-                        # Handle binary audio data
-                        if "bytes" in data and data["bytes"]:
-                            audio_bytes = data["bytes"]
-                            await session.send_realtime_input(
-                                audio=types.Blob(
-                                    data=audio_bytes,
-                                    mime_type="audio/pcm;rate=16000",
-                                )
-                            )
+        logger.info(f"Processing audio file: size={len(audio_bytes)} bytes, mime={mime_type}, user={user_id}")
 
-                        # Handle text messages (for text-based fallback)
-                        elif "text" in data and data["text"]:
-                            text_msg = data["text"]
-                            if text_msg == "__ping__":
-                                await ws.send_text("__pong__")
-                            else:
-                                await session.send(
-                                    input=text_msg, end_of_turn=True
-                                )
+        # ── Step 1: Speech-to-Text (Transcription) ──
+        user_transcript = ""
+        try:
+            stt_response = client.models.generate_content(
+                model=STT_MODEL,
+                contents=[
+                    types.Part.from_bytes(data=audio_bytes, mime_type=mime_type),
+                    "Transcribe the spoken audio perfectly. If it is silent or only contains background noise, return an empty string. Output ONLY the plain transcription text, no comments, no quotes, no conversational filler."
+                ]
+            )
+            user_transcript = (stt_response.text or "").strip()
+        except Exception as stt_err:
+            logger.error(f"STT Error: {stt_err}")
+            # Keep empty and fallback to silent label to generate a fallback reply
+            user_transcript = ""
 
-                except WebSocketDisconnect:
-                    logger.info(f"[{session_id}] Client disconnected (mic relay)")
-                except Exception as e:
-                    logger.error(f"[{session_id}] Mic relay error: {e}")
+        # If completely empty or silent, let the LLM know there was silence
+        effective_input = user_transcript if user_transcript else "[silence]"
+        logger.info(f"User transcript: '{effective_input}'")
 
-            # ── Task 2: Gemini → Browser Speaker ─────────────────────────
-            async def relay_gemini_to_browser():
-                """Read audio chunks from Gemini, forward to browser."""
-                try:
-                    async for response in session.receive():
-                        if response is None:
-                            continue
+        # ── Step 2: Retrieve Supabase Context ──
+        history_context = ""
+        challenges_context = ""
+        if supabase and user_id:
+            try:
+                # Fetch last 5 messages from messages table
+                history_res = supabase.table("messages").select("text, sender").eq("user_id", user_id).eq("source", "aria").order("created_at", desc=True).limit(5).execute()
+                if history_res.data:
+                    # Reverse to chronological order
+                    msgs = reversed(history_res.data)
+                    history_context = "\n".join([f"{m['sender']}: {m['text']}" for m in msgs])
+                
+                # Fetch active challenges
+                challenges_res = supabase.table("sai_challenges").select("challenge_text").eq("user_id", user_id).eq("completed", False).execute()
+                if challenges_res.data:
+                    ch_list = [c["challenge_text"] for c in challenges_res.data]
+                    challenges_context = ", ".join(ch_list)
+            except Exception as db_err:
+                logger.error(f"Database retrieval error: {db_err}")
 
-                        # Stream audio data chunks immediately
-                        server_content = response.server_content
-                        if server_content and server_content.model_turn:
-                            for part in server_content.model_turn.parts:
-                                if part.inline_data and part.inline_data.data:
-                                    # Send raw PCM bytes directly to browser
-                                    await ws.send_bytes(part.inline_data.data)
-                                if part.text:
-                                    # Send text transcription chunk to browser
-                                    await ws.send_text(f"__text__:{part.text}")
+        # ── Step 3: LLM Chat Generation (Hinglish bestie persona) ──
+        system_instruction = SHUNA_SYSTEM_INSTRUCTION
+        if challenges_context:
+            system_instruction += f"\nActive user challenges/tasks: {challenges_context}. Mention or ask about them casually if relevant."
 
-                        # Signal turn completion to frontend
-                        if server_content and server_content.turn_complete:
-                            await ws.send_text("__turn_done__")
+        prompt_parts = []
+        if history_context:
+            prompt_parts.append(f"Recent chat history:\n{history_context}")
+        prompt_parts.append(f"User said: {effective_input}")
+        prompt_parts.append("Generate a Hinglish bestie response to the user. Speak directly as Shuna. Be fun, short, and use inline tags like [laughs] or [sigh] naturally to express your feelings.")
 
-                except WebSocketDisconnect:
-                    logger.info(f"[{session_id}] Client disconnected (gemini relay)")
-                except Exception as e:
-                    logger.error(f"[{session_id}] Gemini relay error: {e}")
+        try:
+            llm_response = client.models.generate_content(
+                model=LLM_MODEL,
+                contents="\n\n".join(prompt_parts),
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction
+                )
+            )
+            ai_text = (llm_response.text or "").strip()
+        except Exception as llm_err:
+            logger.error(f"LLM Error: {llm_err}")
+            ai_text = "Arre yaar, server nakhre kar raha hai. Phir se bol na?"
 
-            # ── Task 3: Heartbeat (keep Render socket alive) ─────────────
-            async def heartbeat():
-                """Ping client every 25s to prevent Render idle timeout."""
-                try:
-                    while True:
-                        await asyncio.sleep(HEARTBEAT_INTERVAL)
-                        try:
-                            await ws.send_text("__heartbeat__")
-                        except Exception:
-                            break
-                except asyncio.CancelledError:
-                    pass
+        logger.info(f"AI response: '{ai_text}'")
 
-            # Launch all three concurrent tasks
-            mic_relay_task = asyncio.create_task(relay_mic_to_gemini())
-            gemini_relay_task = asyncio.create_task(relay_gemini_to_browser())
-            heartbeat_task = asyncio.create_task(heartbeat())
-
-            # Wait until any task exits (means connection died)
-            done, pending = await asyncio.wait(
-                [mic_relay_task, gemini_relay_task, heartbeat_task],
-                return_when=asyncio.FIRST_COMPLETED,
+        # ── Step 4: Text-to-Speech (Synthesis) ──
+        audio_base64 = ""
+        try:
+            tts_config = types.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=types.SpeechConfig(
+                    voice_config=types.VoiceConfig(
+                        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=VOICE_NAME)
+                    )
+                )
+            )
+            tts_response = client.models.generate_content(
+                model=TTS_MODEL,
+                contents=ai_text,
+                config=tts_config
             )
 
-            # Cancel remaining tasks
-            for task in pending:
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
+            # Accumulate voice chunks
+            synthesized_bytes = b""
+            if tts_response.candidates and tts_response.candidates[0].content.parts:
+                for part in tts_response.candidates[0].content.parts:
+                    if part.inline_data and part.inline_data.data:
+                        data_chunk = part.inline_data.data
+                        if isinstance(data_chunk, str):
+                            synthesized_bytes += base64.b64decode(data_chunk)
+                        else:
+                            synthesized_bytes += data_chunk
 
-    except WebSocketDisconnect:
-        logger.info(f"[{session_id}] Client disconnected during setup")
+            if synthesized_bytes:
+                audio_base64 = base64.b64encode(synthesized_bytes).decode("utf-8")
+        except Exception as tts_err:
+            logger.error(f"TTS Error: {tts_err}")
+            # If TTS fails, audio_base64 remains empty but we still return transcripts
+
+        # ── Step 5: Save Records to Supabase ──
+        if supabase and user_id:
+            try:
+                # Save user transcript (only if they actually spoke)
+                if user_transcript:
+                    supabase.table("messages").insert({
+                        "user_id": user_id,
+                        "text": user_transcript,
+                        "sender": "user",
+                        "source": "aria"
+                    }).execute()
+                
+                # Save AI response
+                supabase.table("messages").insert({
+                    "user_id": user_id,
+                    "text": ai_text,
+                    "sender": "ai",
+                    "source": "aria"
+                }).execute()
+            except Exception as db_log_err:
+                logger.error(f"Supabase logging error: {db_log_err}")
+
+        # Return payload
+        return {
+            "success": True,
+            "audio": audio_base64,
+            "user_transcript": user_transcript,
+            "ai_transcript": ai_text
+        }
+
     except Exception as e:
-        logger.error(f"[{session_id}] Session error: {e}")
-        try:
-            await ws.close(code=1011, reason=str(e)[:120])
-        except Exception:
-            pass
-    finally:
-        # Clean cancellation of any lingering tasks
-        for task in [mic_relay_task, gemini_relay_task, heartbeat_task]:
-            if task and not task.done():
-                task.cancel()
-                try:
-                    await task
-                except (asyncio.CancelledError, Exception):
-                    pass
-
-        logger.info(f"[{session_id}] All resources released cleanly")
+        logger.error(f"Internal endpoint error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server voice processing error")

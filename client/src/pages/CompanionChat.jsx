@@ -196,50 +196,32 @@ export default function CompanionChat({ session }) {
     }
   };
 
-  // Accumulate streaming text transcription from Shuna's Gemini Live session
-  const handleVoiceTextMessage = useCallback((chunk) => {
+  // Handle completed transcription response from Shuna's stateless voice engine
+  const handleVoiceChatResponse = useCallback((userText, aiText) => {
     setMessages(prev => {
-      const activeId = activeVoiceResponseIdRef.current;
-      if (activeId && prev.some(m => m.id === activeId)) {
-        return prev.map(m => m.id === activeId ? { ...m, text: m.text + chunk } : m);
-      } else {
-        const newId = crypto.randomUUID();
-        activeVoiceResponseIdRef.current = newId;
-        return [...prev, { id: newId, text: chunk, sender: 'ai' }];
+      const newMsgs = [...prev];
+      if (userText) {
+        newMsgs.push({ id: crypto.randomUUID(), text: userText, sender: 'user' });
       }
+      if (aiText) {
+        newMsgs.push({ id: crypto.randomUUID(), text: aiText, sender: 'ai' });
+      }
+      return newMsgs;
     });
   }, []);
 
-  // Monitor voice state changes for animation and database save trigger
+  // Monitor voice state changes for animation
   useEffect(() => {
-    const prev = prevVoiceStateRef.current;
     prevVoiceStateRef.current = voiceState;
 
     if (voiceState === 'speaking') {
       setCharacterAnim('talk');
-    } else if (voiceState === 'listening') {
+    } else if (voiceState === 'listening' || voiceState === 'idle') {
       setCharacterAnim('idle');
+    } else if (voiceState === 'thinking') {
+      setCharacterAnim('thinking');
     }
-
-    // Save completed voice response to database when Shuna finishes speaking
-    if (prev === 'speaking' && (voiceState === 'listening' || voiceState === 'idle')) {
-      const activeId = activeVoiceResponseIdRef.current;
-      if (activeId) {
-        const latestMsgs = messagesRef.current;
-        const msg = latestMsgs.find(m => m.id === activeId);
-        if (msg && session?.user?.id) {
-          saveMessageToDB({
-            id: msg.id,
-            user_id: session.user.id,
-            text: msg.text,
-            sender: 'ai',
-            source: 'aria'
-          });
-        }
-        activeVoiceResponseIdRef.current = null;
-      }
-    }
-  }, [voiceState, session]);
+  }, [voiceState]);
 
   useEffect(() => {
     // Prevent body scrolling on mobile
@@ -546,13 +528,13 @@ export default function CompanionChat({ session }) {
           )}
         </AnimatePresence>
         
-        {/* Headless ShunaVoiceChat engine */}
         <ShunaVoiceChat 
           ref={voiceChatRef}
           isActive={isVoiceEnabled} 
+          userId={session?.user?.id}
           onStateChange={setVoiceState}
           onError={setVoiceError}
-          onTextMessageReceived={handleVoiceTextMessage}
+          onVoiceChatResponse={handleVoiceChatResponse}
         />
       </div>
     </ParasiteSIYA>
