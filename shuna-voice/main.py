@@ -1,8 +1,8 @@
 """
-Shuna Stateless HTTP Pipelined Voice Agent (Local Kokoro TTS)
-=============================================================
-Stateless, robust, and highly scalable pipeline (Web Speech STT -> Text LLM -> Kokoro TTS).
-Runs entirely locally to avoid cloud API rate limits, keeping RAM footprint under 512MB.
+Shuna Stateless HTTP Pipelined Voice Agent (Local ONNX TTS)
+===========================================================
+Stateless, robust, and highly scalable pipeline (Web Speech STT -> Text LLM -> Kokoro ONNX TTS).
+Runs entirely locally to avoid cloud API rate limits, keeping RAM footprint under 200MB.
 """
 
 import os
@@ -17,8 +17,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client, Client
 import soundfile as sf
-import torch
-from kokoro import KPipeline
+import numpy as np
+from kokoro_onnx import Kokoro
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -29,14 +29,18 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 MAIN_BACKEND_URL = os.environ.get("MAIN_BACKEND_URL", "https://emotional-ai-18zi.onrender.com")
 
-VOICES_DIR = os.path.join(os.path.dirname(__file__), "voices")
-VOICE_HINDI_URL = "https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/hf_alpha.pt"
-VOICE_ENGLISH_URL = "https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices/af_bella.pt"
+# ONNX Model & Voice Bin paths
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "kokoro-v1.0.onnx")
+VOICES_BIN_PATH = os.path.join(os.path.dirname(__file__), "voices-v1.0.bin")
+SHUNA_VOICE_PATH = os.path.join(os.path.dirname(__file__), "voices", "shuna_voice.npy")
+
+MODEL_URL = "https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/kokoro-v1.0.onnx"
+VOICES_BIN_URL = "https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/voices-v1.0.bin"
 
 # Global states
 supabase: Client = None
-k_pipeline: KPipeline = None
-SHUNA_VOICE = None
+kokoro_engine: Kokoro = None
+SHUNA_VOICE: np.ndarray = None
 
 # ── Setup ────────────────────────────────────────────────────────────────────
 if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
@@ -51,54 +55,60 @@ else:
 def download_file(url: str, dest: str):
     logger.info(f"Downloading {url} to {dest}...")
     import urllib.request
-    urllib.request.urlretrieve(url, dest)
-    logger.info(f"Downloaded {dest}")
+    # Use temporary download and rename to prevent corrupted files if interrupted
+    temp_dest = dest + ".tmp"
+    urllib.request.urlretrieve(url, temp_dest)
+    os.rename(temp_dest, dest)
+    logger.info(f"Downloaded {dest} successfully.")
 
-def load_voice_profile():
+def ensure_assets():
     global SHUNA_VOICE
-    os.makedirs(VOICES_DIR, exist_ok=True)
     
-    hindi_path = os.path.join(VOICES_DIR, "hf_alpha.pt")
-    english_path = os.path.join(VOICES_DIR, "af_bella.pt")
-    
-    if not os.path.exists(hindi_path):
-        download_file(VOICE_HINDI_URL, hindi_path)
-    if not os.path.exists(english_path):
-        download_file(VOICE_ENGLISH_URL, english_path)
+    # 1. Download ONNX model if missing
+    if not os.path.exists(MODEL_PATH):
+        logger.info("ONNX model file missing.")
+        download_file(MODEL_URL, MODEL_PATH)
         
-    logger.info("Loading Kokoro voice embeddings on CPU...")
-    try:
-        v_hindi = torch.load(hindi_path, map_location="cpu", weights_only=True)
-        v_english = torch.load(english_path, map_location="cpu", weights_only=True)
-        # Blend: 60% Hindi / 40% English
-        SHUNA_VOICE = (v_hindi * 0.6) + (v_english * 0.4)
-        logger.info("Voice blending successful!")
-    except Exception as e:
-        logger.error(f"Failed to load or blend voice embeddings: {e}")
-        # Fallback to a zero tensor just in case (though it will sound broken, it prevents crashing if missing)
-        SHUNA_VOICE = None
+    # 2. Download Voices BIN file if missing
+    if not os.path.exists(VOICES_BIN_PATH):
+        logger.info("Voices binary file missing.")
+        download_file(VOICES_BIN_URL, VOICES_BIN_PATH)
+
+    # 3. Load Shuna custom blended voice style
+    if os.path.exists(SHUNA_VOICE_PATH):
+        try:
+            SHUNA_VOICE = np.load(SHUNA_VOICE_PATH)
+            logger.info(f"Loaded Shuna custom blended voice from {SHUNA_VOICE_PATH} (shape: {SHUNA_VOICE.shape})")
+        except Exception as e:
+            logger.error(f"Error loading custom voice npy style: {e}")
+    else:
+        logger.error(f"Custom voice style file missing at {SHUNA_VOICE_PATH}. Standard voices will be used as fallback.")
 
 # ── Lifespan ─────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global k_pipeline
-    logger.info("Shuna Local Voice Engine starting up")
+    global kokoro_engine
+    logger.info("Shuna Local ONNX Voice Engine starting up")
     
-    load_voice_profile()
-    
-    logger.info("Initializing Kokoro Pipeline (Hindi lang code)...")
+    # Ensure large files are downloaded and voice styles are loaded
     try:
-        # We use 'h' for Hindi to properly process Devanagari phonemes
-        k_pipeline = KPipeline(lang_code='h')
-        logger.info("Kokoro Pipeline initialized successfully.")
+        ensure_assets()
     except Exception as e:
-        logger.error(f"Failed to initialize Kokoro pipeline. Is espeak-ng installed? Error: {e}")
+        logger.critical(f"Failed to ensure or download voice assets: {e}", exc_info=True)
+    
+    # Initialize Kokoro-ONNX engine
+    logger.info("Initializing Kokoro ONNX engine...")
+    try:
+        kokoro_engine = Kokoro(MODEL_PATH, VOICES_BIN_PATH)
+        logger.info("Kokoro ONNX Engine initialized successfully.")
+    except Exception as e:
+        logger.critical(f"Failed to initialize Kokoro ONNX engine: {e}", exc_info=True)
         
     yield
-    logger.info("Shuna Local Voice Engine shutting down")
+    logger.info("Shuna Local ONNX Voice Engine shutting down")
 
 # ── FastAPI App ──────────────────────────────────────────────────────────────
-app = FastAPI(title="Shuna Voice Engine", version="3.0.0", lifespan=lifespan)
+app = FastAPI(title="Shuna ONNX Voice Engine", version="3.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -119,16 +129,21 @@ class VoiceChatRequest(BaseModel):
 # ── Endpoints ────────────────────────────────────────────────────────────────
 @app.get("/")
 async def health_check():
-    return {"status": "online", "message": "Shuna Local Voice Engine Active"}
+    return {
+        "status": "online", 
+        "message": "Shuna Local ONNX Voice Engine Active",
+        "engine_loaded": kokoro_engine is not None,
+        "voice_loaded": SHUNA_VOICE is not None
+    }
 
 @app.post("/api/v1/shuna/voice-chat")
 async def voice_chat(req: VoiceChatRequest):
     """
-    Stateless Pipelined Voice Chat Endpoint (Local TTS).
-    1. Receive plain text transcript from frontend (Web Speech API).
+    Stateless Pipelined Voice Chat Endpoint (Local ONNX TTS).
+    1. Receive plain text transcript from frontend.
     2. Retrieve recent message history from Supabase.
-    3. Call the main backend chat API (multi-key pool) with 'isVoice': True to get JSON script.
-    4. Synthesize voice locally using Kokoro-82M.
+    3. Call the main backend chat API to get the JSON transcript script.
+    4. Synthesize voice locally using Kokoro ONNX.
     5. Save chat records to Supabase and return the response payload.
     """
     try:
@@ -189,7 +204,7 @@ async def voice_chat(req: VoiceChatRequest):
             chat_data = chat_response.json()
             raw_ai_text = (chat_data.get("text") or "").strip()
             
-            # The backend should return a JSON string. We parse it:
+            # Parse the strict JSON format:
             import json
             try:
                 # Remove markdown code blocks if present
@@ -211,39 +226,36 @@ async def voice_chat(req: VoiceChatRequest):
         logger.info(f"UI Transcript: '{chat_transcript}'")
         logger.info(f"Kokoro Script: '{kokoro_script}'")
 
-        # ── Step 3: Text-to-Speech (Local Kokoro) ──
+        # ── Step 3: Text-to-Speech (Local ONNX) ──
         audio_base64 = ""
         error_tts = None
         
         try:
-            if not k_pipeline:
-                raise Exception("Kokoro pipeline is not initialized")
-            if SHUNA_VOICE is None:
-                raise Exception("Voice profile is missing")
-
-            # Generate audio using Kokoro generator
-            # speed=0.88 to prevent rushed robotic output
-            generator = k_pipeline(kokoro_script, voice=SHUNA_VOICE, speed=0.88, split_pattern=r'\n+')
+            if not kokoro_engine:
+                raise Exception("Kokoro ONNX engine is not initialized")
             
-            # Combine all chunks
-            all_audio = []
-            sample_rate = 24000
-            for gs, ps, audio_chunk in generator:
-                if audio_chunk is not None:
-                    all_audio.append(audio_chunk)
+            # Select voice: use custom style if loaded, fallback to default af_bella style
+            voice_style = SHUNA_VOICE if SHUNA_VOICE is not None else "af_bella"
 
-            if all_audio:
-                import numpy as np
-                combined_audio = np.concatenate(all_audio)
-                
-                # Convert numpy array to WAV in memory
+            # Generate speech
+            # speed=0.88 to slow down prosody for more natural delivery
+            # lang='hi' to force Hindi phonemizer rules for Hinglish/Devanagari switching
+            samples, sample_rate = kokoro_engine.create(
+                kokoro_script, 
+                voice=voice_style, 
+                speed=0.88, 
+                lang="hi"
+            )
+            
+            if samples is not None and len(samples) > 0:
+                # Convert numpy float32 samples to 16-bit PCM WAV in memory
                 wav_io = io.BytesIO()
-                sf.write(wav_io, combined_audio, sample_rate, format='WAV', subtype='PCM_16')
+                sf.write(wav_io, samples, sample_rate, format='WAV', subtype='PCM_16')
                 wav_bytes = wav_io.getvalue()
                 
                 audio_base64 = base64.b64encode(wav_bytes).decode("utf-8")
             else:
-                raise Exception("Kokoro generator returned no audio chunks")
+                raise Exception("Kokoro ONNX engine generated empty audio samples")
                 
         except Exception as tts_err:
             logger.error(f"TTS Error: {tts_err}")
@@ -272,7 +284,7 @@ async def voice_chat(req: VoiceChatRequest):
 
         # Return payload
         return {
-            "success": True,
+            "success": True if audio_base64 else False,
             "audio": audio_base64,
             "user_transcript": user_transcript,
             "ai_transcript": chat_transcript,
