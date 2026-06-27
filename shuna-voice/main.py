@@ -180,13 +180,22 @@ async def health_check():
 
 @app.get("/api/test-debug")
 async def test_debug():
+    import subprocess
+    import sys
+    try:
+        pip_list = subprocess.check_output([sys.executable, "-m", "pip", "list"], text=True)
+    except Exception as e:
+        pip_list = f"Failed to get pip list: {e}"
+        
     return {
         "kokoro_engine_type": str(type(kokoro_engine)),
         "kokoro_engine_is_none": kokoro_engine is None,
         "kokoro_engine_bool": bool(kokoro_engine) if kokoro_engine is not None else None,
         "init_error": init_error,
         "model_path_exists": os.path.exists(MODEL_PATH),
-        "voices_path_exists": os.path.exists(VOICES_BIN_PATH)
+        "voices_path_exists": os.path.exists(VOICES_BIN_PATH),
+        "pip_list": pip_list,
+        "sys_modules": [m for m in sys.modules.keys() if "onnx" in m or "transformer" in m or "optimum" in m]
     }
 
 @app.post("/api/v1/shuna/voice-chat")
