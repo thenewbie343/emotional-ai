@@ -111,7 +111,12 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, onStateChange, onError, o
 
       const result = await response.json();
       if (!result.success || !result.audio) {
-        throw new Error("Invalid server voice response");
+        console.error("Voice pipeline backend error details:", {
+          stt: result.error_stt,
+          llm: result.error_llm,
+          tts: result.error_tts
+        });
+        throw new Error(`Invalid server voice response: STT=${result.error_stt || 'ok'}, LLM=${result.error_llm || 'ok'}, TTS=${result.error_tts || 'ok'}`);
       }
 
       if (onTranscriptsReceived) {
