@@ -114,6 +114,7 @@ async def voice_chat(
 
         # ── Step 1: Speech-to-Text (Transcription) ──
         user_transcript = ""
+        error_stt = None
         try:
             stt_response = client.models.generate_content(
                 model=STT_MODEL,
@@ -125,7 +126,7 @@ async def voice_chat(
             user_transcript = (stt_response.text or "").strip()
         except Exception as stt_err:
             logger.error(f"STT Error: {stt_err}")
-            # Keep empty and fallback to silent label to generate a fallback reply
+            error_stt = str(stt_err)
             user_transcript = ""
 
         # If completely empty or silent, let the LLM know there was silence
@@ -163,6 +164,8 @@ async def voice_chat(
         prompt_parts.append(f"User said: {effective_input}")
         prompt_parts.append("Generate a Hinglish bestie response to the user. Speak directly as Shuna. Be fun, short, and use inline tags like [laughs] or [sigh] naturally to express your feelings.")
 
+        ai_text = ""
+        error_llm = None
         try:
             llm_response = client.models.generate_content(
                 model=LLM_MODEL,
@@ -174,12 +177,14 @@ async def voice_chat(
             ai_text = (llm_response.text or "").strip()
         except Exception as llm_err:
             logger.error(f"LLM Error: {llm_err}")
+            error_llm = str(llm_err)
             ai_text = "Arre yaar, server nakhre kar raha hai. Phir se bol na?"
 
         logger.info(f"AI response: '{ai_text}'")
 
         # ── Step 4: Text-to-Speech (Synthesis) ──
         audio_base64 = ""
+        error_tts = None
         try:
             tts_config = types.GenerateContentConfig(
                 response_modalities=["AUDIO"],
@@ -210,7 +215,7 @@ async def voice_chat(
                 audio_base64 = base64.b64encode(synthesized_bytes).decode("utf-8")
         except Exception as tts_err:
             logger.error(f"TTS Error: {tts_err}")
-            # If TTS fails, audio_base64 remains empty but we still return transcripts
+            error_tts = str(tts_err)
 
         # ── Step 5: Save Records to Supabase ──
         if supabase and user_id:
@@ -239,7 +244,10 @@ async def voice_chat(
             "success": True,
             "audio": audio_base64,
             "user_transcript": user_transcript,
-            "ai_transcript": ai_text
+            "ai_transcript": ai_text,
+            "error_stt": error_stt,
+            "error_llm": error_llm,
+            "error_tts": error_tts
         }
 
     except Exception as e:
