@@ -3,9 +3,43 @@ Shuna Stateless HTTP Pipelined Voice Agent (Local ONNX TTS)
 ===========================================================
 Stateless, robust, and highly scalable pipeline (Web Speech STT -> Text LLM -> Kokoro ONNX TTS).
 Runs entirely locally to avoid cloud API rate limits, keeping RAM footprint under 200MB.
+Optimized for 512MB RAM constraints on Render.
 """
 
 import os
+import gc
+
+# ── ONNX Runtime Memory Optimizations ────────────────────────────────────────
+# Force single-threaded execution at the OS level to reduce thread-pool memory overhead
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["ONNXRUNTIME_INTER_OP_NUM_THREADS"] = "1"
+os.environ["ONNXRUNTIME_INTRA_OP_NUM_THREADS"] = "1"
+
+import onnxruntime as rt
+
+# Monkey patch ONNX Runtime InferenceSession BEFORE importing kokoro_onnx.
+# This forces the internal Kokoro-ONNX session to use strict memory-saving parameters.
+_original_InferenceSession = rt.InferenceSession
+
+def custom_InferenceSession(model_path, *args, **kwargs):
+    sess_options = rt.SessionOptions()
+    # Disable caching of memory allocation patterns (saves RAM for dynamic voice sizes)
+    sess_options.enable_mem_pattern = False
+    # Execute operators sequentially (reduces memory consumption compared to parallel execution)
+    sess_options.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
+    # Limit execution threads strictly to 1
+    sess_options.intra_op_num_threads = 1
+    sess_options.inter_op_num_threads = 1
+    # Enable aggressive memory arena shrinkage (forces ORT to release free RAM back to OS)
+    sess_options.add_session_config_entry("memory.enable_memory_arena_shrinkage", "cpu:0")
+    
+    kwargs['sess_options'] = sess_options
+    return _original_InferenceSession(model_path, *args, **kwargs)
+
+rt.InferenceSession = custom_InferenceSession
+
+# ── Rest of imports ──────────────────────────────────────────────────────────
 import io
 import base64
 import logging
@@ -29,7 +63,6 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 MAIN_BACKEND_URL = os.environ.get("MAIN_BACKEND_URL", "https://emotional-ai-18zi.onrender.com")
 
-# ONNX Model & Voice Bin paths
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "kokoro-v1.0.onnx")
 VOICES_BIN_PATH = os.path.join(os.path.dirname(__file__), "voices-v1.0.bin")
 SHUNA_VOICE_PATH = os.path.join(os.path.dirname(__file__), "voices", "shuna_voice.npy")
@@ -55,11 +88,11 @@ else:
 def download_file(url: str, dest: str):
     logger.info(f"Downloading {url} to {dest}...")
     import urllib.request
-    # Use temporary download and rename to prevent corrupted files if interrupted
     temp_dest = dest + ".tmp"
     urllib.request.urlretrieve(url, temp_dest)
     os.rename(temp_dest, dest)
     logger.info(f"Downloaded {dest} successfully.")
+    gc.collect()  # Release memory from download operations
 
 def ensure_assets():
     global SHUNA_VOICE
@@ -90,7 +123,6 @@ async def lifespan(app: FastAPI):
     global kokoro_engine
     logger.info("Shuna Local ONNX Voice Engine starting up")
     
-    # Ensure large files are downloaded and voice styles are loaded
     try:
         ensure_assets()
     except Exception as e:
@@ -104,11 +136,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.critical(f"Failed to initialize Kokoro ONNX engine: {e}", exc_info=True)
         
+    gc.collect()  # Final garbage collection to free up memory from startup/downloads
     yield
     logger.info("Shuna Local ONNX Voice Engine shutting down")
 
 # ── FastAPI App ──────────────────────────────────────────────────────────────
-app = FastAPI(title="Shuna ONNX Voice Engine", version="3.1.0", lifespan=lifespan)
+app = FastAPI(title="Shuna ONNX Voice Engine", version="3.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -140,11 +173,6 @@ async def health_check():
 async def voice_chat(req: VoiceChatRequest):
     """
     Stateless Pipelined Voice Chat Endpoint (Local ONNX TTS).
-    1. Receive plain text transcript from frontend.
-    2. Retrieve recent message history from Supabase.
-    3. Call the main backend chat API to get the JSON transcript script.
-    4. Synthesize voice locally using Kokoro ONNX.
-    5. Save chat records to Supabase and return the response payload.
     """
     try:
         user_transcript = req.text.strip()
@@ -186,7 +214,7 @@ async def voice_chat(req: VoiceChatRequest):
                 "companion": req.companion,
                 "userId": req.user_id,
                 "userEmail": req.user_email,
-                "isVoice": True  # Flag to trigger JSON output from LLM
+                "isVoice": True
             }
             logger.info(f"Calling main backend chat API: {MAIN_BACKEND_URL}/api/ai/message")
             
@@ -204,10 +232,8 @@ async def voice_chat(req: VoiceChatRequest):
             chat_data = chat_response.json()
             raw_ai_text = (chat_data.get("text") or "").strip()
             
-            # Parse the strict JSON format:
             import json
             try:
-                # Remove markdown code blocks if present
                 clean_json_str = raw_ai_text.replace("```json", "").replace("```", "").strip()
                 parsed = json.loads(clean_json_str)
                 chat_transcript = parsed.get("chat_transcript", raw_ai_text)
@@ -234,12 +260,8 @@ async def voice_chat(req: VoiceChatRequest):
             if not kokoro_engine:
                 raise Exception("Kokoro ONNX engine is not initialized")
             
-            # Select voice: use custom style if loaded, fallback to default af_bella style
             voice_style = SHUNA_VOICE if SHUNA_VOICE is not None else "af_bella"
 
-            # Generate speech
-            # speed=0.88 to slow down prosody for more natural delivery
-            # lang='hi' to force Hindi phonemizer rules for Hinglish/Devanagari switching
             samples, sample_rate = kokoro_engine.create(
                 kokoro_script, 
                 voice=voice_style, 
@@ -248,7 +270,6 @@ async def voice_chat(req: VoiceChatRequest):
             )
             
             if samples is not None and len(samples) > 0:
-                # Convert numpy float32 samples to 16-bit PCM WAV in memory
                 wav_io = io.BytesIO()
                 sf.write(wav_io, samples, sample_rate, format='WAV', subtype='PCM_16')
                 wav_bytes = wav_io.getvalue()
@@ -261,10 +282,12 @@ async def voice_chat(req: VoiceChatRequest):
             logger.error(f"TTS Error: {tts_err}")
             error_tts = str(tts_err)
 
+        # Force garbage collection to prevent RAM creep during back-to-back voice turns
+        gc.collect()
+
         # ── Step 4: Save Records to Supabase ──
         if supabase and req.user_id:
             try:
-                # Save user transcript
                 supabase.table("messages").insert({
                     "user_id": req.user_id,
                     "text": user_transcript,
@@ -272,7 +295,6 @@ async def voice_chat(req: VoiceChatRequest):
                     "source": "aria"
                 }).execute()
                 
-                # Save AI response (chat transcript)
                 supabase.table("messages").insert({
                     "user_id": req.user_id,
                     "text": chat_transcript,
@@ -282,7 +304,6 @@ async def voice_chat(req: VoiceChatRequest):
             except Exception as db_log_err:
                 logger.error(f"Supabase logging error: {db_log_err}")
 
-        # Return payload
         return {
             "success": True if audio_base64 else False,
             "audio": audio_base64,
