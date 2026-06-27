@@ -13,13 +13,25 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
   const transcriptRef = useRef("");
   const silenceTimerRef = useRef(null);
 
+  // Store all fast-changing props in a single ref to stabilize callback references
+  const propsRef = useRef({ userId, userEmail, mode, companion, onTranscriptsReceived, onError });
   useEffect(() => {
+    propsRef.current = { userId, userEmail, mode, companion, onTranscriptsReceived, onError };
+  });
+
+  // Track state in a ref for closures
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
     if (onStateChange) onStateChange(state);
   }, [state, onStateChange]);
 
   useEffect(() => {
     isMountedRef.current = true;
-    return () => { isMountedRef.current = false; };
+    return () => { 
+      isMountedRef.current = false; 
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    };
   }, []);
 
   const cleanup = useCallback(() => {
@@ -59,10 +71,10 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
     try {
       const payload = {
         text: transcript,
-        user_id: userId || "",
-        user_email: userEmail || "",
-        mode: mode || "friendly",
-        companion: companion || "siya"
+        user_id: propsRef.current.userId || "",
+        user_email: propsRef.current.userEmail || "",
+        mode: propsRef.current.mode || "friendly",
+        companion: propsRef.current.companion || "siya"
       };
 
       console.log("[ShunaVoice] Fetching:", `${API_BASE}/api/v1/shuna/voice-chat`);
@@ -77,14 +89,13 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
       const result = await response.json();
       console.log("[ShunaVoice] Result data:", result);
 
-      if (onTranscriptsReceived && (result.user_transcript || result.ai_transcript)) {
-        onTranscriptsReceived(result.user_transcript, result.ai_transcript);
+      if (propsRef.current.onTranscriptsReceived && (result.user_transcript || result.ai_transcript)) {
+        propsRef.current.onTranscriptsReceived(result.user_transcript, result.ai_transcript);
       }
 
       if (!result.success || !result.audio) {
         console.warn("[ShunaVoice] TTS failed or empty audio returned.");
         setState("idle");
-        // Safe delayed restart handled via connection reset
         setTimeout(() => { if (isActiveRef.current) startRecognition(); }, 1500);
         return;
       }
@@ -117,30 +128,30 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
       await audio.play();
     } catch (err) {
       console.error("[ShunaVoice] sendTextToBackend failed:", err);
-      if (onError) onError(err.message || "Failed to process voice response");
+      if (propsRef.current.onError) propsRef.current.onError(err.message || "Failed to process voice response");
       if (isMountedRef.current) setState("error");
       setTimeout(() => { if (isActiveRef.current) startRecognition(); }, 3000);
     }
-  }, [userId, userEmail, mode, companion, onTranscriptsReceived, onError]);
+  }, []); // Empty dependencies: stabilized reference!
 
   const startRecognition = useCallback(() => {
     cleanup();
     isActiveRef.current = true;
     if (isMountedRef.current) setState("listening");
-    if (onError) onError("");
+    if (propsRef.current.onError) propsRef.current.onError("");
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       const err = "Web Speech API is not supported in this browser.";
       console.error(err);
-      if (onError) onError(err);
+      if (propsRef.current.onError) propsRef.current.onError(err);
       if (isMountedRef.current) setState("error");
       return;
     }
 
     const recognition = new SpeechRecognition();
     recognition.lang = "hi-IN";
-    recognition.interimResults = true; // Enabled for custom silence detection
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     recognitionRef.current = recognition;
 
@@ -156,7 +167,6 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
         console.log("[ShunaVoice] Speech heard (accumulated):", accumulated);
         transcriptRef.current = accumulated;
         
-        // Reset the silence timer on every new speech fragment heard
         if (silenceTimerRef.current) {
           console.log("[ShunaVoice] Resetting VAD timer (speaking...)");
           clearTimeout(silenceTimerRef.current);
@@ -166,16 +176,13 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
           if (isActiveRef.current && transcriptRef.current.trim() && stateRef.current === "listening") {
             const finalSpeech = transcriptRef.current;
             
-            // Transition to thinking state immediately so onend knows not to restart
             setState("thinking");
             
-            // Abort current session to release mic
             if (recognitionRef.current) {
               console.log("[ShunaVoice] VAD silence threshold met. Aborting session...");
               try { recognitionRef.current.abort(); } catch (e) {}
             }
             
-            // Clear current state transcript
             transcriptRef.current = "";
             if (silenceTimerRef.current) {
               clearTimeout(silenceTimerRef.current);
@@ -184,18 +191,18 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
             
             sendTextToBackend(finalSpeech);
           }
-        }, 900); // 900ms of silence triggers the send action
+        }, 900);
       }
     };
 
     recognition.onerror = (event) => {
-      // Suppress red console errors for expected events like 'aborted' (manual VAD stop) and 'no-speech' (silence)
+      // Suppress red console errors for expected events
       if (event.error !== 'no-speech' && event.error !== 'aborted') {
-        console.error("Speech recognition error:", event.error);
-        if (onError) onError(event.error);
+        console.error("[ShunaVoice] Speech recognition error:", event.error);
+        if (propsRef.current.onError) propsRef.current.onError(event.error);
         if (isMountedRef.current) setState("error");
       } else {
-        console.log("Speech recognition event:", event.error);
+        console.log("[ShunaVoice] Speech recognition event:", event.error);
       }
       
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'language-not-supported') {
@@ -205,7 +212,7 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
 
     recognition.onend = () => {
       if (hasFatalErrorRef.current) {
-        console.warn("Speech recognition stopped due to fatal error.");
+        console.warn("[ShunaVoice] Speech recognition stopped due to fatal error.");
         return;
       }
 
@@ -223,13 +230,7 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
     } catch (e) {
       console.error("Failed to start recognition:", e);
     }
-  }, [cleanup, onError, sendTextToBackend]);
-
-  // Track state in a ref for closures
-  const stateRef = useRef(state);
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+  }, [cleanup, sendTextToBackend]); // Stabilized dependencies!
 
   // Sync state when active prop changes
   useEffect(() => {
@@ -240,7 +241,7 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
     } else {
       cleanup();
     }
-  }, [isActive, startRecognition, cleanup]);
+  }, [isActive, startRecognition, cleanup]); // Only fires when isActive changes!
 
   // Cleanup on unmount
   useEffect(() => {
