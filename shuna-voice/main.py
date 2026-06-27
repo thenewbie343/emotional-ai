@@ -110,10 +110,34 @@ async def lifespan(app: FastAPI):
         init_error = str(e)
     
     # Initialize Kokoro-ONNX engine
-    logger.info("Initializing Kokoro ONNX engine...")
+    # NOTE: We bypass Kokoro.__init__() because PyPI kokoro-onnx 0.5.0 was
+    # re-published with a breaking change that tries to json.load() the binary
+    # voices file. Instead, we manually construct the object using np.load()
+    # which is how the original working version loads voices-v1.0.bin.
+    logger.info("Initializing Kokoro ONNX engine (manual init)...")
     try:
-        kokoro_engine = Kokoro(MODEL_PATH, VOICES_BIN_PATH)
-        logger.info("Kokoro ONNX Engine initialized successfully.")
+        import onnxruntime as rt
+        from kokoro_onnx import Kokoro
+        from kokoro_onnx.config import KoKoroConfig, EspeakConfig
+        from kokoro_onnx.tokenizer import Tokenizer
+
+        # Create a blank Kokoro instance without calling __init__
+        kokoro_engine = object.__new__(Kokoro)
+
+        # 1. Load ONNX model session
+        providers = ["CPUExecutionProvider"]
+        kokoro_engine.sess = rt.InferenceSession(MODEL_PATH, providers=providers)
+        logger.info("ONNX InferenceSession created successfully.")
+
+        # 2. Load voices as numpy array (NOT json)
+        kokoro_engine.voices = np.load(VOICES_BIN_PATH, allow_pickle=True).item()
+        logger.info(f"Loaded voices: {type(kokoro_engine.voices)}, keys={list(kokoro_engine.voices.keys())[:5] if isinstance(kokoro_engine.voices, dict) else 'ndarray'}")
+
+        # 3. Initialize tokenizer
+        kokoro_engine.config = KoKoroConfig(MODEL_PATH, VOICES_BIN_PATH)
+        kokoro_engine.tokenizer = Tokenizer(None, vocab={})
+        
+        logger.info("Kokoro ONNX Engine initialized successfully (manual).")
     except Exception as e:
         import traceback
         tb_str = traceback.format_exc()
