@@ -130,8 +130,8 @@ async def lifespan(app: FastAPI):
         logger.info("ONNX InferenceSession created successfully.")
 
         # 2. Load voices as numpy array (NOT json)
-        kokoro_engine.voices = np.load(VOICES_BIN_PATH, allow_pickle=True).item()
-        logger.info(f"Loaded voices: {type(kokoro_engine.voices)}, keys={list(kokoro_engine.voices.keys())[:5] if isinstance(kokoro_engine.voices, dict) else 'ndarray'}")
+        kokoro_engine.voices = np.load(VOICES_BIN_PATH, allow_pickle=True)
+        logger.info(f"Loaded voices: type={type(kokoro_engine.voices)}")
 
         # 3. Initialize tokenizer
         kokoro_engine.config = KoKoroConfig(MODEL_PATH, VOICES_BIN_PATH)
