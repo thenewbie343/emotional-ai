@@ -150,7 +150,22 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
         silenceTimerRef.current = setTimeout(() => {
           if (isActiveRef.current && transcriptRef.current.trim() && stateRef.current === "listening") {
             const finalSpeech = transcriptRef.current;
-            cleanup(); // Terminate recognition immediately to prevent double-start
+            
+            // Transition to thinking state immediately so onend knows not to restart
+            setState("thinking");
+            
+            // Abort current session to release mic
+            if (recognitionRef.current) {
+              try { recognitionRef.current.abort(); } catch (e) {}
+            }
+            
+            // Clear current state transcript
+            transcriptRef.current = "";
+            if (silenceTimerRef.current) {
+              clearTimeout(silenceTimerRef.current);
+              silenceTimerRef.current = null;
+            }
+            
             sendTextToBackend(finalSpeech);
           }
         }, 900); // 900ms of silence triggers the send action
