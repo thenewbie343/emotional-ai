@@ -155,7 +155,7 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = "hi-IN";
+    recognition.lang = "en-IN"; // Set to Indian English to force Hinglish transcription instead of Hindi script
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     recognitionRef.current = recognition;

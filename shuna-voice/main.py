@@ -235,8 +235,13 @@ async def voice_chat(req: VoiceChatRequest):
             raw_ai_text = (chat_data.get("text") or "").strip()
             
             import json
+            import re
+            
             try:
-                clean_json_str = raw_ai_text.replace("```json", "").replace("```", "").strip()
+                # Find JSON block using regex to ignore any preceding/trailing conversational text
+                json_match = re.search(r'\{.*\}', raw_ai_text, re.DOTALL)
+                clean_json_str = json_match.group(0) if json_match else raw_ai_text.replace("```json", "").replace("```", "").strip()
+                
                 parsed = json.loads(clean_json_str)
                 chat_transcript = parsed.get("chat_transcript", raw_ai_text)
                 kokoro_script = parsed.get("kokoro_script", raw_ai_text)
