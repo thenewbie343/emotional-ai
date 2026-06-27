@@ -176,6 +176,17 @@ async def health_check():
         "init_error": init_error
     }
 
+@app.get("/api/test-debug")
+async def test_debug():
+    return {
+        "kokoro_engine_type": str(type(kokoro_engine)),
+        "kokoro_engine_is_none": kokoro_engine is None,
+        "kokoro_engine_bool": bool(kokoro_engine) if kokoro_engine is not None else None,
+        "init_error": init_error,
+        "model_path_exists": os.path.exists(MODEL_PATH),
+        "voices_path_exists": os.path.exists(VOICES_BIN_PATH)
+    }
+
 @app.post("/api/v1/shuna/voice-chat")
 async def voice_chat(req: VoiceChatRequest):
     """
