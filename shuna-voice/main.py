@@ -8,6 +8,7 @@ Avoids long-lived WebSocket memory footprint, allowing 150+ concurrent sessions 
 import os
 import base64
 import logging
+import httpx
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
@@ -24,9 +25,9 @@ logger = logging.getLogger("shuna-voice")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+MAIN_BACKEND_URL = os.environ.get("MAIN_BACKEND_URL", "https://emotional-ai-18zi.onrender.com")
 
 STT_MODEL = "gemini-2.0-flash"
-LLM_MODEL = "gemini-2.0-flash"
 TTS_MODEL = "gemini-3.1-flash-tts-preview"
 VOICE_NAME = "Despina"
 
@@ -82,7 +83,6 @@ async def health():
         "status": "ok",
         "service": "shuna-voice-pipelined",
         "stt": STT_MODEL,
-        "llm": LLM_MODEL,
         "tts": TTS_MODEL
     }
 
@@ -90,13 +90,16 @@ async def health():
 @app.post("/api/v1/shuna/voice-chat")
 async def voice_chat(
     file: UploadFile = File(...),
-    user_id: str = Form(...)
+    user_id: str = Form(...),
+    user_email: str = Form(""),
+    mode: str = Form("friendly"),
+    companion: str = Form("siya")
 ):
     """
     Stateless Pipelined Voice Chat Endpoint.
     1. Transcribe incoming browser audio Blob (mime type read dynamically).
-    2. Retrieve recent message history & active user challenges from Supabase.
-    3. Generate a warm Hinglish response matching Shuna's personality.
+    2. Retrieve recent message history from Supabase and format as conversation payload.
+    3. Call the main backend chat API (5-API rotated key system) to generate the Hinglish text response.
     4. Synthesize voice using gemini-3.1-flash-tts-preview with Despina voice config.
     5. Save chat records to Supabase and return the response payload.
     """
@@ -110,7 +113,7 @@ async def voice_chat(
         if not mime_type or mime_type == "application/octet-stream":
             mime_type = "audio/webm"  # fallback
 
-        logger.info(f"Processing audio file: size={len(audio_bytes)} bytes, mime={mime_type}, user={user_id}")
+        logger.info(f"Processing audio: size={len(audio_bytes)} bytes, mime={mime_type}, user={user_id}, email={user_email}, mode={mode}, companion={companion}")
 
         # ── Step 1: Speech-to-Text (Transcription) ──
         user_transcript = ""
@@ -133,50 +136,60 @@ async def voice_chat(
         effective_input = user_transcript if user_transcript else "[silence]"
         logger.info(f"User transcript: '{effective_input}'")
 
-        # ── Step 2: Retrieve Supabase Context ──
-        history_context = ""
-        challenges_context = ""
+        # ── Step 2: Retrieve Recent Chat History & Format ──
+        api_messages = []
         if supabase and user_id:
             try:
                 # Fetch last 5 messages from messages table
                 history_res = supabase.table("messages").select("text, sender").eq("user_id", user_id).eq("source", "aria").order("created_at", desc=True).limit(5).execute()
                 if history_res.data:
-                    # Reverse to chronological order
-                    msgs = reversed(history_res.data)
-                    history_context = "\n".join([f"{m['sender']}: {m['text']}" for m in msgs])
-                
-                # Fetch active challenges
-                challenges_res = supabase.table("sai_challenges").select("challenge_text").eq("user_id", user_id).eq("completed", False).execute()
-                if challenges_res.data:
-                    ch_list = [c["challenge_text"] for c in challenges_res.data]
-                    challenges_context = ", ".join(ch_list)
+                    # Reverse to chronological order (oldest to newest)
+                    msgs = list(reversed(history_res.data))
+                    for m in msgs:
+                        api_messages.append({
+                            "role": "user" if m["sender"] == "user" else "assistant",
+                            "content": m["text"]
+                        })
             except Exception as db_err:
-                logger.error(f"Database retrieval error: {db_err}")
+                logger.error(f"Database history retrieval error: {db_err}")
 
-        # ── Step 3: LLM Chat Generation (Hinglish bestie persona) ──
-        system_instruction = SHUNA_SYSTEM_INSTRUCTION
-        if challenges_context:
-            system_instruction += f"\nActive user challenges/tasks: {challenges_context}. Mention or ask about them casually if relevant."
+        # Append the new user message (the transcribed voice text)
+        api_messages.append({
+            "role": "user",
+            "content": effective_input
+        })
 
-        prompt_parts = []
-        if history_context:
-            prompt_parts.append(f"Recent chat history:\n{history_context}")
-        prompt_parts.append(f"User said: {effective_input}")
-        prompt_parts.append("Generate a Hinglish bestie response to the user. Speak directly as Shuna. Be fun, short, and use inline tags like [laughs] or [sigh] naturally to express your feelings.")
-
+        # ── Step 3: Call Main Chat Backend (5-API Rotator) ──
         ai_text = ""
         error_llm = None
         try:
-            llm_response = client.models.generate_content(
-                model=LLM_MODEL,
-                contents="\n\n".join(prompt_parts),
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction
+            chat_payload = {
+                "messages": api_messages,
+                "emotion": "default",
+                "mode": mode,
+                "companion": companion,
+                "userId": user_id,
+                "userEmail": user_email
+            }
+            logger.info(f"Calling main backend chat API: {MAIN_BACKEND_URL}/api/ai/message")
+            
+            async with httpx.AsyncClient() as http_client:
+                chat_response = await http_client.post(
+                    f"{MAIN_BACKEND_URL}/api/ai/message",
+                    json=chat_payload,
+                    headers={"Content-Type": "application/json"},
+                    timeout=15.0
                 )
-            )
-            ai_text = (llm_response.text or "").strip()
+            
+            if not chat_response.is_success:
+                raise Exception(f"Main backend error status {chat_response.status_code}: {chat_response.text}")
+            
+            chat_data = chat_response.json()
+            ai_text = (chat_data.get("text") or "").strip()
+            if not ai_text:
+                raise Exception("Empty response text from main backend chat API")
         except Exception as llm_err:
-            logger.error(f"LLM Error: {llm_err}")
+            logger.error(f"Main Backend LLM Error: {llm_err}")
             error_llm = str(llm_err)
             ai_text = "Arre yaar, server nakhre kar raha hai. Phir se bol na?"
 
