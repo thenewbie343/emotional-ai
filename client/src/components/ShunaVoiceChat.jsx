@@ -128,30 +128,27 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
       const transcript = event.results[0][0].transcript;
       if (transcript.trim()) {
         sendTextToBackend(transcript);
-      } else {
-        startRecognition(); // Restart if empty
       }
     };
 
     recognition.onerror = (event) => {
-      console.error("Speech recognition error", event.error);
-      if (event.error === 'no-speech' && isActiveRef.current) {
-        startRecognition();
-      } else if (event.error !== 'aborted') {
+      console.error("Speech recognition error:", event.error);
+      if (event.error !== 'no-speech' && event.error !== 'aborted') {
         if (onError) onError(event.error);
         if (isMountedRef.current) setState("error");
-        setTimeout(() => { if (isActiveRef.current) startRecognition(); }, 3000);
       }
     };
 
     recognition.onend = () => {
+      // The ONLY place where restart is handled to avoid double-start race conditions
       if (isActiveRef.current && isMountedRef.current) {
         setTimeout(() => { 
-          // Only restart if we are still supposed to be listening (not thinking or speaking)
-          if (isActiveRef.current && stateRef.current === "listening") {
+          // Restart only if we are still active and in listening or error state
+          // (We do not restart if we transitioned to thinking or speaking)
+          if (isActiveRef.current && (stateRef.current === "listening" || stateRef.current === "error")) {
             startRecognition(); 
           }
-        }, 500);
+        }, 1000);
       }
     };
 
