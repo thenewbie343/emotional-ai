@@ -133,9 +133,15 @@ async def lifespan(app: FastAPI):
         kokoro_engine.voices = np.load(VOICES_BIN_PATH, allow_pickle=True)
         logger.info(f"Loaded voices: type={type(kokoro_engine.voices)}")
 
-        # 3. Initialize tokenizer
+        # 3. Initialize tokenizer (handle different API versions)
         kokoro_engine.config = KoKoroConfig(MODEL_PATH, VOICES_BIN_PATH)
-        kokoro_engine.tokenizer = Tokenizer(None, vocab={})
+        try:
+            kokoro_engine.tokenizer = Tokenizer(None, vocab={})
+        except TypeError:
+            try:
+                kokoro_engine.tokenizer = Tokenizer(None)
+            except TypeError:
+                kokoro_engine.tokenizer = Tokenizer()
         
         logger.info("Kokoro ONNX Engine initialized successfully (manual).")
     except Exception as e:
