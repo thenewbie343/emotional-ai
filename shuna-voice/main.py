@@ -15,33 +15,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["ONNXRUNTIME_INTER_OP_NUM_THREADS"] = "1"
 os.environ["ONNXRUNTIME_INTRA_OP_NUM_THREADS"] = "1"
-os.environ["ONNX_PROVIDER"] = "CPUExecutionProvider"
 
-import onnxruntime as rt
-
-# Monkey patch ONNX Runtime InferenceSession BEFORE importing kokoro_onnx.
-# This forces the internal Kokoro-ONNX session to use strict memory-saving parameters.
-_original_InferenceSession = rt.InferenceSession
-
-def custom_InferenceSession(model_path, *args, **kwargs):
-    logger.info(f"custom_InferenceSession called with args: {args}, kwargs: {kwargs}")
-    sess_options = rt.SessionOptions()
-    # Disable caching of memory allocation patterns (saves RAM for dynamic voice sizes)
-    sess_options.enable_mem_pattern = False
-    # Disable graph optimizations to prevent compilation RAM spikes
-    sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_DISABLE_ALL
-    # Execute operators sequentially (reduces memory consumption compared to parallel execution)
-    sess_options.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
-    # Limit execution threads strictly to 1
-    sess_options.intra_op_num_threads = 1
-    sess_options.inter_op_num_threads = 1
-    # Enable aggressive memory arena shrinkage (forces ORT to release free RAM back to OS)
-    sess_options.add_session_config_entry("memory.enable_memory_arena_shrinkage", "cpu:0")
-    
-    kwargs['sess_options'] = sess_options
-    return _original_InferenceSession(model_path, *args, **kwargs)
-
-rt.InferenceSession = custom_InferenceSession
 
 # ── Rest of imports ──────────────────────────────────────────────────────────
 import io
@@ -67,11 +41,11 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 MAIN_BACKEND_URL = os.environ.get("MAIN_BACKEND_URL", "https://emotional-ai-18zi.onrender.com")
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "kokoro-v1.0.onnx")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "kokoro-v1.0.int8.onnx")
 VOICES_BIN_PATH = os.path.join(os.path.dirname(__file__), "voices-v1.0.bin")
 SHUNA_VOICE_PATH = os.path.join(os.path.dirname(__file__), "voices", "shuna_voice.npy")
 
-MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx"
+MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.int8.onnx"
 VOICES_BIN_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
 
 # Global states
