@@ -158,15 +158,17 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
     };
 
     recognition.onerror = (event) => {
-      console.error("Speech recognition error:", event.error);
+      // Suppress red console errors for expected events like 'aborted' (manual VAD stop) and 'no-speech' (silence)
+      if (event.error !== 'no-speech' && event.error !== 'aborted') {
+        console.error("Speech recognition error:", event.error);
+        if (onError) onError(event.error);
+        if (isMountedRef.current) setState("error");
+      } else {
+        console.log("Speech recognition event:", event.error);
+      }
       
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'language-not-supported') {
         hasFatalErrorRef.current = true;
-      }
-
-      if (event.error !== 'no-speech' && event.error !== 'aborted') {
-        if (onError) onError(event.error);
-        if (isMountedRef.current) setState("error");
       }
     };
 
