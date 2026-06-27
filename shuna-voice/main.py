@@ -25,8 +25,8 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
-STT_MODEL = "gemini-2.5-flash"
-LLM_MODEL = "gemini-2.5-flash"
+STT_MODEL = "gemini-2.0-flash"
+LLM_MODEL = "gemini-2.0-flash"
 TTS_MODEL = "gemini-3.1-flash-tts-preview"
 VOICE_NAME = "Despina"
 
