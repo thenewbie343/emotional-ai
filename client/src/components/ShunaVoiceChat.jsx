@@ -1,302 +1,264 @@
-/**
- * ShunaVoiceChat.jsx — Stateless HTTP Pipelined Voice Engine
- * ==========================================================
- * Pipeline flow:
- *   Mic Record (MediaRecorder) ➔ stop ➔ POST Form Data ➔ FastAPI ➔ Playback Response
- */
-
 import React, { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 
-// ── Configuration ───────────────────────────────────────────────────────────
-const API_BASE = "https://shuna-backend.onrender.com";
-const SPEECH_THRESHOLD = 12;      // Average volume threshold to detect voice activity
-const SILENCE_TIMEOUT_MS = 1600;   // Auto-stop recording after 1.6s of silence
+const API_BASE = "https://emotional-ai-1-cfrn.onrender.com";
 
 const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companion, onStateChange, onError, onTranscriptsReceived }, ref) => {
-  const [state, setState] = useState("idle"); // idle | connecting | listening | thinking | speaking | error
-
-  // Audio/Recording refs
-  const mediaRecorderRef = useRef(null);
-  const streamRef = useRef(null);
-  const chunksRef = useRef([]);
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-  const silenceCheckFrameRef = useRef(null);
-  const audioElementRef = useRef(null);
-
-  // Connection/Tear-down flag refs
+  const [state, setState] = useState("idle");
   const isActiveRef = useRef(isActive);
   const isMountedRef = useRef(true);
+  
+  const recognitionRef = useRef(null);
+  const audioElementRef = useRef(null);
+  const hasFatalErrorRef = useRef(false);
+  const transcriptRef = useRef("");
+  const silenceTimerRef = useRef(null);
 
-  // Notify parent of state changes
+  // Store all fast-changing props in a single ref to stabilize callback references
+  const propsRef = useRef({ userId, userEmail, mode, companion, onTranscriptsReceived, onError });
   useEffect(() => {
-    if (onStateChange) {
-      onStateChange(state);
-    }
+    propsRef.current = { userId, userEmail, mode, companion, onTranscriptsReceived, onError };
+  });
+
+  // Track state in a ref for closures
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+    if (onStateChange) onStateChange(state);
   }, [state, onStateChange]);
 
-  // Track mount status
   useEffect(() => {
     isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
+    return () => { 
+      isMountedRef.current = false; 
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     };
   }, []);
 
-  // ── Cleanup ─────────────────────────────────────────────────────────────
   const cleanup = useCallback(() => {
     isActiveRef.current = false;
-
-    if (silenceCheckFrameRef.current) {
-      cancelAnimationFrame(silenceCheckFrameRef.current);
-      silenceCheckFrameRef.current = null;
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
     }
-
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch (e) {}
-      mediaRecorderRef.current = null;
+    transcriptRef.current = "";
+    if (recognitionRef.current) {
+      const rec = recognitionRef.current;
+      rec.onstart = null;
+      rec.onresult = null;
+      rec.onerror = null;
+      rec.onend = null;
+      try { rec.abort(); } catch (e) {}
+      recognitionRef.current = null;
     }
-
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-      audioContextRef.current.close().catch(() => {});
-      audioContextRef.current = null;
-    }
-
     if (audioElementRef.current) {
       audioElementRef.current.pause();
       audioElementRef.current = null;
     }
-
-    if (isMountedRef.current) {
-      setState("idle");
-    }
+    if (isMountedRef.current) setState("idle");
   }, []);
 
-  // Expose API to parent component
   useImperativeHandle(ref, () => ({
     connect() {
       isActiveRef.current = true;
-      startRecording();
+      hasFatalErrorRef.current = false;
+      startRecognition();
     },
     cleanup() {
       cleanup();
     }
   }));
 
-  // ── Send Audio to Backend ───────────────────────────────────────────────
-  const sendAudioToBackend = useCallback(async (audioBlob) => {
+  const sendTextToBackend = useCallback(async (transcript) => {
     if (!isActiveRef.current) return;
     setState("thinking");
+    console.log("[ShunaVoice] VAD silence triggered. Sending text to backend:", transcript);
 
     try {
-      const formData = new FormData();
-      formData.append("file", audioBlob, `audio-input.${audioBlob.type.split("/")[1] || "webm"}`);
-      formData.append("user_id", userId || "");
-      formData.append("user_email", userEmail || "");
-      formData.append("mode", mode || "friendly");
-      formData.append("companion", companion || "siya");
+      const payload = {
+        text: transcript,
+        user_id: propsRef.current.userId || "",
+        user_email: propsRef.current.userEmail || "",
+        mode: propsRef.current.mode || "friendly",
+        companion: propsRef.current.companion || "siya"
+      };
 
+      console.log("[ShunaVoice] Fetching:", `${API_BASE}/api/v1/shuna/voice-chat`);
       const response = await fetch(`${API_BASE}/api/v1/shuna/voice-chat`, {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        throw new Error(`Server error: status ${response.status}`);
-      }
-
+      console.log("[ShunaVoice] Response status:", response.status);
+      if (!response.ok) throw new Error(`Server error: status ${response.status}`);
       const result = await response.json();
-      
-      // Always feed transcripts to parent chat UI if available
-      if (onTranscriptsReceived && (result.user_transcript || result.ai_transcript)) {
-        onTranscriptsReceived(result.user_transcript, result.ai_transcript);
+      console.log("[ShunaVoice] Result data:", result);
+
+      if (propsRef.current.onTranscriptsReceived && (result.user_transcript || result.ai_transcript)) {
+        propsRef.current.onTranscriptsReceived(result.user_transcript, result.ai_transcript);
       }
 
-      if (!result.success) {
-        console.error("Voice pipeline backend error details:", {
-          stt: result.error_stt,
-          llm: result.error_llm,
-          tts: result.error_tts
-        });
-        throw new Error(`Invalid server response: STT=${result.error_stt || 'ok'}, LLM=${result.error_llm || 'ok'}`);
-      }
-
-      // If text response succeeded but TTS failed, fall back to silent chat mode gracefully
-      if (!result.audio) {
-        console.warn("TTS failed but transcripts were received. Transitioning to idle.");
+      if (!result.success || !result.audio) {
+        console.warn("[ShunaVoice] TTS failed or empty audio returned.");
         setState("idle");
-        setTimeout(() => {
-          if (isActiveRef.current) {
-            startRecording();
-          }
-        }, 1500);
+        setTimeout(() => { if (isActiveRef.current) startRecognition(); }, 1500);
         return;
       }
 
-
-
-      // Decode base64 audio response to blob URL
+      console.log("[ShunaVoice] Decoding audio...");
       const audioBytes = atob(result.audio);
       const array = new Uint8Array(audioBytes.length);
-      for (let i = 0; i < audioBytes.length; i++) {
-        array[i] = audioBytes.charCodeAt(i);
-      }
+      for (let i = 0; i < audioBytes.length; i++) array[i] = audioBytes.charCodeAt(i);
       const playBlob = new Blob([array], { type: "audio/wav" });
       const playUrl = URL.createObjectURL(playBlob);
 
-      // Play back audio response
       const audio = new Audio(playUrl);
       audioElementRef.current = audio;
-
-      audio.onplay = () => {
-        if (isMountedRef.current) setState("speaking");
+      audio.onplay = () => { 
+        console.log("[ShunaVoice] Audio playing...");
+        if (isMountedRef.current) setState("speaking"); 
       };
-
       audio.onended = () => {
+        console.log("[ShunaVoice] Audio playback ended.");
         URL.revokeObjectURL(playUrl);
-        if (isActiveRef.current) {
-          startRecording();
-        } else {
-          if (isMountedRef.current) setState("idle");
-        }
+        if (isActiveRef.current) startRecognition();
+        else if (isMountedRef.current) setState("idle");
       };
-
       audio.onerror = (e) => {
-        console.error("Audio playback error:", e);
+        console.error("[ShunaVoice] Audio element error:", e);
         URL.revokeObjectURL(playUrl);
-        if (isActiveRef.current) {
-          startRecording();
-        }
+        if (isActiveRef.current) startRecognition();
       };
 
       await audio.play();
-
     } catch (err) {
-      console.error("Failed to process voice pipeline:", err);
-      if (onError) onError(err.message || "Failed to process voice response");
+      console.error("[ShunaVoice] sendTextToBackend failed:", err);
+      if (propsRef.current.onError) propsRef.current.onError(err.message || "Failed to process voice response");
       if (isMountedRef.current) setState("error");
-
-      const isRateLimit = err.message?.includes("429") || err.message?.toLowerCase().includes("quota") || err.message?.toLowerCase().includes("rate limit");
-      if (isRateLimit) {
-        isActiveRef.current = false;
-        if (onStateChange) onStateChange("error");
-      } else {
-        // Auto-restart recording after 3s delay in case of transient error
-        setTimeout(() => {
-          if (isActiveRef.current) {
-            startRecording();
-          }
-        }, 3000);
-      }
+      setTimeout(() => { if (isActiveRef.current) startRecognition(); }, 3000);
     }
-  }, [userId, userEmail, mode, companion, onTranscriptsReceived, onError]);
+  }, []); // Empty dependencies: stabilized reference!
 
-  // ── Start Recording ─────────────────────────────────────────────────────
-  const startRecording = useCallback(async () => {
+  const startRecognition = useCallback(() => {
     cleanup();
     isActiveRef.current = true;
+    if (isMountedRef.current) setState("listening");
+    if (propsRef.current.onError) propsRef.current.onError("");
 
-    if (isMountedRef.current) {
-      setState("listening");
-      if (onError) onError("");
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      const err = "Web Speech API is not supported in this browser.";
+      console.error(err);
+      if (propsRef.current.onError) propsRef.current.onError(err);
+      if (isMountedRef.current) setState("error");
+      return;
     }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "hi-IN";
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognitionRef.current = recognition;
+
+    recognition.onresult = (event) => {
+      if (!isActiveRef.current) return;
+      
+      let accumulated = "";
+      for (let i = 0; i < event.results.length; ++i) {
+        accumulated += event.results[i][0].transcript;
+      }
+      
+      if (accumulated.trim()) {
+        console.log("[ShunaVoice] Speech heard (accumulated):", accumulated);
+        transcriptRef.current = accumulated;
+        
+        if (silenceTimerRef.current) {
+          console.log("[ShunaVoice] Resetting VAD timer (speaking...)");
+          clearTimeout(silenceTimerRef.current);
+        }
+        
+        silenceTimerRef.current = setTimeout(() => {
+          if (isActiveRef.current && transcriptRef.current.trim() && stateRef.current === "listening") {
+            const finalSpeech = transcriptRef.current;
+            
+            setState("thinking");
+            
+            if (recognitionRef.current) {
+              console.log("[ShunaVoice] VAD silence threshold met. Aborting session...");
+              const rec = recognitionRef.current;
+              rec.onresult = null;
+              rec.onerror = null;
+              rec.onend = null;
+              try { rec.abort(); } catch (e) {}
+              recognitionRef.current = null;
+            }
+            
+            transcriptRef.current = "";
+            if (silenceTimerRef.current) {
+              clearTimeout(silenceTimerRef.current);
+              silenceTimerRef.current = null;
+            }
+            
+            sendTextToBackend(finalSpeech);
+          }
+        }, 900);
+      }
+    };
+
+    recognition.onerror = (event) => {
+      // Suppress red console errors for expected events
+      if (event.error !== 'no-speech' && event.error !== 'aborted') {
+        console.error("[ShunaVoice] Speech recognition error:", event.error);
+        if (propsRef.current.onError) propsRef.current.onError(event.error);
+        if (isMountedRef.current) setState("error");
+      } else {
+        console.log("[ShunaVoice] Speech recognition event:", event.error);
+      }
+      
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'language-not-supported') {
+        hasFatalErrorRef.current = true;
+      }
+    };
+
+    recognition.onend = () => {
+      if (hasFatalErrorRef.current) {
+        console.warn("[ShunaVoice] Speech recognition stopped due to fatal error.");
+        return;
+      }
+
+      if (isActiveRef.current && isMountedRef.current) {
+        setTimeout(() => { 
+          if (isActiveRef.current && (stateRef.current === "listening" || stateRef.current === "error")) {
+            startRecognition(); 
+          }
+        }, 1000);
+      }
+    };
 
     try {
-      chunksRef.current = [];
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        if (!isActiveRef.current) return;
-        const audioBlob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType });
-        await sendAudioToBackend(audioBlob);
-      };
-
-      // Web Audio RMS volume check for silence VAD detection
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      const audioCtx = new AudioContextClass();
-      audioContextRef.current = audioCtx;
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 512;
-      source.connect(analyser);
-      analyserRef.current = analyser;
-
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      let silenceStart = null;
-      let hasSpoken = false;
-
-      const checkSilence = () => {
-        if (!isActiveRef.current || mediaRecorder.state !== "recording") return;
-
-        analyser.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
-        }
-        const average = sum / bufferLength;
-
-        if (average > SPEECH_THRESHOLD) {
-          hasSpoken = true;
-          silenceStart = null;
-        } else if (hasSpoken) {
-          if (!silenceStart) {
-            silenceStart = Date.now();
-          } else if (Date.now() - silenceStart > SILENCE_TIMEOUT_MS) {
-            mediaRecorder.stop();
-            return;
-          }
-        }
-
-        silenceCheckFrameRef.current = requestAnimationFrame(checkSilence);
-      };
-
-      mediaRecorder.start();
-      silenceCheckFrameRef.current = requestAnimationFrame(checkSilence);
-
-    } catch (err) {
-      console.error("Failed to start voice capture:", err);
-      if (onError) onError(err.message || "Failed to start microphone capture");
-      if (isMountedRef.current) setState("error");
+      recognition.start();
+    } catch (e) {
+      console.error("Failed to start recognition:", e);
     }
-  }, [cleanup, onError, sendAudioToBackend]);
+  }, [cleanup, sendTextToBackend]); // Stabilized dependencies!
 
-  // Synchronize component state with isActive prop changes
+  // Sync state when active prop changes
   useEffect(() => {
     isActiveRef.current = isActive;
     if (isActive) {
-      startRecording();
+      hasFatalErrorRef.current = false;
+      startRecognition();
     } else {
       cleanup();
     }
-  }, [isActive, startRecording, cleanup]);
+  }, [isActive, startRecognition, cleanup]); // Only fires when isActive changes!
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      cleanup();
-    };
+    return () => cleanup();
   }, [cleanup]);
 
-  return null; // Headless component
+  return null;
 });
 
 export default ShunaVoiceChat;

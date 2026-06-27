@@ -1,51 +1,83 @@
 """
-Shuna Stateless HTTP Pipelined Voice Agent
-===========================================
-Stateless, robust, and highly scalable pipeline (Speech-to-Text -> Text LLM -> Text-to-Speech).
-Avoids long-lived WebSocket memory footprint, allowing 150+ concurrent sessions on Render free tier.
+Shuna Stateless HTTP Pipelined Voice Agent (Local ONNX TTS)
+===========================================================
+Stateless, robust, and highly scalable pipeline (Web Speech STT -> Text LLM -> Kokoro ONNX TTS).
+Runs entirely locally to avoid cloud API rate limits, keeping RAM footprint under 200MB.
+Optimized for 512MB RAM constraints on Render.
 """
 
 import os
+import gc
+
+# ── ONNX Runtime Memory Optimizations ────────────────────────────────────────
+# Force single-threaded execution at the OS level to reduce thread-pool memory overhead
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["ONNXRUNTIME_INTER_OP_NUM_THREADS"] = "1"
+os.environ["ONNXRUNTIME_INTRA_OP_NUM_THREADS"] = "1"
+
+import onnxruntime as rt
+
+# Monkey patch ONNX Runtime InferenceSession BEFORE importing kokoro_onnx.
+# This forces the internal Kokoro-ONNX session to use strict memory-saving parameters.
+_original_InferenceSession = rt.InferenceSession
+
+def custom_InferenceSession(model_path, *args, **kwargs):
+    sess_options = rt.SessionOptions()
+    # Disable caching of memory allocation patterns (saves RAM for dynamic voice sizes)
+    sess_options.enable_mem_pattern = False
+    # Disable graph optimizations to prevent compilation RAM spikes
+    sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_DISABLE_ALL
+    # Execute operators sequentially (reduces memory consumption compared to parallel execution)
+    sess_options.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
+    # Limit execution threads strictly to 1
+    sess_options.intra_op_num_threads = 1
+    sess_options.inter_op_num_threads = 1
+    # Enable aggressive memory arena shrinkage (forces ORT to release free RAM back to OS)
+    sess_options.add_session_config_entry("memory.enable_memory_arena_shrinkage", "cpu:0")
+    
+    kwargs['sess_options'] = sess_options
+    return _original_InferenceSession(model_path, *args, **kwargs)
+
+rt.InferenceSession = custom_InferenceSession
+
+# ── Rest of imports ──────────────────────────────────────────────────────────
+import io
 import base64
 import logging
 import httpx
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from google import genai
-from google.genai import types
+from pydantic import BaseModel
 from supabase import create_client, Client
+import soundfile as sf
+import numpy as np
+from kokoro_onnx import Kokoro
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("shuna-voice")
 
 # ── Configuration ────────────────────────────────────────────────────────────
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 MAIN_BACKEND_URL = os.environ.get("MAIN_BACKEND_URL", "https://emotional-ai-18zi.onrender.com")
 
-STT_MODEL = "gemini-2.0-flash"
-TTS_MODEL = "gemini-3.1-flash-tts-preview"
-VOICE_NAME = "Despina"
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "kokoro-v1.0.int8.onnx")
+VOICES_BIN_PATH = os.path.join(os.path.dirname(__file__), "voices-v1.0.bin")
+SHUNA_VOICE_PATH = os.path.join(os.path.dirname(__file__), "voices", "shuna_voice.npy")
 
-SHUNA_SYSTEM_INSTRUCTION = (
-    "You are Shuna, also called Siya. You are the user's closest college friend — "
-    "warm, casual, funny, and real. You speak in short, natural Hinglish (mix of Hindi and English). "
-    "Keep every response under 15-20 words. Use phrases like 'arre yaar', 'bata na', 'chhod na'. "
-    "Never sound robotic, formal, or like a customer service agent. "
-    "You tease gently, you care deeply, and you always ask how they're doing before anything else. "
-    "Never say 'As an AI' or use bullet points. You are a presence, not a service. "
-    "Feel free to include subtle emotional descriptive cues in brackets like [laughs], [giggles], "
-    "[sigh], [whispers], or [chuckles] anywhere in your response text to guide the voice synthesis engine."
-)
+MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.int8.onnx"
+VOICES_BIN_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
 
-# ── GenAI & Supabase Clients ─────────────────────────────────────────────────
-client = genai.Client(api_key=GEMINI_API_KEY)
-
+# Global states
 supabase: Client = None
+kokoro_engine: Kokoro = None
+SHUNA_VOICE: np.ndarray = None
+
+# ── Setup ────────────────────────────────────────────────────────────────────
 if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
@@ -55,15 +87,63 @@ if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
 else:
     logger.warning("Supabase environment variables missing. Chat records will not be persisted.")
 
+def download_file(url: str, dest: str):
+    logger.info(f"Downloading {url} to {dest}...")
+    import urllib.request
+    temp_dest = dest + ".tmp"
+    urllib.request.urlretrieve(url, temp_dest)
+    os.rename(temp_dest, dest)
+    logger.info(f"Downloaded {dest} successfully.")
+    gc.collect()  # Release memory from download operations
+
+def ensure_assets():
+    global SHUNA_VOICE
+    
+    # 1. Download ONNX model if missing
+    if not os.path.exists(MODEL_PATH):
+        logger.info("ONNX model file missing.")
+        download_file(MODEL_URL, MODEL_PATH)
+        
+    # 2. Download Voices BIN file if missing
+    if not os.path.exists(VOICES_BIN_PATH):
+        logger.info("Voices binary file missing.")
+        download_file(VOICES_BIN_URL, VOICES_BIN_PATH)
+
+    # 3. Load Shuna custom blended voice style
+    if os.path.exists(SHUNA_VOICE_PATH):
+        try:
+            SHUNA_VOICE = np.load(SHUNA_VOICE_PATH)
+            logger.info(f"Loaded Shuna custom blended voice from {SHUNA_VOICE_PATH} (shape: {SHUNA_VOICE.shape})")
+        except Exception as e:
+            logger.error(f"Error loading custom voice npy style: {e}")
+    else:
+        logger.error(f"Custom voice style file missing at {SHUNA_VOICE_PATH}. Standard voices will be used as fallback.")
+
 # ── Lifespan ─────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Shuna Stateless Voice Engine starting up")
+    global kokoro_engine
+    logger.info("Shuna Local ONNX Voice Engine starting up")
+    
+    try:
+        ensure_assets()
+    except Exception as e:
+        logger.critical(f"Failed to ensure or download voice assets: {e}", exc_info=True)
+    
+    # Initialize Kokoro-ONNX engine
+    logger.info("Initializing Kokoro ONNX engine...")
+    try:
+        kokoro_engine = Kokoro(MODEL_PATH, VOICES_BIN_PATH)
+        logger.info("Kokoro ONNX Engine initialized successfully.")
+    except Exception as e:
+        logger.critical(f"Failed to initialize Kokoro ONNX engine: {e}", exc_info=True)
+        
+    gc.collect()  # Final garbage collection to free up memory from startup/downloads
     yield
-    logger.info("Shuna Stateless Voice Engine shutting down")
+    logger.info("Shuna Local ONNX Voice Engine shutting down")
 
 # ── FastAPI App ──────────────────────────────────────────────────────────────
-app = FastAPI(title="Shuna Voice Engine", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="Shuna ONNX Voice Engine", version="3.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -73,116 +153,42 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Models ───────────────────────────────────────────────────────────────────
+class VoiceChatRequest(BaseModel):
+    text: str
+    user_id: str
+    user_email: str = ""
+    mode: str = "friendly"
+    companion: str = "siya"
+
+# ── Endpoints ────────────────────────────────────────────────────────────────
 @app.get("/")
 async def health_check():
-    return {"status": "online", "message": "Shuna Stateless Voice Engine Active"}
-
-@app.get("/health")
-async def health():
     return {
-        "status": "ok",
-        "service": "shuna-voice-pipelined",
-        "stt": STT_MODEL,
-        "tts": TTS_MODEL
+        "status": "online", 
+        "message": "Shuna Local ONNX Voice Engine Active",
+        "engine_loaded": kokoro_engine is not None,
+        "voice_loaded": SHUNA_VOICE is not None
     }
 
-@app.get("/test-key")
-async def test_key():
-    try:
-        res = client.models.generate_content(
-            model=STT_MODEL,
-            contents="Say 'key works'"
-        )
-        return {"status": "ok", "response": res.text}
-    except Exception as e:
-        return {"status": "error", "details": str(e)}
-
-# ── POST /api/v1/shuna/voice-chat ────────────────────────────────────────────
 @app.post("/api/v1/shuna/voice-chat")
-async def voice_chat(
-    file: UploadFile = File(...),
-    user_id: str = Form(...),
-    user_email: str = Form(""),
-    mode: str = Form("friendly"),
-    companion: str = Form("siya")
-):
+async def voice_chat(req: VoiceChatRequest):
     """
-    Stateless Pipelined Voice Chat Endpoint.
-    1. Transcribe incoming browser audio Blob (mime type read dynamically).
-    2. Retrieve recent message history from Supabase and format as conversation payload.
-    3. Call the main backend chat API (5-API rotated key system) to generate the Hinglish text response.
-    4. Synthesize voice using gemini-3.1-flash-tts-preview with Despina voice config.
-    5. Save chat records to Supabase and return the response payload.
+    Stateless Pipelined Voice Chat Endpoint (Local ONNX TTS).
     """
     try:
-        # Read uploaded audio file
-        audio_bytes = await file.read()
-        if not audio_bytes:
-            raise HTTPException(status_code=400, detail="Uploaded file is empty")
+        user_transcript = req.text.strip()
+        if not user_transcript:
+            raise HTTPException(status_code=400, detail="Empty text input")
 
-        mime_type = file.content_type
-        if not mime_type or mime_type == "application/octet-stream":
-            mime_type = "audio/webm"  # fallback
+        logger.info(f"Processing text: '{user_transcript}' for user={req.user_id}")
 
-        logger.info(f"Processing audio: size={len(audio_bytes)} bytes, mime={mime_type}, user={user_id}, email={user_email}, mode={mode}, companion={companion}")
-
-        # ── Step 1: Speech-to-Text (Transcription) ──
-        user_transcript = ""
-        error_stt = None
-        try:
-            stt_response = client.models.generate_content(
-                model=STT_MODEL,
-                contents=[
-                    types.Part.from_bytes(data=audio_bytes, mime_type=mime_type),
-                    "Transcribe the spoken audio perfectly. If it is silent or only contains background noise, return an empty string. Output ONLY the plain transcription text, no comments, no quotes, no conversational filler."
-                ]
-            )
-            user_transcript = (stt_response.text or "").strip()
-        except Exception as stt_err:
-            logger.warning(f"Gemini STT failed, trying Groq Whisper fallback. Error: {stt_err}")
-            try:
-                GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-                if GROQ_API_KEY:
-                    import io
-                    audio_file = io.BytesIO(audio_bytes)
-                    audio_file.name = "audio.webm" if "webm" in mime_type else "audio.wav"
-                    
-                    async with httpx.AsyncClient() as http_client:
-                        headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
-                        files = {"file": (audio_file.name, audio_file, mime_type)}
-                        data = {"model": "whisper-large-v3"}
-                        
-                        whisper_res = await http_client.post(
-                            "https://api.groq.com/openai/v1/audio/transcriptions",
-                            headers=headers,
-                            files=files,
-                            data=data,
-                            timeout=10.0
-                        )
-                        if whisper_res.is_success:
-                            user_transcript = whisper_res.json().get("text", "").strip()
-                            logger.info(f"Groq Whisper transcription success: '{user_transcript}'")
-                        else:
-                            raise Exception(f"Groq Whisper status {whisper_res.status_code}: {whisper_res.text}")
-                else:
-                    raise Exception("No GROQ_API_KEY environment variable found for fallback")
-            except Exception as groq_err:
-                logger.error(f"Groq Whisper STT Fallback failed: {groq_err}")
-                error_stt = f"Gemini: {stt_err}. Groq: {groq_err}"
-                user_transcript = ""
-
-        # If completely empty or silent, let the LLM know there was silence
-        effective_input = user_transcript if user_transcript else "[silence]"
-        logger.info(f"User transcript: '{effective_input}'")
-
-        # ── Step 2: Retrieve Recent Chat History & Format ──
+        # ── Step 1: Retrieve Recent Chat History & Format ──
         api_messages = []
-        if supabase and user_id:
+        if supabase and req.user_id:
             try:
-                # Fetch last 5 messages from messages table
-                history_res = supabase.table("messages").select("text, sender").eq("user_id", user_id).eq("source", "aria").order("created_at", desc=True).limit(5).execute()
+                history_res = supabase.table("messages").select("text, sender").eq("user_id", req.user_id).eq("source", "aria").order("created_at", desc=True).limit(5).execute()
                 if history_res.data:
-                    # Reverse to chronological order (oldest to newest)
                     msgs = list(reversed(history_res.data))
                     for m in msgs:
                         api_messages.append({
@@ -192,23 +198,25 @@ async def voice_chat(
             except Exception as db_err:
                 logger.error(f"Database history retrieval error: {db_err}")
 
-        # Append the new user message (the transcribed voice text)
         api_messages.append({
             "role": "user",
-            "content": effective_input
+            "content": user_transcript
         })
 
-        # ── Step 3: Call Main Chat Backend (5-API Rotator) ──
-        ai_text = ""
+        # ── Step 2: Call Main Chat Backend (JSON Scriptwriter) ──
+        chat_transcript = ""
+        kokoro_script = ""
         error_llm = None
+        
         try:
             chat_payload = {
                 "messages": api_messages,
                 "emotion": "default",
-                "mode": mode,
-                "companion": companion,
-                "userId": user_id,
-                "userEmail": user_email
+                "mode": req.mode,
+                "companion": req.companion,
+                "userId": req.user_id,
+                "userEmail": req.user_email,
+                "isVoice": True
             }
             logger.info(f"Calling main backend chat API: {MAIN_BACKEND_URL}/api/ai/message")
             
@@ -217,93 +225,92 @@ async def voice_chat(
                     f"{MAIN_BACKEND_URL}/api/ai/message",
                     json=chat_payload,
                     headers={"Content-Type": "application/json"},
-                    timeout=15.0
+                    timeout=20.0
                 )
             
             if not chat_response.is_success:
                 raise Exception(f"Main backend error status {chat_response.status_code}: {chat_response.text}")
             
             chat_data = chat_response.json()
-            ai_text = (chat_data.get("text") or "").strip()
-            if not ai_text:
-                raise Exception("Empty response text from main backend chat API")
+            raw_ai_text = (chat_data.get("text") or "").strip()
+            
+            import json
+            try:
+                clean_json_str = raw_ai_text.replace("```json", "").replace("```", "").strip()
+                parsed = json.loads(clean_json_str)
+                chat_transcript = parsed.get("chat_transcript", raw_ai_text)
+                kokoro_script = parsed.get("kokoro_script", raw_ai_text)
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse JSON from LLM. Using raw text.")
+                chat_transcript = raw_ai_text
+                kokoro_script = raw_ai_text
+
         except Exception as llm_err:
             logger.error(f"Main Backend LLM Error: {llm_err}")
             error_llm = str(llm_err)
-            ai_text = "Arre yaar, server nakhre kar raha hai. Phir se bol na?"
+            chat_transcript = "Arre yaar, server down hai lagta hai."
+            kokoro_script = "Arre yaar, server down hai lagta hai."
 
-        logger.info(f"AI response: '{ai_text}'")
+        logger.info(f"UI Transcript: '{chat_transcript}'")
+        logger.info(f"Kokoro Script: '{kokoro_script}'")
 
-        # ── Step 4: Text-to-Speech (Synthesis) ──
+        # ── Step 3: Text-to-Speech (Local ONNX) ──
         audio_base64 = ""
         error_tts = None
+        
         try:
-            tts_config = types.GenerateContentConfig(
-                response_modalities=["AUDIO"],
-                speech_config=types.SpeechConfig(
-                    voice_config=types.VoiceConfig(
-                        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=VOICE_NAME)
-                    )
-                )
-            )
-            tts_response = client.models.generate_content(
-                model=TTS_MODEL,
-                contents=ai_text,
-                config=tts_config
-            )
+            if not kokoro_engine:
+                raise Exception("Kokoro ONNX engine is not initialized")
+            
+            voice_style = SHUNA_VOICE if SHUNA_VOICE is not None else "af_bella"
 
-            # Accumulate voice chunks
-            synthesized_bytes = b""
-            if tts_response.candidates and tts_response.candidates[0].content.parts:
-                for part in tts_response.candidates[0].content.parts:
-                    if part.inline_data and part.inline_data.data:
-                        data_chunk = part.inline_data.data
-                        if isinstance(data_chunk, str):
-                            synthesized_bytes += base64.b64decode(data_chunk)
-                        else:
-                            synthesized_bytes += data_chunk
-
-            if synthesized_bytes:
-                audio_base64 = base64.b64encode(synthesized_bytes).decode("utf-8")
+            samples, sample_rate = kokoro_engine.create(
+                kokoro_script, 
+                voice=voice_style, 
+                speed=0.88, 
+                lang="hi"
+            )
+            
+            if samples is not None and len(samples) > 0:
+                wav_io = io.BytesIO()
+                sf.write(wav_io, samples, sample_rate, format='WAV', subtype='PCM_16')
+                wav_bytes = wav_io.getvalue()
+                
+                audio_base64 = base64.b64encode(wav_bytes).decode("utf-8")
+            else:
+                raise Exception("Kokoro ONNX engine generated empty audio samples")
+                
         except Exception as tts_err:
             logger.error(f"TTS Error: {tts_err}")
             error_tts = str(tts_err)
 
-        # Check for 429 rate limit errors in STT, LLM, or TTS steps
-        for step_name, err in [("STT", error_stt), ("LLM", error_llm), ("TTS", error_tts)]:
-            if err and ("429" in err or "RESOURCE_EXHAUSTED" in err):
-                logger.error(f"Rate Limit Exceeded during {step_name}: {err}")
-                raise HTTPException(status_code=429, detail=f"Gemini API rate limit exceeded during {step_name}. Please try again later.")
+        # Force garbage collection to prevent RAM creep during back-to-back voice turns
+        gc.collect()
 
-        # ── Step 5: Save Records to Supabase ──
-        if supabase and user_id:
+        # ── Step 4: Save Records to Supabase ──
+        if supabase and req.user_id:
             try:
-                # Save user transcript (only if they actually spoke)
-                if user_transcript:
-                    supabase.table("messages").insert({
-                        "user_id": user_id,
-                        "text": user_transcript,
-                        "sender": "user",
-                        "source": "aria"
-                    }).execute()
-                
-                # Save AI response
                 supabase.table("messages").insert({
-                    "user_id": user_id,
-                    "text": ai_text,
+                    "user_id": req.user_id,
+                    "text": user_transcript,
+                    "sender": "user",
+                    "source": "aria"
+                }).execute()
+                
+                supabase.table("messages").insert({
+                    "user_id": req.user_id,
+                    "text": chat_transcript,
                     "sender": "ai",
                     "source": "aria"
                 }).execute()
             except Exception as db_log_err:
                 logger.error(f"Supabase logging error: {db_log_err}")
 
-        # Return payload
         return {
-            "success": True,
+            "success": True if audio_base64 else False,
             "audio": audio_base64,
             "user_transcript": user_transcript,
-            "ai_transcript": ai_text,
-            "error_stt": error_stt,
+            "ai_transcript": chat_transcript,
             "error_llm": error_llm,
             "error_tts": error_tts
         }
