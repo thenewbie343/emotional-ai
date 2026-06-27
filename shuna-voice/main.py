@@ -243,6 +243,7 @@ async def voice_chat(req: VoiceChatRequest):
         
         try:
             chat_payload = {
+                "text": req.text,
                 "messages": api_messages,
                 "emotion": "default",
                 "mode": req.mode,
