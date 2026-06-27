@@ -15,6 +15,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["ONNXRUNTIME_INTER_OP_NUM_THREADS"] = "1"
 os.environ["ONNXRUNTIME_INTRA_OP_NUM_THREADS"] = "1"
+os.environ["ONNX_PROVIDER"] = "CPUExecutionProvider"
 
 import onnxruntime as rt
 
