@@ -309,6 +309,20 @@ async def voice_chat(req: VoiceChatRequest):
             if not kokoro_engine:
                 raise Exception("Kokoro ONNX engine is not initialized")
             
+            # Truncate text to prevent Render 100-second HTTP timeout on free tier
+            import re
+            sentences = re.split(r'([.!?])', kokoro_script)
+            truncated_script = ""
+            for i in range(0, len(sentences)-1, 2):
+                truncated_script += sentences[i] + sentences[i+1]
+                if len(truncated_script) > 80:
+                    break
+            if not truncated_script:
+                truncated_script = kokoro_script[:80]
+                
+            kokoro_script = truncated_script.strip()
+            logger.info(f"Truncated Kokoro Script (for speed): '{kokoro_script}'")
+
             voice_style = SHUNA_VOICE if SHUNA_VOICE is not None else "af_bella"
 
             samples, sample_rate = kokoro_engine.create(
