@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 supabase>=2.30.0
 httpx
-kokoro-onnx
-onnxruntime
+kokoro-onnx>=0.4.0
+onnxruntime>=1.20.1,<1.22.0
 soundfile
 numpy<2.0.0
