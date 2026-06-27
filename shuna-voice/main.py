@@ -273,7 +273,7 @@ async def voice_chat(req: VoiceChatRequest):
                 kokoro_script, 
                 voice=voice_style, 
                 speed=0.88, 
-                lang="hi"
+                lang="en-us"
             )
             
             if samples is not None and len(samples) > 0:
