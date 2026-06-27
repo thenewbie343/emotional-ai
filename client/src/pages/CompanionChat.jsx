@@ -532,6 +532,9 @@ export default function CompanionChat({ session }) {
           ref={voiceChatRef}
           isActive={isVoiceEnabled} 
           userId={session?.user?.id}
+          userEmail={session?.user?.email}
+          mode={activeMode}
+          companion="siya"
           onStateChange={setVoiceState}
           onError={setVoiceError}
           onTranscriptsReceived={handleVoiceTranscripts}

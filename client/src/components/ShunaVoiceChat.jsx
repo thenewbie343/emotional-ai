@@ -12,7 +12,7 @@ const API_BASE = "https://shuna-backend.onrender.com";
 const SPEECH_THRESHOLD = 12;      // Average volume threshold to detect voice activity
 const SILENCE_TIMEOUT_MS = 1600;   // Auto-stop recording after 1.6s of silence
 
-const ShunaVoiceChat = forwardRef(({ isActive, userId, onStateChange, onError, onTranscriptsReceived }, ref) => {
+const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companion, onStateChange, onError, onTranscriptsReceived }, ref) => {
   const [state, setState] = useState("idle"); // idle | connecting | listening | thinking | speaking | error
 
   // Audio/Recording refs
@@ -99,6 +99,9 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, onStateChange, onError, o
       const formData = new FormData();
       formData.append("file", audioBlob, `audio-input.${audioBlob.type.split("/")[1] || "webm"}`);
       formData.append("user_id", userId || "");
+      formData.append("user_email", userEmail || "");
+      formData.append("mode", mode || "friendly");
+      formData.append("companion", companion || "siya");
 
       const response = await fetch(`${API_BASE}/api/v1/shuna/voice-chat`, {
         method: "POST",
@@ -177,7 +180,7 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, onStateChange, onError, o
         }, 3000);
       }
     }
-  }, [userId, onTranscriptsReceived, onError]);
+  }, [userId, userEmail, mode, companion, onTranscriptsReceived, onError]);
 
   // ── Start Recording ─────────────────────────────────────────────────────
   const startRecording = useCallback(async () => {
