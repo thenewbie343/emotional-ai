@@ -86,6 +86,17 @@ async def health():
         "tts": TTS_MODEL
     }
 
+@app.get("/test-key")
+async def test_key():
+    try:
+        res = client.models.generate_content(
+            model=STT_MODEL,
+            contents="Say 'key works'"
+        )
+        return {"status": "ok", "response": res.text}
+    except Exception as e:
+        return {"status": "error", "details": str(e)}
+
 # ── POST /api/v1/shuna/voice-chat ────────────────────────────────────────────
 @app.post("/api/v1/shuna/voice-chat")
 async def voice_chat(
