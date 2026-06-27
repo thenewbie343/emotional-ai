@@ -155,8 +155,28 @@ Example JSON:
       }
     }
 
+    let finalResponseText = responseText;
+    
+    // If voice mode, forcefully extract only the JSON block to ensure downstream TTS doesn't crash
+    if (isVoice) {
+      try {
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          finalResponseText = jsonMatch[0];
+        } else {
+          // Fallback: manually construct a safe JSON if the LLM completely failed
+          finalResponseText = JSON.stringify({
+            chat_transcript: responseText.replace(/```json/g, "").replace(/```/g, "").trim(),
+            kokoro_script: responseText.replace(/```json/g, "").replace(/```/g, "").trim()
+          });
+        }
+      } catch (e) {
+        console.error("Failed to forcefully extract JSON:", e);
+      }
+    }
+
     res.json({
-      text: responseText,
+      text: finalResponseText,
       emotion: detectedEmotion, 
     });
 
