@@ -1,5 +1,5 @@
-fastapi==0.115.12
-uvicorn[standard]==0.34.3
-google-genai==1.14.0
-supabase==2.5.0
-python-multipart==0.0.9
+fastapi
+uvicorn[standard]
+google-genai>=1.14.0
+supabase>=2.30.0
+python-multipart
