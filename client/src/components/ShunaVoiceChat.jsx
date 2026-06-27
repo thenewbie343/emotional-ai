@@ -9,6 +9,7 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
   
   const recognitionRef = useRef(null);
   const audioElementRef = useRef(null);
+  const hasFatalErrorRef = useRef(false);
 
   useEffect(() => {
     if (onStateChange) onStateChange(state);
@@ -35,6 +36,7 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
   useImperativeHandle(ref, () => ({
     connect() {
       isActiveRef.current = true;
+      hasFatalErrorRef.current = false;
       startRecognition();
     },
     cleanup() {
@@ -133,6 +135,12 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error:", event.error);
+      
+      // Stop the restart loop for fatal errors (blocked permissions or unsupported features)
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'language-not-supported') {
+        hasFatalErrorRef.current = true;
+      }
+
       if (event.error !== 'no-speech' && event.error !== 'aborted') {
         if (onError) onError(event.error);
         if (isMountedRef.current) setState("error");
@@ -140,6 +148,12 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
     };
 
     recognition.onend = () => {
+      // Do not restart if we hit a fatal error (like blocked microphone)
+      if (hasFatalErrorRef.current) {
+        console.warn("Speech recognition stopped due to fatal error.");
+        return;
+      }
+
       // The ONLY place where restart is handled to avoid double-start race conditions
       if (isActiveRef.current && isMountedRef.current) {
         setTimeout(() => { 
@@ -168,8 +182,12 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
   // Sync state when active prop changes
   useEffect(() => {
     isActiveRef.current = isActive;
-    if (isActive) startRecognition();
-    else cleanup();
+    if (isActive) {
+      hasFatalErrorRef.current = false;
+      startRecognition();
+    } else {
+      cleanup();
+    }
   }, [isActive, startRecognition, cleanup]);
 
   // Cleanup on unmount
