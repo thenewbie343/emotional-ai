@@ -113,18 +113,34 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
       }
 
       const result = await response.json();
-      if (!result.success || !result.audio) {
+      
+      // Always feed transcripts to parent chat UI if available
+      if (onTranscriptsReceived && (result.user_transcript || result.ai_transcript)) {
+        onTranscriptsReceived(result.user_transcript, result.ai_transcript);
+      }
+
+      if (!result.success) {
         console.error("Voice pipeline backend error details:", {
           stt: result.error_stt,
           llm: result.error_llm,
           tts: result.error_tts
         });
-        throw new Error(`Invalid server voice response: STT=${result.error_stt || 'ok'}, LLM=${result.error_llm || 'ok'}, TTS=${result.error_tts || 'ok'}`);
+        throw new Error(`Invalid server response: STT=${result.error_stt || 'ok'}, LLM=${result.error_llm || 'ok'}`);
       }
 
-      if (onTranscriptsReceived) {
-        onTranscriptsReceived(result.user_transcript, result.ai_transcript);
+      // If text response succeeded but TTS failed, fall back to silent chat mode gracefully
+      if (!result.audio) {
+        console.warn("TTS failed but transcripts were received. Transitioning to idle.");
+        setState("idle");
+        setTimeout(() => {
+          if (isActiveRef.current) {
+            startRecording();
+          }
+        }, 1500);
+        return;
       }
+
+
 
       // Decode base64 audio response to blob URL
       const audioBytes = atob(result.audio);

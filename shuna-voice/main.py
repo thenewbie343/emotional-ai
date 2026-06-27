@@ -139,9 +139,37 @@ async def voice_chat(
             )
             user_transcript = (stt_response.text or "").strip()
         except Exception as stt_err:
-            logger.error(f"STT Error: {stt_err}")
-            error_stt = str(stt_err)
-            user_transcript = ""
+            logger.warning(f"Gemini STT failed, trying Groq Whisper fallback. Error: {stt_err}")
+            try:
+                GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+                if GROQ_API_KEY:
+                    import io
+                    audio_file = io.BytesIO(audio_bytes)
+                    audio_file.name = "audio.webm" if "webm" in mime_type else "audio.wav"
+                    
+                    async with httpx.AsyncClient() as http_client:
+                        headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+                        files = {"file": (audio_file.name, audio_file, mime_type)}
+                        data = {"model": "whisper-large-v3"}
+                        
+                        whisper_res = await http_client.post(
+                            "https://api.groq.com/openai/v1/audio/transcriptions",
+                            headers=headers,
+                            files=files,
+                            data=data,
+                            timeout=10.0
+                        )
+                        if whisper_res.is_success:
+                            user_transcript = whisper_res.json().get("text", "").strip()
+                            logger.info(f"Groq Whisper transcription success: '{user_transcript}'")
+                        else:
+                            raise Exception(f"Groq Whisper status {whisper_res.status_code}: {whisper_res.text}")
+                else:
+                    raise Exception("No GROQ_API_KEY environment variable found for fallback")
+            except Exception as groq_err:
+                logger.error(f"Groq Whisper STT Fallback failed: {groq_err}")
+                error_stt = f"Gemini: {stt_err}. Groq: {groq_err}"
+                user_transcript = ""
 
         # If completely empty or silent, let the LLM know there was silence
         effective_input = user_transcript if user_transcript else "[silence]"
