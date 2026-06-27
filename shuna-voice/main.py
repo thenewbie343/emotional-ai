@@ -124,10 +124,18 @@ async def lifespan(app: FastAPI):
         # Create a blank Kokoro instance without calling __init__
         kokoro_engine = object.__new__(Kokoro)
 
-        # 1. Load ONNX model session
+        # 1. Load ONNX model session with strict memory limits
+        sess_options = rt.SessionOptions()
+        sess_options.enable_mem_pattern = False
+        sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_DISABLE_ALL
+        sess_options.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
+        sess_options.intra_op_num_threads = 1
+        sess_options.inter_op_num_threads = 1
+        sess_options.add_session_config_entry("memory.enable_memory_arena_shrinkage", "cpu:0")
+        
         providers = ["CPUExecutionProvider"]
-        kokoro_engine.sess = rt.InferenceSession(MODEL_PATH, providers=providers)
-        logger.info("ONNX InferenceSession created successfully.")
+        kokoro_engine.sess = rt.InferenceSession(MODEL_PATH, sess_options=sess_options, providers=providers)
+        logger.info("ONNX InferenceSession created successfully with strict memory options.")
 
         # 2. Load voices as numpy array (NOT json)
         kokoro_engine.voices = np.load(VOICES_BIN_PATH, allow_pickle=True)
