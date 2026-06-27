@@ -10,6 +10,8 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
   const recognitionRef = useRef(null);
   const audioElementRef = useRef(null);
   const hasFatalErrorRef = useRef(false);
+  const transcriptRef = useRef("");
+  const silenceTimerRef = useRef(null);
 
   useEffect(() => {
     if (onStateChange) onStateChange(state);
@@ -22,6 +24,11 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
 
   const cleanup = useCallback(() => {
     isActiveRef.current = false;
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    transcriptRef.current = "";
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
       recognitionRef.current = null;
@@ -73,6 +80,7 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
       if (!result.success || !result.audio) {
         console.warn("TTS failed or empty audio. Transitioning to idle.");
         setState("idle");
+        // Safe delayed restart handled via connection reset
         setTimeout(() => { if (isActiveRef.current) startRecognition(); }, 1500);
         return;
       }
@@ -121,22 +129,37 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
 
     const recognition = new SpeechRecognition();
     recognition.lang = "hi-IN";
-    recognition.interimResults = false;
+    recognition.interimResults = true; // Enabled for custom silence detection
     recognition.maxAlternatives = 1;
     recognitionRef.current = recognition;
 
     recognition.onresult = (event) => {
       if (!isActiveRef.current) return;
-      const transcript = event.results[0][0].transcript;
-      if (transcript.trim()) {
-        sendTextToBackend(transcript);
+      
+      let accumulated = "";
+      for (let i = 0; i < event.results.length; ++i) {
+        accumulated += event.results[i][0].transcript;
+      }
+      
+      if (accumulated.trim()) {
+        transcriptRef.current = accumulated;
+        
+        // Reset the silence timer on every new speech fragment heard
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        
+        silenceTimerRef.current = setTimeout(() => {
+          if (isActiveRef.current && transcriptRef.current.trim() && stateRef.current === "listening") {
+            const finalSpeech = transcriptRef.current;
+            cleanup(); // Terminate recognition immediately to prevent double-start
+            sendTextToBackend(finalSpeech);
+          }
+        }, 900); // 900ms of silence triggers the send action
       }
     };
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error:", event.error);
       
-      // Stop the restart loop for fatal errors (blocked permissions or unsupported features)
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'language-not-supported') {
         hasFatalErrorRef.current = true;
       }
@@ -148,17 +171,13 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
     };
 
     recognition.onend = () => {
-      // Do not restart if we hit a fatal error (like blocked microphone)
       if (hasFatalErrorRef.current) {
         console.warn("Speech recognition stopped due to fatal error.");
         return;
       }
 
-      // The ONLY place where restart is handled to avoid double-start race conditions
       if (isActiveRef.current && isMountedRef.current) {
         setTimeout(() => { 
-          // Restart only if we are still active and in listening or error state
-          // (We do not restart if we transitioned to thinking or speaking)
           if (isActiveRef.current && (stateRef.current === "listening" || stateRef.current === "error")) {
             startRecognition(); 
           }
