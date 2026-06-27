@@ -42,7 +42,12 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
     }
     transcriptRef.current = "";
     if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
+      const rec = recognitionRef.current;
+      rec.onstart = null;
+      rec.onresult = null;
+      rec.onerror = null;
+      rec.onend = null;
+      try { rec.abort(); } catch (e) {}
       recognitionRef.current = null;
     }
     if (audioElementRef.current) {
@@ -180,7 +185,12 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
             
             if (recognitionRef.current) {
               console.log("[ShunaVoice] VAD silence threshold met. Aborting session...");
-              try { recognitionRef.current.abort(); } catch (e) {}
+              const rec = recognitionRef.current;
+              rec.onresult = null;
+              rec.onerror = null;
+              rec.onend = null;
+              try { rec.abort(); } catch (e) {}
+              recognitionRef.current = null;
             }
             
             transcriptRef.current = "";
