@@ -256,6 +256,8 @@ async def voice_chat(
             "error_tts": error_tts
         }
 
+    except HTTPException as http_ex:
+        raise http_ex
     except Exception as e:
         logger.error(f"Internal endpoint error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server voice processing error")
