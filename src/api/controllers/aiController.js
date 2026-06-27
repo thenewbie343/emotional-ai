@@ -126,7 +126,9 @@ exports.processMessage = async (req, res) => {
     }
 
     if (isVoice) {
-      systemPrompt += `\n\nIMPORTANT: Since this is a voice chat, you MUST return your response as a strict JSON object with EXACTLY two keys:
+      systemPrompt += `\n\nIMPORTANT: Since this is a voice chat, you MUST return your response as a strict JSON object with EXACTLY two keys.
+CRITICAL: DO NOT add ANY conversational text before or after the JSON block. Your entire response must be just the JSON block starting with '{' and ending with '}'.
+
 1. "chat_transcript": Your standard response in natural Hinglish.
 2. "kokoro_script": A phonetic script for the Kokoro TTS engine. For this script:
    - Use ONLY the English (Latin) alphabet. NEVER use Hindi script (Devanagari).
