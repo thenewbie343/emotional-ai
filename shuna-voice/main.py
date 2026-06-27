@@ -119,16 +119,19 @@ def ensure_assets():
     else:
         logger.error(f"Custom voice style file missing at {SHUNA_VOICE_PATH}. Standard voices will be used as fallback.")
 
+init_error = None
+
 # ── Lifespan ─────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global kokoro_engine
+    global kokoro_engine, init_error
     logger.info("Shuna Local ONNX Voice Engine starting up")
     
     try:
         ensure_assets()
     except Exception as e:
         logger.critical(f"Failed to ensure or download voice assets: {e}", exc_info=True)
+        init_error = str(e)
     
     # Initialize Kokoro-ONNX engine
     logger.info("Initializing Kokoro ONNX engine...")
@@ -137,6 +140,7 @@ async def lifespan(app: FastAPI):
         logger.info("Kokoro ONNX Engine initialized successfully.")
     except Exception as e:
         logger.critical(f"Failed to initialize Kokoro ONNX engine: {e}", exc_info=True)
+        init_error = str(e)
         
     gc.collect()  # Final garbage collection to free up memory from startup/downloads
     yield
@@ -168,7 +172,8 @@ async def health_check():
         "status": "online", 
         "message": "Shuna Local ONNX Voice Engine Active",
         "engine_loaded": kokoro_engine is not None,
-        "voice_loaded": SHUNA_VOICE is not None
+        "voice_loaded": SHUNA_VOICE is not None,
+        "init_error": init_error
     }
 
 @app.post("/api/v1/shuna/voice-chat")
