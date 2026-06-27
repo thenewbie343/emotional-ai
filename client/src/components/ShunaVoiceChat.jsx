@@ -164,12 +164,18 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, onStateChange, onError, o
       if (onError) onError(err.message || "Failed to process voice response");
       if (isMountedRef.current) setState("error");
 
-      // Auto-restart recording after 3s delay in case of transient error
-      setTimeout(() => {
-        if (isActiveRef.current) {
-          startRecording();
-        }
-      }, 3000);
+      const isRateLimit = err.message?.includes("429") || err.message?.toLowerCase().includes("quota") || err.message?.toLowerCase().includes("rate limit");
+      if (isRateLimit) {
+        isActiveRef.current = false;
+        if (onStateChange) onStateChange("error");
+      } else {
+        // Auto-restart recording after 3s delay in case of transient error
+        setTimeout(() => {
+          if (isActiveRef.current) {
+            startRecording();
+          }
+        }, 3000);
+      }
     }
   }, [userId, onTranscriptsReceived, onError]);
 
