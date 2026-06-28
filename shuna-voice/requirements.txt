@@ -6,4 +6,4 @@ kokoro-onnx
 onnxruntime
 soundfile
 numpy<2.0.0
-gTTS>=2.5.1
+edge-tts>=7.2.0
