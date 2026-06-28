@@ -126,8 +126,8 @@ async def lifespan(app: FastAPI):
 
         # 1. Load ONNX model session with strict memory limits
         sess_options = rt.SessionOptions()
-        sess_options.enable_mem_pattern = True
-        sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_BASIC
+        sess_options.enable_mem_pattern = True  # Allow memory pattern caching for faster inference
+        sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
         sess_options.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
         sess_options.intra_op_num_threads = 1
         sess_options.inter_op_num_threads = 1
@@ -309,54 +309,30 @@ async def voice_chat(req: VoiceChatRequest):
             if not kokoro_engine:
                 raise Exception("Kokoro ONNX engine is not initialized")
             
-            # Truncate text to prevent Render 100-second HTTP timeout on free tier
+            # Truncate to 1 sentence / max 60 chars to fit in Render free tier timeout
             import re as re_mod
-            sentences = re_mod.split(r'([.!?।])', kokoro_script)
-            truncated_script = ""
-            for i in range(0, len(sentences)-1, 2):
-                truncated_script += sentences[i] + sentences[i+1]
-                if len(truncated_script) > 120:
-                    break
-            if not truncated_script:
-                truncated_script = kokoro_script[:120]
-                
-            tts_text = truncated_script.strip()
-            logger.info(f"TTS text (truncated): '{tts_text}'")
+            first_sentence = re_mod.split(r'[.!?,;]', kokoro_script)[0].strip()
+            tts_text = first_sentence[:60] if first_sentence else kokoro_script[:60]
+            logger.info(f"TTS text: '{tts_text}'")
 
             voice_style = SHUNA_VOICE if SHUNA_VOICE is not None else "af_heart"
             
-            # Try Hindi lang first (for Devanagari text), fallback to en-us
-            samples = None
-            sample_rate = 24000
-            for lang_code in ["hi", "en-us"]:
-                try:
-                    logger.info(f"Attempting TTS with lang='{lang_code}'...")
-                    samples, sample_rate = kokoro_engine.create(
-                        tts_text, 
-                        voice=voice_style, 
-                        speed=0.88, 
-                        lang=lang_code
-                    )
-                    if samples is not None and len(samples) > 0:
-                        logger.info(f"TTS succeeded with lang='{lang_code}', samples={len(samples)}")
-                        break
-                    else:
-                        logger.warning(f"TTS with lang='{lang_code}' returned empty samples, trying next...")
-                        samples = None
-                except Exception as lang_err:
-                    import traceback
-                    logger.warning(f"TTS with lang='{lang_code}' failed: {lang_err}\n{traceback.format_exc()}")
-                    samples = None
-                    continue
+            # kokoro-onnx only supports: en-us, en-gb, fr-fr, ja, ko, cmn (NO Hindi)
+            samples, sample_rate = kokoro_engine.create(
+                tts_text, 
+                voice=voice_style, 
+                speed=0.85, 
+                lang="en-us"
+            )
             
             if samples is not None and len(samples) > 0:
                 wav_io = io.BytesIO()
                 sf.write(wav_io, samples, sample_rate, format='WAV', subtype='PCM_16')
                 wav_bytes = wav_io.getvalue()
                 audio_base64 = base64.b64encode(wav_bytes).decode("utf-8")
-                logger.info(f"Audio generated: {len(audio_base64)} base64 chars")
+                logger.info(f"TTS OK: {len(samples)} samples, {len(audio_base64)} b64 chars")
             else:
-                raise Exception("All TTS language attempts failed or produced empty audio")
+                raise Exception("TTS returned empty audio")
                 
         except Exception as tts_err:
             import traceback

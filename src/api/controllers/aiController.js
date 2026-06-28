@@ -128,20 +128,19 @@ exports.processMessage = async (req, res) => {
     if (isVoice) {
       systemPrompt += `\n\nIMPORTANT: Since this is a voice chat, you MUST return your response as a strict JSON object with EXACTLY two keys.
 CRITICAL: DO NOT add ANY conversational text before or after the JSON block. Your entire response must be just the JSON block starting with '{' and ending with '}'.
-Keep your response SHORT — max 2 sentences.
+Keep your response to EXACTLY 1 short sentence (max 15 words).
 
-1. "chat_transcript": Your standard response in natural Hinglish (Latin script).
-2. "kokoro_script": A script optimized for Kokoro TTS Hindi voice. For this script:
-   - Write ALL Hindi words in Devanagari script (e.g., "क्या कर रहा है", NOT "kya kar raha hai").
-   - Keep English words in Latin alphabet (e.g., "project", "hello", "seriously").
-   - This mixing is critical: Devanagari triggers correct Hindi phonemes, Latin triggers English phonemes.
-   - Use commas (,) liberally to force natural pauses and slow down the prosody.
-   - Remove ALL emotional tags like [laughs] or [sigh].
+1. "chat_transcript": Your response in natural Hinglish (Latin script).
+2. "kokoro_script": The SAME text optimized for English TTS pronunciation:
+   - Use ONLY Latin alphabet (no Devanagari, no Hindi script).
+   - Spell Hindi words phonetically so an English TTS reads them correctly.
+   - Add commas after every 2-3 words to create natural pauses.
+   - Remove ALL tags like [laughs], [sigh], emojis.
    
-Example JSON:
+Example:
 {
-  "chat_transcript": "Arre yaar, seriously? Tune abhi tak kaam shuru nahi kiya?",
-  "kokoro_script": "अरे यार, seriously? तूने, अभी तक, काम शुरू नहीं किया?"
+  "chat_transcript": "Arre yaar, kya kar raha hai tu?",
+  "kokoro_script": "Arre yaar, kya kar raha hai tu?"
 }`;
     }
 
