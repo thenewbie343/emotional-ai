@@ -126,8 +126,8 @@ async def lifespan(app: FastAPI):
 
         # 1. Load ONNX model session with strict memory limits
         sess_options = rt.SessionOptions()
-        sess_options.enable_mem_pattern = False
-        sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_DISABLE_ALL
+        sess_options.enable_mem_pattern = True
+        sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_BASIC
         sess_options.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
         sess_options.intra_op_num_threads = 1
         sess_options.inter_op_num_threads = 1
@@ -311,14 +311,14 @@ async def voice_chat(req: VoiceChatRequest):
             
             # Truncate text to prevent Render 100-second HTTP timeout on free tier
             import re
-            sentences = re.split(r'([.!?])', kokoro_script)
+            sentences = re.split(r'([.!?।])', kokoro_script)
             truncated_script = ""
             for i in range(0, len(sentences)-1, 2):
                 truncated_script += sentences[i] + sentences[i+1]
-                if len(truncated_script) > 80:
+                if len(truncated_script) > 150:
                     break
             if not truncated_script:
-                truncated_script = kokoro_script[:80]
+                truncated_script = kokoro_script[:150]
                 
             kokoro_script = truncated_script.strip()
             logger.info(f"Truncated Kokoro Script (for speed): '{kokoro_script}'")
@@ -329,7 +329,7 @@ async def voice_chat(req: VoiceChatRequest):
                 kokoro_script, 
                 voice=voice_style, 
                 speed=0.88, 
-                lang="en-us"
+                lang="hi"
             )
             
             if samples is not None and len(samples) > 0:
