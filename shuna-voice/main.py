@@ -124,18 +124,32 @@ async def lifespan(app: FastAPI):
         # Create a blank Kokoro instance without calling __init__
         kokoro_engine = object.__new__(Kokoro)
 
-        # 1. Load ONNX model session
+        # 1. Load ONNX model session with strict memory limits
+        sess_options = rt.SessionOptions()
+        sess_options.enable_mem_pattern = True
+        sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_BASIC
+        sess_options.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
+        sess_options.intra_op_num_threads = 1
+        sess_options.inter_op_num_threads = 1
+        sess_options.add_session_config_entry("memory.enable_memory_arena_shrinkage", "cpu:0")
+        
         providers = ["CPUExecutionProvider"]
-        kokoro_engine.sess = rt.InferenceSession(MODEL_PATH, providers=providers)
-        logger.info("ONNX InferenceSession created successfully.")
+        kokoro_engine.sess = rt.InferenceSession(MODEL_PATH, sess_options=sess_options, providers=providers)
+        logger.info("ONNX InferenceSession created successfully with strict memory options.")
 
         # 2. Load voices as numpy array (NOT json)
-        kokoro_engine.voices = np.load(VOICES_BIN_PATH, allow_pickle=True).item()
-        logger.info(f"Loaded voices: {type(kokoro_engine.voices)}, keys={list(kokoro_engine.voices.keys())[:5] if isinstance(kokoro_engine.voices, dict) else 'ndarray'}")
+        kokoro_engine.voices = np.load(VOICES_BIN_PATH, allow_pickle=True)
+        logger.info(f"Loaded voices: type={type(kokoro_engine.voices)}")
 
-        # 3. Initialize tokenizer
+        # 3. Initialize tokenizer (handle different API versions)
         kokoro_engine.config = KoKoroConfig(MODEL_PATH, VOICES_BIN_PATH)
-        kokoro_engine.tokenizer = Tokenizer(None, vocab={})
+        try:
+            kokoro_engine.tokenizer = Tokenizer(None, vocab={})
+        except TypeError:
+            try:
+                kokoro_engine.tokenizer = Tokenizer(None)
+            except TypeError:
+                kokoro_engine.tokenizer = Tokenizer()
         
         logger.info("Kokoro ONNX Engine initialized successfully (manual).")
     except Exception as e:
@@ -237,6 +251,7 @@ async def voice_chat(req: VoiceChatRequest):
         
         try:
             chat_payload = {
+                "text": req.text,
                 "messages": api_messages,
                 "emotion": "default",
                 "mode": req.mode,
@@ -294,13 +309,27 @@ async def voice_chat(req: VoiceChatRequest):
             if not kokoro_engine:
                 raise Exception("Kokoro ONNX engine is not initialized")
             
+            # Truncate text to prevent Render 100-second HTTP timeout on free tier
+            import re
+            sentences = re.split(r'([.!?।])', kokoro_script)
+            truncated_script = ""
+            for i in range(0, len(sentences)-1, 2):
+                truncated_script += sentences[i] + sentences[i+1]
+                if len(truncated_script) > 150:
+                    break
+            if not truncated_script:
+                truncated_script = kokoro_script[:150]
+                
+            kokoro_script = truncated_script.strip()
+            logger.info(f"Truncated Kokoro Script (for speed): '{kokoro_script}'")
+
             voice_style = SHUNA_VOICE if SHUNA_VOICE is not None else "af_bella"
 
             samples, sample_rate = kokoro_engine.create(
                 kokoro_script, 
                 voice=voice_style, 
                 speed=0.88, 
-                lang="en-us"
+                lang="hi"
             )
             
             if samples is not None and len(samples) > 0:
