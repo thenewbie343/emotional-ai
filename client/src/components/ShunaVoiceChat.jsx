@@ -209,13 +209,27 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
       // Suppress red console errors for expected events
       if (event.error !== 'no-speech' && event.error !== 'aborted') {
         console.error("[ShunaVoice] Speech recognition error:", event.error);
-        if (propsRef.current.onError) propsRef.current.onError(event.error);
+        
+        // Map common errors to human-readable text
+        let displayError = event.error;
+        if (event.error === 'not-allowed') displayError = 'Microphone Denied';
+        if (event.error === 'network') displayError = 'Network/Browser Blocked';
+        if (event.error === 'language-not-supported') displayError = 'Lang Not Supported';
+        if (event.error === 'service-not-allowed') displayError = 'Service Not Allowed';
+        
+        if (propsRef.current.onError) propsRef.current.onError(displayError);
         if (isMountedRef.current) setState("error");
       } else {
         console.log("[ShunaVoice] Speech recognition event:", event.error);
       }
       
-      if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'language-not-supported') {
+      // Stop infinite restart loops if the browser/user blocked access
+      if (
+        event.error === 'not-allowed' || 
+        event.error === 'service-not-allowed' || 
+        event.error === 'language-not-supported' ||
+        event.error === 'network'
+      ) {
         hasFatalErrorRef.current = true;
       }
     };
