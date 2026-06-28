@@ -310,39 +310,57 @@ async def voice_chat(req: VoiceChatRequest):
                 raise Exception("Kokoro ONNX engine is not initialized")
             
             # Truncate text to prevent Render 100-second HTTP timeout on free tier
-            import re
-            sentences = re.split(r'([.!?।])', kokoro_script)
+            import re as re_mod
+            sentences = re_mod.split(r'([.!?।])', kokoro_script)
             truncated_script = ""
             for i in range(0, len(sentences)-1, 2):
                 truncated_script += sentences[i] + sentences[i+1]
-                if len(truncated_script) > 150:
+                if len(truncated_script) > 120:
                     break
             if not truncated_script:
-                truncated_script = kokoro_script[:150]
+                truncated_script = kokoro_script[:120]
                 
-            kokoro_script = truncated_script.strip()
-            logger.info(f"Truncated Kokoro Script (for speed): '{kokoro_script}'")
+            tts_text = truncated_script.strip()
+            logger.info(f"TTS text (truncated): '{tts_text}'")
 
-            voice_style = SHUNA_VOICE if SHUNA_VOICE is not None else "af_bella"
-
-            samples, sample_rate = kokoro_engine.create(
-                kokoro_script, 
-                voice=voice_style, 
-                speed=0.88, 
-                lang="hi"
-            )
+            voice_style = SHUNA_VOICE if SHUNA_VOICE is not None else "af_heart"
+            
+            # Try Hindi lang first (for Devanagari text), fallback to en-us
+            samples = None
+            sample_rate = 24000
+            for lang_code in ["hi", "en-us"]:
+                try:
+                    logger.info(f"Attempting TTS with lang='{lang_code}'...")
+                    samples, sample_rate = kokoro_engine.create(
+                        tts_text, 
+                        voice=voice_style, 
+                        speed=0.88, 
+                        lang=lang_code
+                    )
+                    if samples is not None and len(samples) > 0:
+                        logger.info(f"TTS succeeded with lang='{lang_code}', samples={len(samples)}")
+                        break
+                    else:
+                        logger.warning(f"TTS with lang='{lang_code}' returned empty samples, trying next...")
+                        samples = None
+                except Exception as lang_err:
+                    import traceback
+                    logger.warning(f"TTS with lang='{lang_code}' failed: {lang_err}\n{traceback.format_exc()}")
+                    samples = None
+                    continue
             
             if samples is not None and len(samples) > 0:
                 wav_io = io.BytesIO()
                 sf.write(wav_io, samples, sample_rate, format='WAV', subtype='PCM_16')
                 wav_bytes = wav_io.getvalue()
-                
                 audio_base64 = base64.b64encode(wav_bytes).decode("utf-8")
+                logger.info(f"Audio generated: {len(audio_base64)} base64 chars")
             else:
-                raise Exception("Kokoro ONNX engine generated empty audio samples")
+                raise Exception("All TTS language attempts failed or produced empty audio")
                 
         except Exception as tts_err:
-            logger.error(f"TTS Error: {tts_err}")
+            import traceback
+            logger.error(f"TTS Error: {tts_err}\n{traceback.format_exc()}")
             error_tts = str(tts_err)
 
         # Force garbage collection to prevent RAM creep during back-to-back voice turns
