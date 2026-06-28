@@ -100,67 +100,9 @@ init_error = None
 # ── Lifespan ─────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global kokoro_engine, init_error
-    logger.info("Shuna Local ONNX Voice Engine starting up")
-    
-    try:
-        ensure_assets()
-    except Exception as e:
-        logger.critical(f"Failed to ensure or download voice assets: {e}", exc_info=True)
-        init_error = str(e)
-    
-    # Initialize Kokoro-ONNX engine
-    # NOTE: We bypass Kokoro.__init__() because PyPI kokoro-onnx 0.5.0 was
-    # re-published with a breaking change that tries to json.load() the binary
-    # voices file. Instead, we manually construct the object using np.load()
-    # which is how the original working version loads voices-v1.0.bin.
-    logger.info("Initializing Kokoro ONNX engine (manual init)...")
-    try:
-        import onnxruntime as rt
-        from kokoro_onnx import Kokoro
-        from kokoro_onnx.config import KoKoroConfig, EspeakConfig
-        from kokoro_onnx.tokenizer import Tokenizer
-
-        # Create a blank Kokoro instance without calling __init__
-        kokoro_engine = object.__new__(Kokoro)
-
-        # 1. Load ONNX model session with strict memory limits
-        sess_options = rt.SessionOptions()
-        sess_options.enable_mem_pattern = True  # Allow memory pattern caching for faster inference
-        sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
-        sess_options.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
-        sess_options.intra_op_num_threads = 1
-        sess_options.inter_op_num_threads = 1
-        sess_options.add_session_config_entry("memory.enable_memory_arena_shrinkage", "cpu:0")
-        
-        providers = ["CPUExecutionProvider"]
-        kokoro_engine.sess = rt.InferenceSession(MODEL_PATH, sess_options=sess_options, providers=providers)
-        logger.info("ONNX InferenceSession created successfully with strict memory options.")
-
-        # 2. Load voices as numpy array (NOT json)
-        kokoro_engine.voices = np.load(VOICES_BIN_PATH, allow_pickle=True)
-        logger.info(f"Loaded voices: type={type(kokoro_engine.voices)}")
-
-        # 3. Initialize tokenizer (handle different API versions)
-        kokoro_engine.config = KoKoroConfig(MODEL_PATH, VOICES_BIN_PATH)
-        try:
-            kokoro_engine.tokenizer = Tokenizer(None, vocab={})
-        except TypeError:
-            try:
-                kokoro_engine.tokenizer = Tokenizer(None)
-            except TypeError:
-                kokoro_engine.tokenizer = Tokenizer()
-        
-        logger.info("Kokoro ONNX Engine initialized successfully (manual).")
-    except Exception as e:
-        import traceback
-        tb_str = traceback.format_exc()
-        logger.critical(f"Failed to initialize Kokoro ONNX engine: {e}\n{tb_str}", exc_info=True)
-        init_error = f"{e}\n{tb_str}"
-        
-    gc.collect()  # Final garbage collection to free up memory from startup/downloads
+    logger.info("Shuna Local Voice Engine starting up (using gTTS)")
     yield
-    logger.info("Shuna Local ONNX Voice Engine shutting down")
+    logger.info("Shuna Local Voice Engine shutting down")
 
 # ── FastAPI App ──────────────────────────────────────────────────────────────
 app = FastAPI(title="Shuna ONNX Voice Engine", version="3.2.0", lifespan=lifespan)
@@ -301,45 +243,36 @@ async def voice_chat(req: VoiceChatRequest):
         logger.info(f"UI Transcript: '{chat_transcript}'")
         logger.info(f"Kokoro Script: '{kokoro_script}'")
 
-        # ── Step 3: Text-to-Speech (Local ONNX) ──
+        # ── Step 3: Text-to-Speech (gTTS Fallback) ──
         audio_base64 = ""
         error_tts = None
         
         try:
-            if not kokoro_engine:
-                raise Exception("Kokoro ONNX engine is not initialized")
-            
-            # Truncate to 1 sentence / max 60 chars to fit in Render free tier timeout
-            import re as re_mod
-            first_sentence = re_mod.split(r'[.!?,;]', kokoro_script)[0].strip()
-            tts_text = first_sentence[:60] if first_sentence else kokoro_script[:60]
-            logger.info(f"TTS text: '{tts_text}'")
+            logger.info(f"TTS text: '{kokoro_script}'")
 
-            voice_style = SHUNA_VOICE if SHUNA_VOICE is not None else "af_heart"
+            # Use gTTS (Google TTS) which is native Hindi, instantaneous, and high quality
+            from gtts import gTTS
+            tts = gTTS(text=kokoro_script, lang='hi', slow=False)
             
-            # kokoro-onnx only supports: en-us, en-gb, fr-fr, ja, ko, cmn (NO Hindi)
-            samples, sample_rate = kokoro_engine.create(
-                tts_text, 
-                voice=voice_style, 
-                speed=0.85, 
-                lang="en-us"
-            )
+            import io
+            fp = io.BytesIO()
+            tts.write_to_fp(fp)
+            fp.seek(0)
+            mp3_bytes = fp.read()
             
-            if samples is not None and len(samples) > 0:
-                wav_io = io.BytesIO()
-                sf.write(wav_io, samples, sample_rate, format='WAV', subtype='PCM_16')
-                wav_bytes = wav_io.getvalue()
-                audio_base64 = base64.b64encode(wav_bytes).decode("utf-8")
-                logger.info(f"TTS OK: {len(samples)} samples, {len(audio_base64)} b64 chars")
+            if mp3_bytes and len(mp3_bytes) > 0:
+                import base64
+                audio_base64 = base64.b64encode(mp3_bytes).decode("utf-8")
+                logger.info(f"TTS OK: {len(mp3_bytes)} bytes, {len(audio_base64)} b64 chars")
             else:
-                raise Exception("TTS returned empty audio")
+                raise Exception("gTTS returned empty audio")
                 
         except Exception as tts_err:
             import traceback
             logger.error(f"TTS Error: {tts_err}\n{traceback.format_exc()}")
             error_tts = str(tts_err)
 
-        # Force garbage collection to prevent RAM creep during back-to-back voice turns
+        # Force garbage collection
         gc.collect()
 
         # ── Step 4: Save Records to Supabase ──
