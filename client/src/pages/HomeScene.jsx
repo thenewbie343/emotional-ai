@@ -125,7 +125,7 @@ export default function HomeScene() {
 
         {!hasEntered ? (
           <div onClick={handleEnter} style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', cursor: 'pointer', zIndex: 9999 }}>
-            <img src="/LOGO.png" alt="Antigravity Island Logo" style={{ maxWidth: '300px', maxHeight: '180px', marginBottom: '24px', objectFit: 'contain' }} />
+            <img src="/official-logo.png" alt="Antigravity Island Logo" style={{ maxWidth: '300px', maxHeight: '180px', marginBottom: '24px', objectFit: 'contain' }} />
             <h1 style={{ color: 'white', marginBottom: '20px', fontSize: '3rem', fontFamily: 'sans-serif', letterSpacing: '2px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>Antigravity Island</h1>
             <div style={{ padding: '15px 30px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '30px', color: 'white', fontWeight: '500', letterSpacing: '1px' }}>Click anywhere to enter</div>
           </div>
