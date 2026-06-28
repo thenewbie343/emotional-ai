@@ -250,22 +250,23 @@ async def voice_chat(req: VoiceChatRequest):
         try:
             logger.info(f"TTS text: '{kokoro_script}'")
 
-            # Use gTTS (Google TTS) which is native Hindi, instantaneous, and high quality
-            from gtts import gTTS
-            tts = gTTS(text=kokoro_script, lang='hi', slow=False)
+            # Use Edge TTS (Microsoft Neural TTS) for highly expressive, non-robotic voice
+            import edge_tts
+            voice = "hi-IN-SwaraNeural"  # High quality female Hindi neural voice
             
-            import io
-            fp = io.BytesIO()
-            tts.write_to_fp(fp)
-            fp.seek(0)
-            mp3_bytes = fp.read()
+            communicate = edge_tts.Communicate(kokoro_script, voice)
             
-            if mp3_bytes and len(mp3_bytes) > 0:
+            audio_data = b""
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    audio_data += chunk["data"]
+            
+            if audio_data and len(audio_data) > 0:
                 import base64
-                audio_base64 = base64.b64encode(mp3_bytes).decode("utf-8")
-                logger.info(f"TTS OK: {len(mp3_bytes)} bytes, {len(audio_base64)} b64 chars")
+                audio_base64 = base64.b64encode(audio_data).decode("utf-8")
+                logger.info(f"TTS OK: {len(audio_data)} bytes, {len(audio_base64)} b64 chars")
             else:
-                raise Exception("gTTS returned empty audio")
+                raise Exception("edge-tts returned empty audio")
                 
         except Exception as tts_err:
             import traceback
