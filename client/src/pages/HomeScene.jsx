@@ -52,7 +52,7 @@ export default function HomeScene() {
 
     const timer = setTimeout(() => {
       setLogoMoved(true)
-    }, 4000)
+    }, 3000)
 
     return () => {
       window.removeEventListener('resize', handleResize)
