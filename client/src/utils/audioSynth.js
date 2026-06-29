@@ -24,10 +24,10 @@ export const initAudio = async () => {
       await audioCtx.resume();
     }
     
-    // Fade in the master volume smoothly over 5 seconds
+    // Fade in the master volume smoothly over 7 seconds
     masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
     masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
-    masterGain.gain.linearRampToValueAtTime(currentVolume, audioCtx.currentTime + 5);
+    masterGain.gain.linearRampToValueAtTime(currentVolume, audioCtx.currentTime + 7);
     
     await startWind();
     startBirds();
