@@ -193,22 +193,22 @@ export default function HomeScene() {
         ) : (
           <>
             <div className="overlay" style={{ pointerEvents: 'none' }}>Drag to Rotate • Click the Blue Building to Enter</div>
-            <div style={{ position: 'absolute', bottom: '30px', left: '30px', display: 'flex', alignItems: 'center', gap: '15px', background: 'rgba(0,0,0,0.5)', padding: '12px 20px', borderRadius: '30px', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', zIndex: 9999 }}>
+            <div className="volume-control-container">
               <button 
+                className="volume-mute-btn"
                 onClick={toggleMute} 
-                style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.2rem', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 title={isMuted ? "Unmute Audio" : "Mute Audio"}
               >
                 {isMuted ? '🔇' : '🔊'}
               </button>
               <input 
+                className="custom-volume-slider"
                 type="range" 
                 min="0" 
                 max="1" 
                 step="0.01" 
                 value={isMuted ? 0 : volume} 
                 onChange={handleVolumeChange}
-                style={{ width: '100px', cursor: 'pointer', accentColor: '#7c5cfc' }}
                 title="Adjust Volume"
               />
             </div>
