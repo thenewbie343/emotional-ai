@@ -46,7 +46,7 @@ export default function HomeScene() {
 
     const timer = setTimeout(() => {
       setLogoMoved(true)
-    }, 10000)
+    }, 4000)
 
     return () => {
       window.removeEventListener('resize', handleResize)
@@ -140,7 +140,7 @@ export default function HomeScene() {
             transition: 'all 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
             ...(logoMoved ? {
               top: '24px',
-              left: '24px',
+              right: '24px',
               width: '60px',
               height: '60px',
               borderRadius: '50%',
