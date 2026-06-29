@@ -162,15 +162,15 @@ export default function HomeScene() {
           style={{
             position: 'absolute',
             zIndex: 10001,
-            transition: 'all 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'all 1.2s cubic-bezier(0.22, 1, 0.36, 1)', // Smooth ease-out
             ...(logoMoved ? {
               top: '24px',
-              right: '24px',
+              left: 'calc(100% - 84px)', // 100% minus 24px margin minus 60px width
               width: '60px',
               height: '60px',
               borderRadius: '50%',
               boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-              transform: 'none'
+              transform: 'translate(0%, 0%)'
             } : {
               top: '50%',
               left: '50%',
