@@ -25,6 +25,7 @@ export default function HomeScene() {
   const [showPicker, setShowPicker] = useState(false)
   const [userId, setUserId] = useState(null)
   const [showFireworks, setShowFireworks] = useState(false)
+  const [logoMoved, setLogoMoved] = useState(false)
   const portalRef = useRef()
 
   const { achievements } = useIslandAchievements(userId)
@@ -43,10 +44,15 @@ export default function HomeScene() {
     const handleTriggerFireworks = () => setShowFireworks(true)
     window.addEventListener('trigger-fireworks', handleTriggerFireworks)
 
+    const timer = setTimeout(() => {
+      setLogoMoved(true)
+    }, 10000)
+
     return () => {
       window.removeEventListener('resize', handleResize)
       window.removeEventListener('portal-click', handlePortalClick)
       window.removeEventListener('trigger-fireworks', handleTriggerFireworks)
+      clearTimeout(timer)
       stopAudio()
     }
   }, [])
@@ -59,6 +65,7 @@ export default function HomeScene() {
 
   const handleEnter = () => {
     setHasEntered(true)
+    setLogoMoved(true)
     initAudio()
   }
 
@@ -123,9 +130,38 @@ export default function HomeScene() {
           <Stats />
         </Canvas>
 
+        {/* Animated Logo */}
+        <img 
+          src="/logo.jpeg" 
+          alt="Antigravity Island Logo" 
+          style={{
+            position: 'absolute',
+            zIndex: 10001,
+            transition: 'all 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
+            ...(logoMoved ? {
+              top: '24px',
+              left: '24px',
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              transform: 'none'
+            } : {
+              top: '50%',
+              left: '50%',
+              width: '180px',
+              height: '180px',
+              borderRadius: '24px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              transform: 'translate(-50%, -140%)'
+            }),
+            objectFit: 'cover'
+          }}
+        />
+
         {!hasEntered ? (
           <div onClick={handleEnter} style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', cursor: 'pointer', zIndex: 9999 }}>
-            <img src="/logo.jpeg" alt="Antigravity Island Logo" style={{ maxWidth: '300px', maxHeight: '180px', marginBottom: '24px', objectFit: 'contain', borderRadius: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }} />
+            <div style={{ height: '180px', marginBottom: '24px' }} /> {/* Spacer for logo */}
             <h1 style={{ color: 'white', marginBottom: '20px', fontSize: '3rem', fontFamily: 'sans-serif', letterSpacing: '2px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>Antigravity Island</h1>
             <div style={{ padding: '15px 30px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '30px', color: 'white', fontWeight: '500', letterSpacing: '1px' }}>Click anywhere to enter</div>
           </div>
