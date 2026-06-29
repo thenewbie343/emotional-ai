@@ -14,7 +14,8 @@ export const initAudio = async () => {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       audioCtx = new AudioContext();
       masterGain = audioCtx.createGain();
-      masterGain.gain.value = currentVolume;
+      // Start volume at 0 for fade-in effect
+      masterGain.gain.value = 0;
       masterGain.connect(audioCtx.destination);
     }
     
@@ -23,9 +24,14 @@ export const initAudio = async () => {
       await audioCtx.resume();
     }
     
+    // Fade in the master volume smoothly over 5 seconds
+    masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+    masterGain.gain.linearRampToValueAtTime(currentVolume, audioCtx.currentTime + 5);
+    
     await startWind();
     startBirds();
-    console.log("Audio synthesis started successfully.");
+    console.log("Audio synthesis started successfully (fading in).");
   } catch (err) {
     console.error("Failed to initialize audio synthesis:", err);
   }
