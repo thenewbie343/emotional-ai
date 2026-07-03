@@ -352,7 +352,7 @@ export default function CompanionChat({ session }) {
   };
 
   const currentModeMeta = MODES.find(m => m.key === activeMode);
-  const isGlitching = characterAnim === 'arguing' || activeMode === 'unhinged';
+  const isGlitching = characterAnim === 'arguing';
   const orbitSpeed = currentModeMeta.baseSpeed;
 
   return (
@@ -365,7 +365,7 @@ export default function CompanionChat({ session }) {
         </div>
 
         {/* The Orbit Rings (UI controls orbiting Shuna) */}
-        <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
           {/* Inner Ring - Modes */}
           <OrbitalRing radius={150} duration={orbitSpeed} isGlitching={isGlitching}>
             {MODES.map((mode, i) => {
@@ -434,7 +434,7 @@ export default function CompanionChat({ session }) {
         </header>
 
         {/* Floating Messages - Non-obstructive display */}
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-full max-w-2xl max-h-[60vh] overflow-y-auto pointer-events-auto z-20 flex flex-col p-4 companion-scrollbar">
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-full max-w-2xl max-h-[60vh] overflow-y-auto pointer-events-none z-20 flex flex-col p-4 companion-scrollbar">
           <AnimatePresence initial={false}>
             {messages.map((msg) => (
               <motion.div 
@@ -444,7 +444,7 @@ export default function CompanionChat({ session }) {
                 exit={{ opacity: 0, scale: 0.95 }}
                 style={{ willChange: 'transform, opacity' }}
                 transition={{ duration: 0.2 }}
-                className={`mb-4 w-fit max-w-[80%] flex items-center gap-2 ${msg.sender === 'ai' ? 'self-start' : 'self-end'}`}
+                className={`pointer-events-auto mb-4 w-fit max-w-[80%] flex items-center gap-2 ${msg.sender === 'ai' ? 'self-start' : 'self-end'}`}
               >
                 {msg.sender === 'user' && (
                   <button 
