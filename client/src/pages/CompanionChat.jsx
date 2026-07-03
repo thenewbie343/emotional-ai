@@ -374,7 +374,7 @@ export default function CompanionChat({ session }) {
                 <OrbitalItem key={mode.key} angle={angle} radius={150} reverseDuration={orbitSpeed}>
                   <button 
                     onClick={() => setActiveMode(mode.key)}
-                    className={`w-12 h-12 rounded-full border flex items-center justify-center backdrop-blur-md transition-all ${activeMode === mode.key ? 'bg-white/20 border-white/50 shadow-[0_0_20px_rgba(255,255,255,0.5)]' : 'bg-black/40 border-white/10 hover:bg-white/10'}`}
+                    className={`pointer-events-auto w-12 h-12 rounded-full border flex items-center justify-center backdrop-blur-md transition-all ${activeMode === mode.key ? 'bg-white/20 border-white/50 shadow-[0_0_20px_rgba(255,255,255,0.5)]' : 'bg-black/40 border-white/10 hover:bg-white/10'}`}
                     title={mode.label}
                   >
                     <span className="material-symbols-outlined text-[20px]" style={{ color: mode.color }}>
@@ -397,7 +397,7 @@ export default function CompanionChat({ session }) {
               const angle = i * (360 / 4);
               return (
                 <OrbitalItem key={nav.to} angle={angle} radius={250} reverseDuration={orbitSpeed * 1.5}>
-                  <button onClick={() => navigate(nav.to)} className="w-14 h-14 rounded-full bg-black/60 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors backdrop-blur-md">
+                  <button onClick={() => navigate(nav.to)} className="pointer-events-auto w-14 h-14 rounded-full bg-black/60 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors backdrop-blur-md">
                     <span className="material-symbols-outlined text-gray-300 text-[24px]">{nav.icon}</span>
                   </button>
                 </OrbitalItem>
