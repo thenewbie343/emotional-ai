@@ -521,8 +521,17 @@ export default function SaiChat({ session }) {
                 ) : (
                   <div className={`sai-bubble ${msg.sender}`}>
                     <div className="sai-prose">
-                      <ReactMarkdown>{msg.text || ''}</ReactMarkdown>
+                      <ReactMarkdown>{msg.text?.replace('[SWITCH_TO_SHUNA]', '') || ''}</ReactMarkdown>
                     </div>
+                    {msg.text?.includes('[SWITCH_TO_SHUNA]') && (
+                      <button 
+                        onClick={() => navigate('/chat')}
+                        className="mt-3 px-4 py-2 bg-[#f50057]/20 text-[#f50057] border border-[#f50057]/40 rounded-full text-xs font-semibold uppercase tracking-widest flex items-center gap-2 hover:bg-[#f50057]/30 transition-colors"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>favorite</span>
+                        Switch to Shuna
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

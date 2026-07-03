@@ -456,7 +456,16 @@ export default function CompanionChat({ session }) {
                   </button>
                 )}
                 <div className={`p-4 rounded-3xl backdrop-blur-sm border ${msg.sender === 'ai' ? 'bg-black/60 border-fuchsia-500/20 text-gray-200' : 'bg-white/10 border-white/10 text-white'}`}>
-                  {msg.text}
+                  {msg.text?.replace('[SWITCH_TO_SAI]', '')}
+                  {msg.text?.includes('[SWITCH_TO_SAI]') && (
+                    <button 
+                      onClick={() => navigate('/sai/chat')}
+                      className="mt-3 px-4 py-2 bg-[#00d4ff]/20 text-[#00d4ff] border border-[#00d4ff]/40 rounded-full text-xs font-semibold uppercase tracking-widest flex items-center gap-2 hover:bg-[#00d4ff]/30 transition-colors"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>psychology</span>
+                      Switch to Sai
+                    </button>
+                  )}
                 </div>
                 {msg.sender === 'ai' && (
                   <button 
