@@ -365,7 +365,7 @@ export default function CompanionChat({ session }) {
         </div>
 
         {/* The Orbit Rings (UI controls orbiting Shuna) */}
-        <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none">
           {/* Inner Ring - Modes */}
           <OrbitalRing radius={150} duration={orbitSpeed} isGlitching={isGlitching}>
             {MODES.map((mode, i) => {
