@@ -223,12 +223,11 @@ const ShunaVoiceChat = forwardRef(({ isActive, userId, userEmail, mode, companio
         console.log("[ShunaVoice] Speech recognition event:", event.error);
       }
       
-      // Stop infinite restart loops if the browser/user blocked access
+      // Stop infinite restart loops if the browser/user blocked access explicitly
       if (
         event.error === 'not-allowed' || 
         event.error === 'service-not-allowed' || 
-        event.error === 'language-not-supported' ||
-        event.error === 'network'
+        event.error === 'language-not-supported'
       ) {
         hasFatalErrorRef.current = true;
       }
