@@ -29,10 +29,12 @@ export default function ProfileHub({ session }) {
   const { isPremium, loading: subLoading } = useSubscription(session);
   const [metadata, setMetadata] = useState(null);
   
-  // Local state for instant UI updates
   const [strictness, setStrictness] = useState(50);
   const [isMuted, setIsMuted] = useState(false);
   const [defaultCompanion, setDefaultCompanion] = useState('Shuna');
+  const [shunaMode, setShunaMode] = useState('Direct');
+  const [memoriesCount, setMemoriesCount] = useState(0);
+  const [wellnessAvg, setWellnessAvg] = useState('0.0');
   
   useEffect(() => {
     async function loadProfile() {
@@ -42,6 +44,17 @@ export default function ProfileHub({ session }) {
         setStrictness(user.user_metadata.sai_strictness || 50);
         setIsMuted(user.user_metadata.mute_tts || false);
         setDefaultCompanion(user.user_metadata.default_companion || 'Shuna');
+        setShunaMode(user.user_metadata.shuna_mode || 'Direct');
+      }
+      
+      if (user) {
+        const { count } = await supabase.from('sai_memories').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
+        setMemoriesCount(count || 0);
+
+        const { data: wellness } = await supabase.from('sai_wellness').select('avg_score').eq('user_id', user.id).order('date_key', { ascending: false }).limit(1);
+        if (wellness && wellness.length > 0) {
+          setWellnessAvg(Number(wellness[0].avg_score).toFixed(1));
+        }
       }
     }
     loadProfile();
@@ -65,6 +78,50 @@ export default function ProfileHub({ session }) {
 
   const saveStrictness = () => {
     updateMetadata({ sai_strictness: strictness });
+  };
+
+  const saveShunaMode = (mode) => {
+    setShunaMode(mode);
+    updateMetadata({ shuna_mode: mode });
+  };
+
+  const handleDownloadMind = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    await supabase.from('data_export_requests').insert([{ user_id: user.id, email: user.email }]);
+    alert("Export request sent! Our admin team will package your data and email it to you shortly.");
+  };
+
+  const handleClearHistory = async () => {
+    if (window.confirm("WARNING: This will permanently wipe your chat history from the active context window.")) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('messages').delete().eq('user_id', user.id);
+        alert("Chat history cleared.");
+      }
+    }
+  };
+
+  const handleChangePassword = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) {
+      await supabase.auth.resetPasswordForEmail(user.email);
+      alert("A password reset link has been sent to your email.");
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (window.confirm("CRITICAL WARNING: This action will permanently destroy your 3D Memory Island and delete all chat history. Are you absolutely sure?")) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('messages').delete().eq('user_id', user.id);
+        await supabase.from('sai_memories').delete().eq('user_id', user.id);
+        await supabase.auth.signOut();
+        navigate('/auth');
+        alert("Your data has been erased. Please cancel your subscription via the Billing portal if active.");
+      }
+    }
   };
 
   const handleSignOut = async () => {
@@ -162,14 +219,14 @@ export default function ProfileHub({ session }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 rounded-2xl bg-black/20 border border-white/5 flex flex-col items-center text-center">
                   <div className="w-16 h-16 rounded-full border-4 border-indigo-500/30 border-t-indigo-500 mb-3 flex items-center justify-center">
-                    <span className="text-xs font-bold text-indigo-300">AVG</span>
+                    <span className="text-xs font-bold text-indigo-300">{wellnessAvg}</span>
                   </div>
                   <span className="text-sm font-medium text-white/80">Wellness Gyro</span>
                   <span className="text-[10px] text-white/40 mt-1">Synced to Ring Data</span>
                 </div>
                 
                 <div className="p-4 rounded-2xl bg-black/20 border border-white/5 flex flex-col justify-center text-center">
-                  <span className="text-3xl font-light text-fuchsia-300 mb-1">0</span>
+                  <span className="text-3xl font-light text-fuchsia-300 mb-1">{memoriesCount}</span>
                   <span className="text-sm font-medium text-white/80">Memories Crystallized</span>
                   <span className="text-[10px] text-white/40 mt-1">In your 3D Island</span>
                 </div>
@@ -184,9 +241,22 @@ export default function ProfileHub({ session }) {
                   <span className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
                     <span className="material-symbols-outlined text-[14px]">lock_open</span> Resonance
                   </span>
-                  {!isPremium && (
+                  {!isPremium ? (
                     <span className="px-3 py-1 rounded-md bg-white/5 text-white/30 text-xs flex items-center gap-1 border border-white/10">
                       <span className="material-symbols-outlined text-[14px]">lock</span> Dream Vault
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
+                      <span className="material-symbols-outlined text-[14px]">lock_open</span> Dream Vault
+                    </span>
+                  )}
+                  {!isPremium ? (
+                    <span className="px-3 py-1 rounded-md bg-white/5 text-white/30 text-xs flex items-center gap-1 border border-white/10">
+                      <span className="material-symbols-outlined text-[14px]">lock</span> Time Capsules
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
+                      <span className="material-symbols-outlined text-[14px]">lock_open</span> Time Capsules
                     </span>
                   )}
                 </div>
@@ -206,8 +276,8 @@ export default function ProfileHub({ session }) {
                     <span className="text-sm font-medium text-fuchsia-200">Shuna's Behavior Mode</span>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="flex items-center gap-3 p-3 rounded-xl bg-fuchsia-500/10 border border-fuchsia-500/30 cursor-pointer">
-                      <input type="radio" name="shuna_mode" defaultChecked className="accent-fuchsia-500" />
+                    <label className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer ${shunaMode === 'Direct' ? 'bg-fuchsia-500/10 border border-fuchsia-500/30' : 'bg-black/20 border border-white/5'}`}>
+                      <input type="radio" name="shuna_mode" checked={shunaMode === 'Direct'} onChange={() => saveShunaMode('Direct')} className="accent-fuchsia-500" />
                       <div className="flex-1">
                         <div className="text-sm text-white">Direct (Default)</div>
                         <div className="text-[10px] text-white/50">Caring, empathetic, but grounded.</div>
@@ -221,13 +291,12 @@ export default function ProfileHub({ session }) {
                       </div>
                       <div className="absolute right-3 px-2 py-1 bg-red-500/20 text-red-300 text-[9px] font-bold tracking-widest rounded">COMING SOON</div>
                     </label>
-                    <label className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 opacity-50 cursor-not-allowed relative overflow-hidden group">
-                      <input type="radio" name="shuna_mode" disabled className="accent-fuchsia-500" />
+                    <label className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer ${shunaMode === 'Analytical' ? 'bg-fuchsia-500/10 border border-fuchsia-500/30' : 'bg-black/20 border border-white/5'}`}>
+                      <input type="radio" name="shuna_mode" checked={shunaMode === 'Analytical'} onChange={() => saveShunaMode('Analytical')} className="accent-fuchsia-500" />
                       <div className="flex-1">
                         <div className="text-sm text-white">Analytical</div>
                         <div className="text-[10px] text-white/50">Cold, logical therapy breakdowns.</div>
                       </div>
-                      <div className="absolute right-3 px-2 py-1 bg-gray-500/20 text-gray-300 text-[9px] font-bold tracking-widest rounded">COMING SOON</div>
                     </label>
                   </div>
                 </div>
@@ -330,7 +399,7 @@ export default function ProfileHub({ session }) {
                 </div>
 
                 <button 
-                  onClick={() => alert("Packaging your diary and memories into a secure JSON file. This will be sent to your email.")}
+                  onClick={handleDownloadMind}
                   className="w-full flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 hover:bg-white/5 transition-colors group"
                 >
                   <div className="flex items-center gap-3">
@@ -344,7 +413,7 @@ export default function ProfileHub({ session }) {
                 </button>
 
                 <button 
-                  onClick={() => alert("WARNING: This will permanently wipe your chat history from the active context window.")}
+                  onClick={handleClearHistory}
                   className="w-full flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 hover:bg-red-500/10 hover:border-red-500/30 transition-colors group"
                 >
                   <div className="flex items-center gap-3">
@@ -362,7 +431,10 @@ export default function ProfileHub({ session }) {
               </h3>
               
               <div className="space-y-3">
-                <button className="w-full py-3 rounded-xl bg-black/40 border border-white/5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                <button 
+                  onClick={handleChangePassword}
+                  className="w-full py-3 rounded-xl bg-black/40 border border-white/5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+                >
                   Change Password / Update Email
                 </button>
                 <button 
@@ -372,11 +444,7 @@ export default function ProfileHub({ session }) {
                   Sign Out
                 </button>
                 <button 
-                  onClick={() => {
-                    if (window.confirm("CRITICAL WARNING: This action will permanently destroy your 3D Memory Island, delete all chat history, and erase your token balance. Are you absolutely sure?")) {
-                      alert("Account deletion sequence initiated.");
-                    }
-                  }}
+                  onClick={handleDeleteAccount}
                   className="w-full py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-sm font-bold text-red-400 hover:bg-red-500 hover:text-white transition-all shadow-[0_0_15px_rgba(239,68,68,0)] hover:shadow-[0_0_15px_rgba(239,68,68,0.4)]"
                 >
                   DELETE ACCOUNT

@@ -32,7 +32,7 @@ const QUICK_ACCESS = [
   { to: '/sai/capsule',  icon: 'hourglass_empty', title: 'Time Capsules',desc: 'Messages to future self',      color: 'text-amber-400', bg: 'bg-amber-500/10' },
   { to: '/sai/goals',    icon: 'track_changes',   title: 'Goals',        desc: 'Daily challenges',             color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
   { to: '/profile',      icon: 'manage_accounts', title: 'Profile Hub',  desc: 'Command Center & Settings',    color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10' },
-  { to: '/',             icon: 'public',          title: '3D Island',    desc: 'Enter the open world',         color: 'text-rose-400', bg: 'bg-rose-500/10' },
+  { to: '/island',       icon: 'public',          title: '3D Island',    desc: 'Enter the open world',         color: 'text-rose-400', bg: 'bg-rose-500/10' },
 ]
 
 export default function SaiHub({ session }) {

@@ -196,6 +196,11 @@ export default function SaiChat({ session }) {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeRoadmap, setActiveRoadmap] = useState(null);
+  const [showRoadmap, setShowRoadmap] = useState(false);
+  const [activeQuiz, setActiveQuiz] = useState(null);
+  const [activeRoadmapSyllabus, setActiveRoadmapSyllabus] = useState(null);
+  const [strictness, setStrictness] = useState(50); // Default strictness
+
   const [roadmaps, setRoadmaps] = useState([]);
   const [activeQuizLesson, setActiveQuizLesson] = useState(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -209,6 +214,17 @@ export default function SaiChat({ session }) {
   };
 
   useEffect(() => { scrollToBottom(); }, [messages, isTyping]);
+
+  useEffect(() => {
+    const initData = async () => {
+      if (!userId) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.user_metadata?.sai_strictness) {
+        setStrictness(user.user_metadata.sai_strictness);
+      }
+    };
+    initData();
+  }, [userId]);
 
   const handleDeleteMessage = async (msgId) => {
     setMessages(prev => prev.filter(m => m.id !== msgId));
@@ -406,6 +422,7 @@ export default function SaiChat({ session }) {
           messages: [...messages, userMsg].filter(m => !m.type).slice(-10).map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text })),
           emotion: 'default',
           companion: 'sai',
+          strictness: strictness, // Pass strictness to backend
           userEmail: session?.user?.email,
           userId: userId
         }),

@@ -16,7 +16,7 @@ const QUICK_ACCESS = [
   { to: '/siya/wellness', icon: 'self_improvement',title: 'Wellness Radar',  desc: 'Emotional balance',       color: 'text-indigo-300',  bg: 'bg-indigo-500/20' },
   { to: '/siya/insights', icon: 'bubble_chart',    title: 'Resonance',       desc: 'Emotional insights',      color: 'text-violet-300',  bg: 'bg-violet-500/20' },
   { to: '/profile',       icon: 'manage_accounts', title: 'Profile & Settings',desc: 'Command Center',        color: 'text-amber-300',   bg: 'bg-amber-500/20' },
-  { to: '/',              icon: 'public',          title: '3D Island',       desc: 'Return to the world',     color: 'text-sky-300',     bg: 'bg-sky-500/20' },
+  { to: '/island',        icon: 'public',          title: '3D Island',       desc: 'Return to the world',     color: 'text-sky-300',     bg: 'bg-sky-500/20' },
 ];
 
 const springTransition = {

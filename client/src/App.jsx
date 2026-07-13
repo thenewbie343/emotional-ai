@@ -174,7 +174,14 @@ export default function App() {
         <CompanionToggle session={session} onToggle={() => setCompanionKey(k => k + 1)} />
         <Routes>
           <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/" />} />
-          <Route path="/" element={session ? <HomeScene /> : <Navigate to="/auth" />} />
+          <Route path="/" element={
+            session ? (
+              session.user.user_metadata?.default_companion === 'Sai' 
+                ? <Navigate to="/sai" /> 
+                : (session.user.user_metadata?.default_companion === 'Shuna' ? <Navigate to="/siya" /> : <Navigate to="/island" />)
+            ) : <Navigate to="/auth" />
+          } />
+          <Route path="/island" element={session ? <HomeScene /> : <Navigate to="/auth" />} />
           <Route path="/chat" element={session ? <CompanionChat key={`siya-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
 
           {/* SHUNA features */}
