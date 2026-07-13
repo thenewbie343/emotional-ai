@@ -1,4 +1,4 @@
-import { supabase } from '../api/supabaseClient';
+import { supabase } from '../lib/supabaseClient';
 import { NOTIFICATION_TEMPLATES } from '../data/notificationTemplates';
 
 class NotificationEngine {
