@@ -350,16 +350,19 @@ export default function AdminPanel({ session }) {
 
             {activeTab === 'exports' && (
               <div className="space-y-4">
-                <h2 className="text-xl font-bold text-amber-400 mb-4">Pending Export Requests</h2>
+                <h2 className="text-xl font-bold text-amber-400 mb-4">Pending Requests (Exports & Support)</h2>
                 {exportRequests.length === 0 ? (
                   <div className="text-white/50 text-center py-10 bg-black/40 rounded-xl border border-white/5">
-                    No export requests found.
+                    No requests found.
                   </div>
                 ) : (
                   exportRequests.map(req => (
                     <div key={req.id} className="p-4 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between">
                       <div>
                         <div className="font-semibold text-white">{req.email}</div>
+                        <div className="text-xs text-fuchsia-300 font-bold uppercase my-1">
+                          Type: {req.request_type === 'account_change' ? 'ACCOUNT CHANGE (Email/Pass)' : 'DATA EXPORT'}
+                        </div>
                         <div className="text-xs text-white/50">Requested: {new Date(req.created_at).toLocaleString()}</div>
                         <div className="text-xs mt-1">
                           Status: <span className={req.status === 'approved' ? 'text-emerald-400' : 'text-amber-400'}>{req.status.toUpperCase()}</span>
@@ -370,7 +373,7 @@ export default function AdminPanel({ session }) {
                           onClick={() => handleApproveExport(req.id, req.email)}
                           className="px-4 py-2 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white rounded-lg transition-colors font-medium text-sm border border-emerald-500/30"
                         >
-                          Approve & Email
+                          Mark Handled & Email
                         </button>
                       )}
                     </div>

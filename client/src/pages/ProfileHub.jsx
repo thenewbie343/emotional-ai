@@ -106,8 +106,15 @@ export default function ProfileHub({ session }) {
   const handleChangePassword = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.email) {
-      await supabase.auth.resetPasswordForEmail(user.email);
-      alert("A password reset link has been sent to your email.");
+      if (window.confirm("Send a manual request to the admin to change your email or password?")) {
+        await supabase.from('data_export_requests').insert({
+          user_id: user.id,
+          email: user.email,
+          status: 'pending',
+          request_type: 'account_change'
+        });
+        alert("Request sent. An admin will contact you shortly.");
+      }
     }
   };
 
@@ -204,6 +211,12 @@ export default function ProfileHub({ session }) {
                       >
                         Sai
                       </button>
+                      <button 
+                        onClick={() => { setDefaultCompanion('Island'); updateMetadata({ default_companion: 'Island' }); }}
+                        className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${defaultCompanion === 'Island' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white/70'}`}
+                      >
+                        3D Island
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -241,24 +254,21 @@ export default function ProfileHub({ session }) {
                   <span className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
                     <span className="material-symbols-outlined text-[14px]">lock_open</span> Resonance
                   </span>
-                  {!isPremium ? (
-                    <span className="px-3 py-1 rounded-md bg-white/5 text-white/30 text-xs flex items-center gap-1 border border-white/10">
-                      <span className="material-symbols-outlined text-[14px]">lock</span> Dream Vault
-                    </span>
-                  ) : (
-                    <span className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
-                      <span className="material-symbols-outlined text-[14px]">lock_open</span> Dream Vault
-                    </span>
-                  )}
-                  {!isPremium ? (
-                    <span className="px-3 py-1 rounded-md bg-white/5 text-white/30 text-xs flex items-center gap-1 border border-white/10">
-                      <span className="material-symbols-outlined text-[14px]">lock</span> Time Capsules
-                    </span>
-                  ) : (
-                    <span className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
-                      <span className="material-symbols-outlined text-[14px]">lock_open</span> Time Capsules
-                    </span>
-                  )}
+                  <span className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
+                    <span className="material-symbols-outlined text-[14px]">lock_open</span> Wellness Radar
+                  </span>
+                  {/* Sai Modules */}
+                  {['Study Hub', 'Memory Vault', 'Dream Vault', 'Time Capsules', 'Goals'].map((mod, i) => (
+                    isPremium ? (
+                      <span key={i} className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
+                        <span className="material-symbols-outlined text-[14px]">lock_open</span> {mod}
+                      </span>
+                    ) : (
+                      <span key={i} className="px-3 py-1 rounded-md bg-white/5 text-white/30 text-xs flex items-center gap-1 border border-white/10">
+                        <span className="material-symbols-outlined text-[14px]">lock</span> {mod}
+                      </span>
+                    )
+                  ))}
                 </div>
               </div>
             </motion.section>
@@ -381,23 +391,6 @@ export default function ProfileHub({ session }) {
               </h3>
               
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-[20px] text-white/60">volume_off</span>
-                    <span className="text-sm font-medium">Mute Text-to-Speech</span>
-                  </div>
-                  <button 
-                    onClick={() => { setIsMuted(!isMuted); updateMetadata({ mute_tts: !isMuted }); }}
-                    className={`w-12 h-6 rounded-full relative transition-colors ${isMuted ? 'bg-fuchsia-500' : 'bg-white/10'}`}
-                  >
-                    <motion.div 
-                      className="w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm"
-                      animate={{ left: isMuted ? '26px' : '2px' }}
-                      transition={springTransition}
-                    />
-                  </button>
-                </div>
-
                 <button 
                   onClick={handleDownloadMind}
                   className="w-full flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 hover:bg-white/5 transition-colors group"
@@ -435,7 +428,7 @@ export default function ProfileHub({ session }) {
                   onClick={handleChangePassword}
                   className="w-full py-3 rounded-xl bg-black/40 border border-white/5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors"
                 >
-                  Change Password / Update Email
+                  Request Account Changes (Email/Password)
                 </button>
                 <button 
                   onClick={handleSignOut}

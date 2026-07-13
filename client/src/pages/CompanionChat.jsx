@@ -145,6 +145,24 @@ export default function CompanionChat({ session }) {
 
   const { applyTierBehavior, recordEngagement } = useSIYATierBehavior();
 
+  // Load mode from DB
+  useEffect(() => {
+    const initData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.user_metadata?.shuna_mode) {
+        setActiveMode(user.user_metadata.shuna_mode);
+      }
+    };
+    initData();
+  }, []);
+
+  const handleModeChange = async (newMode) => {
+    setActiveMode(newMode);
+    await supabase.auth.updateUser({
+      data: { shuna_mode: newMode }
+    });
+  };
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -373,7 +391,7 @@ export default function CompanionChat({ session }) {
               return (
                 <OrbitalItem key={mode.key} angle={angle} radius={150} reverseDuration={orbitSpeed}>
                   <button 
-                    onClick={() => setActiveMode(mode.key)}
+                    onClick={() => handleModeChange(mode.key)}
                     className={`pointer-events-auto w-12 h-12 rounded-full border flex items-center justify-center backdrop-blur-md transition-all ${activeMode === mode.key ? 'bg-white/20 border-white/50 shadow-[0_0_20px_rgba(255,255,255,0.5)]' : 'bg-black/40 border-white/10 hover:bg-white/10'}`}
                     title={mode.label}
                   >
