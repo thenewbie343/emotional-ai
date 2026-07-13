@@ -102,8 +102,18 @@ export default function ProfileHub({ session }) {
     if (window.confirm("WARNING: This will permanently wipe your chat history from the active context window.")) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase.from('messages').delete().eq('user_id', user.id);
-        alert("Chat history cleared.");
+        try {
+          const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+          await fetch(`${API_BASE}/api/study/delete-record`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ table: 'messages', match: { user_id: user.id } })
+          });
+          alert("Chat history cleared.");
+        } catch (e) {
+          console.error(e);
+          alert("Failed to clear chat history.");
+        }
       }
     }
   };

@@ -40,6 +40,7 @@ router.post('/admin/block', adminAuth, adminController.toggleBlockUser);
 router.post('/admin/change-password', adminAuth, adminController.changeUserPassword);
 router.post('/admin/update-tier', adminAuth, adminController.updateUserTier);
 router.post('/admin/delete-user', adminAuth, adminController.deleteUser);
+router.post('/admin/approve-export', adminAuth, adminController.approveExport);
 
 // Study Companion routes
 const studyController = require('./controllers/studyController');

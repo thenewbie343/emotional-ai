@@ -71,11 +71,21 @@ export default function AdminPanel({ session }) {
   const handleApproveExport = async (reqId, user_email) => {
     if (!window.confirm(`Approve export for ${user_email} and send email?`)) return;
     try {
-      const { supabase } = await import('../lib/supabaseClient');
-      const { error } = await supabase.from('data_export_requests').update({ status: 'approved' }).eq('id', reqId);
-      if (error) throw error;
-      alert(`Export approved! Data packaging initiated for ${user_email}.`);
-      fetchData(); // refresh list
+      const res = await fetch(`${API_BASE}/api/admin/approve-export`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ userEmail, requestId: reqId })
+      });
+      if (res.ok) {
+        alert(`Export approved! Data packaging initiated for ${user_email}.`);
+        fetchData();
+      } else {
+        const err = await res.json();
+        alert(`Failed to approve export: ${err.error}`);
+      }
     } catch (err) {
       alert("Failed to approve export: " + err.message);
     }
