@@ -326,7 +326,8 @@ export default function CompanionChat({ session }) {
             emotion: emotionKey,
             mode: activeMode,
             userEmail: session?.user?.email,
-            userId: session?.user?.id
+            userId: session?.user?.id,
+            userName: session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0]
           })
         });
         if (apiRes.ok) {

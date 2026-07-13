@@ -98,7 +98,7 @@ If the user tries to vent, talk about deep emotional issues, or casual gossip, r
 
 exports.processMessage = async (req, res) => {
   try {
-    const { messages, emotion, mode, companion, userId, isVoice } = req.body;
+    const { messages, emotion, mode, companion, userId, isVoice, userName } = req.body;
     
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Messages array is required' });
@@ -108,8 +108,15 @@ exports.processMessage = async (req, res) => {
     const detectedEmotion = emotion || 'default';
     
     let systemPrompt = SYSTEM_PROMPTS[currentMode] || SYSTEM_PROMPTS.romantic;
+    if (userName) {
+      systemPrompt += `\n\nThe user's name is ${userName}. Address them by their name occasionally, but not every single time.`;
+    }
+
     if (companion === 'sai') {
       systemPrompt = SYSTEM_PROMPTS.sai;
+      if (userName) {
+        systemPrompt += `\n\nThe user's name is ${userName}. Address them by their name occasionally.`;
+      }
       const lastUserMsg = messages && messages.length > 0 ? messages[messages.length - 1]?.content : '';
       if (lastUserMsg && (lastUserMsg.includes("I am ready to study") || lastUserMsg.includes("detailed, structured lesson") || lastUserMsg.includes("Please act as my expert teacher"))) {
         systemPrompt = `You are SAI, acting as an expert, highly knowledgeable teacher. Provide a comprehensive, clear, and well-structured lesson on the requested topic. Use markdown, bold headers, and bullet points. Break it down with clear explanations and practical examples. Keep the tone professional, encouraging, and clear (no roasting, demotivating, or strict study coach persona for this lesson).`;

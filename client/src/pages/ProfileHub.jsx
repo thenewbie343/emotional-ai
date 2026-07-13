@@ -35,6 +35,8 @@ export default function ProfileHub({ session }) {
   const [shunaMode, setShunaMode] = useState('Direct');
   const [memoriesCount, setMemoriesCount] = useState(0);
   const [wellnessAvg, setWellnessAvg] = useState('0.0');
+  const [displayName, setDisplayName] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
   
   useEffect(() => {
     async function loadProfile() {
@@ -45,6 +47,9 @@ export default function ProfileHub({ session }) {
         setIsMuted(user.user_metadata.mute_tts || false);
         setDefaultCompanion(user.user_metadata.default_companion || 'Shuna');
         setShunaMode(user.user_metadata.shuna_mode || 'Direct');
+        setDisplayName(user.user_metadata.display_name || user.email?.split('@')[0] || 'Traveler');
+      } else if (user) {
+        setDisplayName(user.email?.split('@')[0] || 'Traveler');
       }
       
       if (user) {
@@ -185,7 +190,44 @@ export default function ProfileHub({ session }) {
                 </div>
                 
                 <div className="flex-1 pt-2">
-                  <h2 className="text-2xl font-medium tracking-wide mb-2">{session?.user?.email?.split('@')[0] || 'Traveler'}</h2>
+                  <div className="flex items-center gap-2 mb-2">
+                    {isEditingName ? (
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="text" 
+                          value={displayName} 
+                          onChange={(e) => setDisplayName(e.target.value)}
+                          className="bg-black/40 border border-white/20 rounded px-2 py-1 text-xl font-medium text-white w-48 outline-none focus:border-indigo-500"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              setIsEditingName(false);
+                              updateMetadata({ display_name: displayName });
+                            }
+                          }}
+                        />
+                        <button 
+                          onClick={() => {
+                            setIsEditingName(false);
+                            updateMetadata({ display_name: displayName });
+                          }}
+                          className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-sm">check</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <h2 className="text-2xl font-medium tracking-wide">{displayName}</h2>
+                        <button 
+                          onClick={() => setIsEditingName(true)}
+                          className="w-7 h-7 rounded-full bg-white/5 text-white/50 flex items-center justify-center hover:bg-white/10 hover:text-white transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">edit</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
                   <div className="flex flex-wrap gap-2 mb-4">
                     <span className={`px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full border ${
                       isPremium 
