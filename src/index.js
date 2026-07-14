@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('dns').setDefaultResultOrder('ipv4first'); // Force IPv4 globally for Node.js
 const express = require('express');
 const cors = require('cors');
 const apiRoutes = require('./api/routes');
