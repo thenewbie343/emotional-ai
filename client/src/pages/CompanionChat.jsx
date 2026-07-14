@@ -385,18 +385,27 @@ export default function CompanionChat({ session }) {
 
         {/* The Orbit Rings (UI controls orbiting Shuna) */}
         <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
-          {/* Inner Ring - Modes */}
+          {/* Floating UI Elements */}
           <OrbitalRing radius={150} duration={orbitSpeed} isGlitching={isGlitching}>
-            {MODES.map((mode, i) => {
-              const angle = i * (360 / MODES.length);
+            {[
+              { key: 'direct', label: 'Direct', icon: 'bolt' },
+              { key: 'analytical', label: 'Analytical', icon: 'psychology' },
+              { key: 'unhinged', label: 'Unhinged', icon: 'warning' }
+            ].map((mode, i) => {
+              const angle = i * (360 / 3);
+              const isActive = (activeMode || 'direct').toLowerCase() === mode.key;
               return (
                 <OrbitalItem key={mode.key} angle={angle} radius={150} reverseDuration={orbitSpeed}>
                   <button 
-                    onClick={() => handleModeChange(mode.key)}
-                    className={`pointer-events-auto w-12 h-12 rounded-full border flex items-center justify-center backdrop-blur-md transition-all ${activeMode === mode.key ? 'bg-white/20 border-white/50 shadow-[0_0_20px_rgba(255,255,255,0.5)]' : 'bg-black/40 border-white/10 hover:bg-white/10'}`}
-                    title={mode.label}
+                    onClick={() => handleModeChange(mode.label)}
+                    className={`pointer-events-auto flex items-center justify-center w-12 h-12 rounded-full border transition-all duration-300 backdrop-blur-md ${
+                      isActive 
+                        ? 'bg-fuchsia-500/20 border-fuchsia-400 text-fuchsia-300 shadow-[0_0_15px_rgba(232,121,249,0.4)] scale-110' 
+                        : 'bg-black/40 border-white/10 text-gray-400 hover:bg-white/10 hover:scale-105'
+                    }`}
+                    title={mode.label + " Mode"}
                   >
-                    <span className="material-symbols-outlined text-[20px]" style={{ color: mode.color }}>
+                    <span className="material-symbols-outlined text-[20px]">
                       {mode.key === 'analytical' ? 'psychology' : mode.key === 'direct' ? 'bolt' : 'warning'}
                     </span>
                   </button>
