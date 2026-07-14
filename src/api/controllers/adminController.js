@@ -284,3 +284,13 @@ exports.approveExport = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.getExports = async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('data_export_requests').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

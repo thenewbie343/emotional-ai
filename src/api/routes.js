@@ -41,6 +41,7 @@ router.post('/admin/change-password', adminAuth, adminController.changeUserPassw
 router.post('/admin/update-tier', adminAuth, adminController.updateUserTier);
 router.post('/admin/delete-user', adminAuth, adminController.deleteUser);
 router.post('/admin/approve-export', adminAuth, adminController.approveExport);
+router.post('/admin/exports', adminAuth, adminController.getExports);
 
 // Study Companion routes
 const studyController = require('./controllers/studyController');

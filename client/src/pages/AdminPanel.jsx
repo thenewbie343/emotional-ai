@@ -55,11 +55,17 @@ export default function AdminPanel({ session }) {
         const data = await res.json();
         setUsers(data);
       } else if (activeTab === 'exports') {
-        import('../lib/supabaseClient').then(async ({ supabase }) => {
-          const { data, error } = await supabase.from('data_export_requests').select('*').order('created_at', { ascending: false });
-          if (error) throw new Error(error.message);
-          setExportRequests(data || []);
+        const res = await fetch(`${API_BASE}/api/admin/exports`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
+          body: JSON.stringify({ userEmail })
         });
+        if (!res.ok) throw new Error('Failed to fetch exports');
+        const data = await res.json();
+        setExportRequests(data || []);
       }
     } catch (err) {
       setError(err.message);
