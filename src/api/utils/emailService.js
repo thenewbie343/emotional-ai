@@ -3,8 +3,8 @@ const nodemailer = require('nodemailer');
 const createTransporter = () => {
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
+    port: 587,
+    secure: false, // true for 465, false for other ports
     family: 4, // Force IPv4, Render IPv6 routing is blocked
     auth: {
       user: process.env.GMAIL_USER,
