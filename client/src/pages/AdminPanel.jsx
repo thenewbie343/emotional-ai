@@ -389,7 +389,7 @@ export default function AdminPanel({ session }) {
                           onClick={() => handleApproveExport(req.id, req.email)}
                           className="px-4 py-2 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white rounded-lg transition-colors font-medium text-sm border border-emerald-500/30"
                         >
-                          Mark Handled & Email
+                          Mark Handled
                         </button>
                       )}
                     </div>

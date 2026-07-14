@@ -70,6 +70,46 @@ export const NotificationProvider = ({ children }) => {
     }
   }, []);
 
+  // Listen for admin approvals on data export requests
+  useEffect(() => {
+    import('../lib/supabaseClient').then(({ supabase }) => {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (!user) return;
+        
+        const channel = supabase
+          .channel('schema-db-changes')
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'data_export_requests',
+              filter: `user_id=eq.${user.id}`
+            },
+            (payload) => {
+              if (payload.new.status === 'approved' && payload.old.status !== 'approved') {
+                const isAccountChange = payload.new.request_type === 'account_change';
+                const message = isAccountChange 
+                  ? "Your request to change your account email/password has been handled by an admin."
+                  : "Your data export request has been approved and handled.";
+                
+                addNotification({
+                  sender: 'Admin Team',
+                  type: 'system',
+                  message: message
+                });
+              }
+            }
+          )
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
+      });
+    });
+  }, [addNotification]);
+
   const markAsRead = useCallback((id) => {
     setNotifications(prev => 
       prev.map(n => n.id === id ? { ...n, read: true } : n)
