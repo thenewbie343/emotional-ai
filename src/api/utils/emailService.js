@@ -1,11 +1,20 @@
 const nodemailer = require('nodemailer');
 
-const createTransporter = () => {
+const dns = require('dns').promises;
+
+const createTransporter = async () => {
+  // Manually resolve the IPv4 address to completely bypass Node's stubborn IPv6 routing
+  // which causes ENETUNREACH on Render's free tier.
+  const addrs = await dns.resolve4('smtp.gmail.com');
+  const ipv4 = addrs[0];
+
   return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: ipv4,
     port: 587,
-    secure: false, // true for 465, false for other ports
-    family: 4, // Force IPv4, Render IPv6 routing is blocked
+    secure: false,
+    tls: {
+      servername: 'smtp.gmail.com' // Ensure TLS cert matches the domain, not the IP
+    },
     auth: {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_APP_PASSWORD
@@ -18,7 +27,7 @@ exports.sendDataExportEmail = async (toEmail, zipBuffer) => {
     throw new Error("Gmail credentials not configured in environment variables.");
   }
 
-  const transporter = createTransporter();
+  const transporter = await createTransporter();
 
   const mailOptions = {
     from: process.env.GMAIL_USER,
