@@ -30,7 +30,7 @@ exports.generateUserExportZip = async (userId) => {
         }
       });
 
-      const archive = archiver('zip', {
+      const archive = new archiver.ZipArchive({
         zlib: { level: 9 }
       });
 
