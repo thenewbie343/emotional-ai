@@ -17,13 +17,35 @@ import SaiConstellation from './pages/SaiConstellation'
 import SaiTimeCapsule from './pages/SaiTimeCapsule'
 import SaiDashboard from './pages/SaiDashboard'
 import SiyaHub from './pages/SiyaHub'
+import ProfileHub from './pages/ProfileHub'
 import OnboardingTutorial from './components/OnboardingTutorial'
 import Billing from './pages/Billing'
 import AdminPanel from './pages/AdminPanel'
 import { useSubscription } from './hooks/useSubscription'
 import OnboardingGate from './components/OnboardingGate'
 import posthog from 'posthog-js'
+import { NotificationProvider, useNotification } from './context/NotificationContext'
+import NotificationToast from './components/NotificationToast'
+import { notificationEngine } from './utils/NotificationEngine'
 import './index.css'
+
+function NotificationEngineRunner({ session }) {
+  const { addNotification } = useNotification();
+  useEffect(() => {
+    if (session?.user) {
+      notificationEngine.init(addNotification);
+      notificationEngine.evaluateTriggers();
+      
+      const interval = setInterval(() => {
+        notificationEngine.evaluateTriggers();
+      }, 10 * 60 * 1000); // Check every 10 mins
+      
+      return () => clearInterval(interval);
+    }
+  }, [addNotification, session]);
+  
+  return null;
+}
 
 // ── SAI ↔ SHUNA Toggle Button ────────────────────────────────────────────────
 // ... (rest of helper functions and components) ...
@@ -144,36 +166,48 @@ export default function App() {
   if (loading) return <div style={{ width: '100vw', height: '100vh', background: '#0a0e1a' }} />
 
   return (
-    <OnboardingGate>
-      <OnboardingTutorial userId={session?.user?.id} />
-      <CompanionToggle session={session} onToggle={() => setCompanionKey(k => k + 1)} />
-      <Routes>
-        <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/" />} />
-        <Route path="/" element={session ? <HomeScene /> : <Navigate to="/auth" />} />
-        <Route path="/chat" element={session ? <CompanionChat key={`siya-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
+    <NotificationProvider>
+      <NotificationEngineRunner session={session} />
+      <NotificationToast />
+      <OnboardingGate>
+        <OnboardingTutorial userId={session?.user?.id} />
+        <CompanionToggle session={session} onToggle={() => setCompanionKey(k => k + 1)} />
+        <Routes>
+          <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/" />} />
+          <Route path="/" element={
+            session ? (
+              session.user.user_metadata?.default_companion === 'Sai' 
+                ? <Navigate to="/sai" /> 
+                : (session.user.user_metadata?.default_companion === 'Shuna' ? <Navigate to="/siya" /> : <Navigate to="/island" />)
+            ) : <Navigate to="/auth" />
+          } />
+          <Route path="/island" element={session ? <HomeScene /> : <Navigate to="/auth" />} />
+          <Route path="/chat" element={session ? <CompanionChat key={`siya-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
 
-        {/* SHUNA features */}
-        <Route path="/siya" element={session ? <SiyaHub key={`siyahub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/siya/journal" element={session ? <PremiumRoute session={session}><SaiJournal session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/siya/wellness" element={session ? <PremiumRoute session={session}><SaiWellness session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/siya/insights" element={session ? <PremiumRoute session={session}><SaiInsights session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/siya/diary" element={session ? <PremiumRoute session={session}><SaiDiary session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/siya/memory" element={session ? <PremiumRoute session={session}><SaiConstellation session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          {/* SHUNA features */}
+          <Route path="/siya" element={session ? <SiyaHub key={`siyahub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
+          <Route path="/siya/journal" element={session ? <PremiumRoute session={session}><SaiJournal session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/siya/wellness" element={session ? <PremiumRoute session={session}><SaiWellness session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/siya/insights" element={session ? <PremiumRoute session={session}><SaiInsights session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/siya/diary" element={session ? <PremiumRoute session={session}><SaiDiary session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/siya/memory" element={session ? <PremiumRoute session={session}><SaiConstellation session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
 
-        {/* SAI routes */}
-        <Route path="/sai" element={session ? <SaiHub key={`saihub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/chat" element={session ? <SaiChat key={`saichat-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/dreams" element={session ? <PremiumRoute session={session}><SaiDreams session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/sai/memories" element={session ? <PremiumRoute session={session}><SaiMemories session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/sai/goals" element={session ? <SaiGoals session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/sai/capsule" element={session ? <PremiumRoute session={session}><SaiTimeCapsule session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
-        <Route path="/sai/study" element={session ? <SaiDashboard session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/dashboard" element={session ? <Navigate to="/sai/study" replace /> : <Navigate to="/auth" />} />
-        
-        {/* Billing & Admin */}
-        <Route path="/billing" element={session ? <Billing session={session} /> : <Navigate to="/auth" />} />
-        <Route path="/admin" element={session ? <AdminPanel session={session} /> : <Navigate to="/auth" />} />
-      </Routes>
-    </OnboardingGate>
+          {/* SAI routes */}
+          <Route path="/sai" element={session ? <SaiHub key={`saihub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
+          <Route path="/sai/chat" element={session ? <SaiChat key={`saichat-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
+          <Route path="/sai/dreams" element={session ? <PremiumRoute session={session}><SaiDreams session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/sai/memories" element={session ? <PremiumRoute session={session}><SaiMemories session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/sai/goals" element={session ? <SaiGoals session={session} /> : <Navigate to="/auth" />} />
+          <Route path="/sai/capsule" element={session ? <PremiumRoute session={session}><SaiTimeCapsule session={session} /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/sai/study" element={session ? <SaiDashboard session={session} /> : <Navigate to="/auth" />} />
+          <Route path="/dashboard" element={session ? <Navigate to="/sai/study" replace /> : <Navigate to="/auth" />} />
+          
+          {/* Billing & Admin */}
+          <Route path="/billing" element={session ? <Billing session={session} /> : <Navigate to="/auth" />} />
+          <Route path="/profile" element={session ? <ProfileHub session={session} /> : <Navigate to="/auth" />} />
+          <Route path="/admin" element={session ? <AdminPanel session={session} /> : <Navigate to="/auth" />} />
+        </Routes>
+      </OnboardingGate>
+    </NotificationProvider>
   )
 }

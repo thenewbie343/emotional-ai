@@ -6,6 +6,8 @@ import { motion } from 'framer-motion';
 import { SpiritFamiliar } from '../components/siya/SpiritFamiliar';
 import { supabase } from '../lib/supabaseClient';
 import { useSubscription } from '../hooks/useSubscription';
+import { useNotification } from '../context/NotificationContext';
+import NotificationDropdown from '../components/NotificationDropdown';
 import '../index.css';
 
 const QUICK_ACCESS = [
@@ -13,8 +15,8 @@ const QUICK_ACCESS = [
   { to: '/siya/journal',  icon: 'auto_stories',    title: 'Inner Diary',     desc: 'Private reflections',     color: 'text-rose-300',    bg: 'bg-rose-500/20' },
   { to: '/siya/wellness', icon: 'self_improvement',title: 'Wellness Radar',  desc: 'Emotional balance',       color: 'text-indigo-300',  bg: 'bg-indigo-500/20' },
   { to: '/siya/insights', icon: 'bubble_chart',    title: 'Resonance',       desc: 'Emotional insights',      color: 'text-violet-300',  bg: 'bg-violet-500/20' },
-  { to: '/billing',       icon: 'payments',        title: 'Upgrade / Plan',  desc: 'Manage subscription',     color: 'text-amber-300',   bg: 'bg-amber-500/20' },
-  { to: '/',              icon: 'public',          title: '3D Island',       desc: 'Return to the world',     color: 'text-sky-300',     bg: 'bg-sky-500/20' },
+  { to: '/profile',       icon: 'manage_accounts', title: 'Profile & Settings',desc: 'Command Center',        color: 'text-amber-300',   bg: 'bg-amber-500/20' },
+  { to: '/island',        icon: 'public',          title: '3D Island',       desc: 'Return to the world',     color: 'text-sky-300',     bg: 'bg-sky-500/20' },
 ];
 
 const springTransition = {
@@ -42,6 +44,7 @@ const itemVariant = {
 export default function SiyaHub({ session }) {
   const navigate = useNavigate();
   const { isPremium } = useSubscription(session);
+  const { unreadCount, togglePanel } = useNotification();
   const [greeting, setGreeting] = useState('');
   const [rhythmData, setRhythmData] = useState([30, 30, 30, 30, 30, 30, 30]);
   const [daysLabels, setDaysLabels] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
@@ -151,14 +154,21 @@ export default function SiyaHub({ session }) {
                 Go Premium
               </motion.button>
             )}
-            <motion.button 
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              whileTap={{ scale: 0.9 }}
-              transition={springTransition}
-              className="w-11 h-11 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center backdrop-blur-md shadow-lg"
-            >
-              <span className="material-symbols-outlined text-[20px] text-fuchsia-200">notifications</span>
-            </motion.button>
+            <div className="relative">
+              <motion.button 
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                whileTap={{ scale: 0.9 }}
+                transition={springTransition}
+                onClick={togglePanel}
+                className="w-11 h-11 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center backdrop-blur-md shadow-lg relative"
+              >
+                <span className="material-symbols-outlined text-[20px] text-fuchsia-200">notifications</span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-rose-500 rounded-full border border-[#0b0f19] animate-pulse" />
+                )}
+              </motion.button>
+              <NotificationDropdown />
+            </div>
             <motion.button 
               whileHover={{ scale: 1.1, rotate: -5, backgroundColor: "rgba(244, 63, 94, 0.2)", borderColor: "rgba(244, 63, 94, 0.4)" }}
               whileTap={{ scale: 0.9 }}

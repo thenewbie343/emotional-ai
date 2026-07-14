@@ -6,9 +6,10 @@ const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onr
 
 export default function AdminPanel({ session }) {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('requests'); // 'requests', 'users'
+  const [activeTab, setActiveTab] = useState('requests'); // 'requests', 'users', 'exports'
   const [requests, setRequests] = useState([]);
   const [users, setUsers] = useState([]);
+  const [exportRequests, setExportRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -41,7 +42,7 @@ export default function AdminPanel({ session }) {
         if (!res.ok) throw new Error('Failed to fetch requests');
         const data = await res.json();
         setRequests(data);
-      } else {
+      } else if (activeTab === 'users') {
         const res = await fetch(`${API_BASE}/api/admin/users`, {
           method: 'POST',
           headers: { 
@@ -53,11 +54,46 @@ export default function AdminPanel({ session }) {
         if (!res.ok) throw new Error('Failed to fetch users');
         const data = await res.json();
         setUsers(data);
+      } else if (activeTab === 'exports') {
+        const res = await fetch(`${API_BASE}/api/admin/exports`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
+          body: JSON.stringify({ userEmail })
+        });
+        if (!res.ok) throw new Error('Failed to fetch exports');
+        const data = await res.json();
+        setExportRequests(data || []);
       }
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApproveExport = async (reqId, user_email) => {
+    if (!window.confirm(`Approve export for ${user_email} and send email?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/approve-export`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ userEmail, requestId: reqId })
+      });
+      if (res.ok) {
+        alert(`Export approved! Data packaging initiated for ${user_email}.`);
+        fetchData();
+      } else {
+        const err = await res.json();
+        alert(`Failed to approve export: ${err.error}`);
+      }
+    } catch (err) {
+      alert("Failed to approve export: " + err.message);
     }
   };
 
@@ -193,24 +229,30 @@ export default function AdminPanel({ session }) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-8">
+        <div className="flex gap-4 border-b border-white/10 pb-4 mb-8">
           <button 
             onClick={() => setActiveTab('requests')}
-            className={`px-6 py-2 rounded-full font-semibold transition-all ${activeTab === 'requests' ? 'bg-fuchsia-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'requests' ? 'bg-fuchsia-500 text-white' : 'text-white/60 hover:bg-white/5'}`}
           >
-            Payment Requests
+            Subscription Requests
           </button>
           <button 
             onClick={() => setActiveTab('users')}
-            className={`px-6 py-2 rounded-full font-semibold transition-all ${activeTab === 'users' ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'users' ? 'bg-indigo-500 text-white' : 'text-white/60 hover:bg-white/5'}`}
           >
             Manage Users
+          </button>
+          <button 
+            onClick={() => setActiveTab('exports')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'exports' ? 'bg-amber-500 text-white' : 'text-white/60 hover:bg-white/5'}`}
+          >
+            Data Exports
           </button>
         </div>
 
         {error && <div className="bg-red-500/20 text-red-300 p-4 rounded-xl mb-6">{error}</div>}
 
-        {loading ? (
+        {loading && activeTab !== 'exports' ? (
           <div className="text-center text-gray-500 py-12">Loading matrix data...</div>
         ) : (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-black/40 border border-white/10 rounded-3xl p-6 backdrop-blur-xl">
@@ -319,6 +361,40 @@ export default function AdminPanel({ session }) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {activeTab === 'exports' && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-bold text-amber-400 mb-4">Pending Requests (Exports & Support)</h2>
+                {exportRequests.length === 0 ? (
+                  <div className="text-white/50 text-center py-10 bg-black/40 rounded-xl border border-white/5">
+                    No requests found.
+                  </div>
+                ) : (
+                  exportRequests.map(req => (
+                    <div key={req.id} className="p-4 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-white">{req.email}</div>
+                        <div className="text-xs text-fuchsia-300 font-bold uppercase my-1">
+                          Type: {req.request_type === 'account_change' ? 'ACCOUNT CHANGE (Email/Pass)' : 'DATA EXPORT'}
+                        </div>
+                        <div className="text-xs text-white/50">Requested: {new Date(req.created_at).toLocaleString()}</div>
+                        <div className="text-xs mt-1">
+                          Status: <span className={req.status === 'approved' ? 'text-emerald-400' : 'text-amber-400'}>{req.status.toUpperCase()}</span>
+                        </div>
+                      </div>
+                      {req.status === 'pending' && (
+                        <button 
+                          onClick={() => handleApproveExport(req.id, req.email)}
+                          className="px-4 py-2 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white rounded-lg transition-colors font-medium text-sm border border-emerald-500/30"
+                        >
+                          Mark Handled & Email
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </motion.div>

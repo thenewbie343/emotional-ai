@@ -10,6 +10,8 @@ import { XpBar, fetchXp } from '../components/XpSystem'
 import PersonalityRadar from '../components/PersonalityRadar'
 import DailyInsight from '../components/DailyInsight'
 import StreakBadge from '../components/StreakBadge'
+import { useNotification } from '../context/NotificationContext'
+import NotificationDropdown from '../components/NotificationDropdown'
 import './SaiHub.css'
 import '../index.css'
 
@@ -23,19 +25,20 @@ function getGreeting() {
 }
 
 const QUICK_ACCESS = [
-  { to: '/sai/chat',     icon: 'forum',           title: 'SAI Chat',     desc: 'Engage with your assistant',   color: 'text-blue-400', bg: 'bg-blue-500/10' },
-  { to: '/sai/study',    icon: 'dashboard',       title: 'Study Hub',    desc: 'Timetables, missions, tracker',color: 'text-teal-400', bg: 'bg-teal-500/10' },
+  { to: '/sai/study',    icon: 'dashboard',       title: 'Study Hub',    desc: 'Enter the grid',               color: 'text-[#00d4ff]', bg: 'bg-[#00d4ff]/10' },
+  { to: '/sai/chat',     icon: 'bolt',            title: 'Sai Link',     desc: 'Direct AI connection',         color: 'text-blue-400', bg: 'bg-blue-500/10' },
   { to: '/sai/memories', icon: 'memory',          title: 'Memory Vault', desc: 'Review stored context',        color: 'text-purple-400', bg: 'bg-purple-500/10' },
   { to: '/sai/dreams',   icon: 'nights_stay',     title: 'Dream Vault',  desc: 'Visualize your dreams',        color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
   { to: '/sai/capsule',  icon: 'hourglass_empty', title: 'Time Capsules',desc: 'Messages to future self',      color: 'text-amber-400', bg: 'bg-amber-500/10' },
   { to: '/sai/goals',    icon: 'track_changes',   title: 'Goals',        desc: 'Daily challenges',             color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-  { to: '/billing',      icon: 'payments',        title: 'Billing & Plan',desc: 'Manage subscription',        color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10' },
-  { to: '/',             icon: 'public',          title: '3D Island',    desc: 'Enter the open world',         color: 'text-rose-400', bg: 'bg-rose-500/10' },
+  { to: '/profile',      icon: 'manage_accounts', title: 'Profile Hub',  desc: 'Command Center & Settings',    color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10' },
+  { to: '/island',       icon: 'public',          title: '3D Island',    desc: 'Enter the open world',         color: 'text-rose-400', bg: 'bg-rose-500/10' },
 ]
 
 export default function SaiHub({ session }) {
   const navigate = useNavigate()
   const { isPremium } = useSubscription(session)
+  const { unreadCount, togglePanel } = useNotification()
   const [xpData, setXpData] = useState(null)
   
   useEffect(() => {
@@ -64,9 +67,18 @@ export default function SaiHub({ session }) {
                 Go Premium
               </button>
             )}
-            <button className="w-11 h-11 rounded-full bg-white/[0.02] border border-white/5 flex items-center justify-center hover:bg-white/10 transition-colors backdrop-blur-md">
-              <span className="material-symbols-outlined text-[20px] text-gray-300">notifications</span>
-            </button>
+            <div className="relative">
+              <button 
+                onClick={togglePanel}
+                className="w-11 h-11 rounded-full bg-white/[0.02] border border-white/5 flex items-center justify-center hover:bg-white/10 transition-colors backdrop-blur-md relative"
+              >
+                <span className="material-symbols-outlined text-[20px] text-gray-300">notifications</span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#00d4ff] rounded-full border border-[#09090b] animate-pulse" />
+                )}
+              </button>
+              <NotificationDropdown />
+            </div>
             <button onClick={() => supabase.auth.signOut().then(() => navigate('/auth'))} className="w-11 h-11 rounded-full bg-white/[0.02] border border-white/5 flex items-center justify-center hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-colors group backdrop-blur-md">
               <span className="material-symbols-outlined text-[20px] text-gray-400 group-hover:text-red-400 transition-colors">logout</span>
             </button>

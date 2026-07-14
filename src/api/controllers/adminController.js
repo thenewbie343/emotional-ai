@@ -272,3 +272,25 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.approveExport = async (req, res) => {
+  const { requestId } = req.body;
+  if (!requestId) return res.status(400).json({ error: 'requestId is required' });
+  try {
+    const { error } = await supabase.from('data_export_requests').update({ status: 'approved' }).eq('id', requestId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getExports = async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('data_export_requests').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

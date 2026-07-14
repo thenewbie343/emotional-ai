@@ -81,7 +81,7 @@ const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isG
   return (
     <motion.form 
       className={`absolute bottom-10 left-1/2 -translate-x-1/2 w-[92%] max-w-lg flex items-center gap-2 bg-black/40 border backdrop-blur-xl rounded-full p-2 pl-4 pr-2 shadow-2xl z-50`}
-      style={{ borderColor: MODES.find(m => m.key === activeMode).color + '40' }}
+      style={{ borderColor: (MODES.find(m => m.key === (activeMode || 'direct').toLowerCase()) || MODES[0]).color + '40' }}
       animate={isGlitching ? { x: [-2, 2, -2, 0], filter: ["hue-rotate(0deg)", "hue-rotate(90deg)", "hue-rotate(0deg)"] } : {}}
       transition={{ repeat: Infinity, duration: 0.1 }}
       onSubmit={handleSubmit}
@@ -144,6 +144,24 @@ export default function CompanionChat({ session }) {
   const messagesRef = useRef([]);
 
   const { applyTierBehavior, recordEngagement } = useSIYATierBehavior();
+
+  // Load mode from DB
+  useEffect(() => {
+    const initData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.user_metadata?.shuna_mode) {
+        setActiveMode(user.user_metadata.shuna_mode);
+      }
+    };
+    initData();
+  }, []);
+
+  const handleModeChange = async (newMode) => {
+    setActiveMode(newMode);
+    await supabase.auth.updateUser({
+      data: { shuna_mode: newMode }
+    });
+  };
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -304,11 +322,12 @@ export default function CompanionChat({ session }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            messages: [...messages, newUserMsg].map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text })),
+            messages: [...messages, newUserMsg].map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.content || m.text })),
             emotion: emotionKey,
             mode: activeMode,
             userEmail: session?.user?.email,
-            userId: session?.user?.id
+            userId: session?.user?.id,
+            userName: session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0]
           })
         });
         if (apiRes.ok) {
@@ -344,14 +363,14 @@ export default function CompanionChat({ session }) {
 
       setIsTyping(false);
       
-      if (emotionKey === 'angry' || activeMode === 'unhinged') setCharacterAnim('arguing');
+      if (emotionKey === 'angry' || (activeMode || '').toLowerCase() === 'unhinged') setCharacterAnim('arguing');
       else setCharacterAnim('talk');
 
       setTimeout(() => setCharacterAnim('idle'), Math.max(3000, tieredText.length * 100));
     }, 1200);
   };
 
-  const currentModeMeta = MODES.find(m => m.key === activeMode);
+  const currentModeMeta = MODES.find(m => m.key === (activeMode || 'direct').toLowerCase()) || MODES[0];
   const isGlitching = characterAnim === 'arguing';
   const orbitSpeed = currentModeMeta.baseSpeed;
 
@@ -366,18 +385,27 @@ export default function CompanionChat({ session }) {
 
         {/* The Orbit Rings (UI controls orbiting Shuna) */}
         <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
-          {/* Inner Ring - Modes */}
+          {/* Floating UI Elements */}
           <OrbitalRing radius={150} duration={orbitSpeed} isGlitching={isGlitching}>
-            {MODES.map((mode, i) => {
-              const angle = i * (360 / MODES.length);
+            {[
+              { key: 'direct', label: 'Direct', icon: 'bolt' },
+              { key: 'analytical', label: 'Analytical', icon: 'psychology' },
+              { key: 'unhinged', label: 'Unhinged', icon: 'warning' }
+            ].map((mode, i) => {
+              const angle = i * (360 / 3);
+              const isActive = (activeMode || 'direct').toLowerCase() === mode.key;
               return (
                 <OrbitalItem key={mode.key} angle={angle} radius={150} reverseDuration={orbitSpeed}>
                   <button 
-                    onClick={() => setActiveMode(mode.key)}
-                    className={`pointer-events-auto w-12 h-12 rounded-full border flex items-center justify-center backdrop-blur-md transition-all ${activeMode === mode.key ? 'bg-white/20 border-white/50 shadow-[0_0_20px_rgba(255,255,255,0.5)]' : 'bg-black/40 border-white/10 hover:bg-white/10'}`}
-                    title={mode.label}
+                    onClick={() => handleModeChange(mode.label)}
+                    className={`pointer-events-auto flex items-center justify-center w-12 h-12 rounded-full border transition-all duration-300 backdrop-blur-md ${
+                      isActive 
+                        ? 'bg-fuchsia-500/20 border-fuchsia-400 text-fuchsia-300 shadow-[0_0_15px_rgba(232,121,249,0.4)] scale-110' 
+                        : 'bg-black/40 border-white/10 text-gray-400 hover:bg-white/10 hover:scale-105'
+                    }`}
+                    title={mode.label + " Mode"}
                   >
-                    <span className="material-symbols-outlined text-[20px]" style={{ color: mode.color }}>
+                    <span className="material-symbols-outlined text-[20px]">
                       {mode.key === 'analytical' ? 'psychology' : mode.key === 'direct' ? 'bolt' : 'warning'}
                     </span>
                   </button>
@@ -456,8 +484,8 @@ export default function CompanionChat({ session }) {
                   </button>
                 )}
                 <div className={`p-4 rounded-3xl backdrop-blur-sm border ${msg.sender === 'ai' ? 'bg-black/60 border-fuchsia-500/20 text-gray-200' : 'bg-white/10 border-white/10 text-white'}`}>
-                  {msg.text?.replace('[SWITCH_TO_SAI]', '')}
-                  {msg.text?.includes('[SWITCH_TO_SAI]') && (
+                  {(msg.content || msg.text)?.replace('[SWITCH_TO_SAI]', '')}
+                  {(msg.content || msg.text)?.includes('[SWITCH_TO_SAI]') && (
                     <button 
                       onClick={() => navigate('/sai/chat')}
                       className="mt-3 px-4 py-2 bg-[#00d4ff]/20 text-[#00d4ff] border border-[#00d4ff]/40 rounded-full text-xs font-semibold uppercase tracking-widest flex items-center gap-2 hover:bg-[#00d4ff]/30 transition-colors"
