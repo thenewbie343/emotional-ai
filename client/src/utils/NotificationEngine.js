@@ -78,12 +78,17 @@ class NotificationEngine {
       }
     }
 
-    // Update login timestamp for next time
-    await this.saveSyncState({
-      last_login: now.toISOString(),
-      daily_count: notificationSent ? dailyCount + 1 : dailyCount,
-      daily_count_date: todayStr
-    });
+    // Update login timestamp for next time ONLY if we haven't updated it today or if we sent a notification
+    const lastLoginTime = state.last_login ? new Date(state.last_login) : new Date(0);
+    const loginWasToday = lastLoginTime.toISOString().split('T')[0] === todayStr;
+
+    if (notificationSent || !loginWasToday) {
+      await this.saveSyncState({
+        last_login: now.toISOString(),
+        daily_count: notificationSent ? dailyCount + 1 : dailyCount,
+        daily_count_date: todayStr
+      });
+    }
   }
 
   // Can be called immediately from components (e.g. Pomodoro timer hits 0)
