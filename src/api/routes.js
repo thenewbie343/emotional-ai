@@ -89,6 +89,7 @@ router.post('/study/challenges/daily', studyController.generateDailyChallenge);
 router.post('/study/challenges/complete', studyController.completeDailyChallenge);
 
 // User Account Erasure route (DPDP / GDPR Right to Erasure)
-router.delete('/user/erasure', userAuth, userController.deleteUserAccount);
+router.post('/user/delete-account', userAuth, userController.deleteUserAccount);
+router.get('/user/export', userAuth, userController.downloadExport);
 
-module.exports = router;
+module.exports = router;

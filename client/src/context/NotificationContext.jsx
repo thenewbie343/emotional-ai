@@ -87,17 +87,25 @@ export const NotificationProvider = ({ children }) => {
               filter: `user_id=eq.${user.id}`
             },
             (payload) => {
-              if (payload.new.status === 'approved' && payload.old.status !== 'approved') {
-                const isAccountChange = payload.new.request_type === 'account_change';
-                const message = isAccountChange 
-                  ? "Your request to change your account email/password has been handled by an admin."
-                  : "Your data export request has been approved and handled.";
-                
-                addNotification({
-                  sender: 'Admin Team',
-                  type: 'system',
-                  message: message
-                });
+              if (['approved', 'rejected'].includes(payload.new.status) && payload.new.status !== payload.old.status) {
+                const isApproved = payload.new.status === 'approved';
+                if (payload.new.request_type === 'account_change') {
+                  addNotification({
+                    sender: 'System',
+                    message: isApproved 
+                      ? "Your email/password change request has been approved and handled."
+                      : "Your email/password change request has been rejected.",
+                    type: isApproved ? 'success' : 'error'
+                  });
+                } else {
+                  addNotification({
+                    sender: 'System',
+                    message: isApproved
+                      ? "Your data export is ready! Go to Settings -> Data & Privacy and click 'Download Data Export' to download it."
+                      : "Your data export request has been rejected.",
+                    type: isApproved ? 'success' : 'error'
+                  });
+                }
               }
             }
           )

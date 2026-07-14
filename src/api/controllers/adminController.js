@@ -293,13 +293,19 @@ exports.approveExport = async (req, res) => {
       try {
         // Generate ZIP buffer
         const zipBuffer = await generateUserExportZip(request.user_id);
-        // Send email
-        await sendDataExportEmail(request.email, zipBuffer);
-      } catch (emailErr) {
-        console.error("Failed to generate or send export email:", emailErr);
-        // Don't fail the approval just because email failed, or maybe we should?
-        // Actually, if email fails, we should probably return an error so the admin knows.
-        return res.status(500).json({ error: 'Failed to send automated email: ' + emailErr.message });
+        
+        // Upload to Supabase Storage
+        const filename = `${request.user_id}_export.zip`;
+        const { error: uploadErr } = await supabase.storage.from('exports').upload(filename, zipBuffer, {
+          contentType: 'application/zip',
+          upsert: true
+        });
+        
+        if (uploadErr) throw uploadErr;
+        
+      } catch (err) {
+        console.error("Failed to generate or upload export ZIP:", err);
+        return res.status(500).json({ error: 'Failed to process export: ' + err.message });
       }
     }
 

@@ -85,3 +85,22 @@ exports.deleteUserAccount = async (req, res) => {
     });
   }
 };
+
+exports.downloadExport = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const filename = `${userId}_export.zip`;
+    const { data, error } = await supabaseAdmin.storage.from('exports').createSignedUrl(filename, 60 * 10); // 10 minutes valid
+
+    if (error || !data?.signedUrl) {
+      return res.status(404).json({ error: 'No export found or export expired. Please request a new one.' });
+    }
+
+    res.json({ success: true, downloadUrl: data.signedUrl });
+  } catch (err) {
+    console.error('Failed to generate signed url:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};

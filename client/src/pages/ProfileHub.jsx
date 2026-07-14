@@ -91,11 +91,33 @@ export default function ProfileHub({ session }) {
   };
 
   const handleDownloadMind = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    
+    // First, check if there's a download link available from a previously approved request
+    const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+    try {
+      const res = await fetch(`${API_BASE}/api/user/export`, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.downloadUrl) {
+          if (window.confirm("Your data export is ready! Download it now?\n\n(If you want to request a fresher export, click Cancel and then click this button again after the old one expires)")) {
+            window.location.href = data.downloadUrl;
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     
-    await supabase.from('data_export_requests').insert([{ user_id: user.id, email: user.email }]);
-    alert("Export request sent! Our admin team will package your data and email it to you shortly.");
+    await supabase.from('data_export_requests').insert([{ user_id: user.id, email: user.email, request_type: 'data_export' }]);
+    alert("Export request sent! Our admin team will package your data. You will receive an in-app notification when it is ready to download here.");
   };
 
   const handleClearHistory = async () => {
