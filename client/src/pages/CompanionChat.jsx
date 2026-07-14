@@ -81,7 +81,7 @@ const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isG
   return (
     <motion.form 
       className={`absolute bottom-10 left-1/2 -translate-x-1/2 w-[92%] max-w-lg flex items-center gap-2 bg-black/40 border backdrop-blur-xl rounded-full p-2 pl-4 pr-2 shadow-2xl z-50`}
-      style={{ borderColor: MODES.find(m => m.key === activeMode).color + '40' }}
+      style={{ borderColor: (MODES.find(m => m.key === (activeMode || 'direct').toLowerCase()) || MODES[0]).color + '40' }}
       animate={isGlitching ? { x: [-2, 2, -2, 0], filter: ["hue-rotate(0deg)", "hue-rotate(90deg)", "hue-rotate(0deg)"] } : {}}
       transition={{ repeat: Infinity, duration: 0.1 }}
       onSubmit={handleSubmit}
@@ -363,14 +363,14 @@ export default function CompanionChat({ session }) {
 
       setIsTyping(false);
       
-      if (emotionKey === 'angry' || activeMode === 'unhinged') setCharacterAnim('arguing');
+      if (emotionKey === 'angry' || (activeMode || '').toLowerCase() === 'unhinged') setCharacterAnim('arguing');
       else setCharacterAnim('talk');
 
       setTimeout(() => setCharacterAnim('idle'), Math.max(3000, tieredText.length * 100));
     }, 1200);
   };
 
-  const currentModeMeta = MODES.find(m => m.key === activeMode);
+  const currentModeMeta = MODES.find(m => m.key === (activeMode || 'direct').toLowerCase()) || MODES[0];
   const isGlitching = characterAnim === 'arguing';
   const orbitSpeed = currentModeMeta.baseSpeed;
 
