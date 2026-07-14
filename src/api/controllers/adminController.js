@@ -273,13 +273,41 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
+const { generateUserExportZip } = require('../utils/exportGenerator');
+const { sendDataExportEmail } = require('../utils/emailService');
+
 exports.approveExport = async (req, res) => {
   const { requestId } = req.body;
   if (!requestId) return res.status(400).json({ error: 'requestId is required' });
   try {
+    // 1. Get the request details to know the user_id and email
+    const { data: request, error: reqError } = await supabase
+      .from('data_export_requests')
+      .select('*')
+      .eq('id', requestId)
+      .single();
+      
+    if (reqError || !request) throw new Error("Request not found");
+
+    if (request.request_type === 'data_export') {
+      try {
+        // Generate ZIP buffer
+        const zipBuffer = await generateUserExportZip(request.user_id);
+        // Send email
+        await sendDataExportEmail(request.email, zipBuffer);
+      } catch (emailErr) {
+        console.error("Failed to generate or send export email:", emailErr);
+        // Don't fail the approval just because email failed, or maybe we should?
+        // Actually, if email fails, we should probably return an error so the admin knows.
+        return res.status(500).json({ error: 'Failed to send automated email: ' + emailErr.message });
+      }
+    }
+
+    // 2. Mark as approved
     const { error } = await supabase.from('data_export_requests').update({ status: 'approved' }).eq('id', requestId);
     if (error) throw error;
-    res.json({ success: true });
+    
+    res.json({ success: true, message: 'Export approved and email sent successfully.' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
