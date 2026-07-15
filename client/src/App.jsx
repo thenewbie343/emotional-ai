@@ -165,6 +165,21 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Parse URL hash for errors (e.g. invalid client secret, redirect mismatch, etc.)
+    const hash = window.location.hash;
+    if (hash && (hash.includes('error=') || hash.includes('error_description='))) {
+      const params = new URLSearchParams(hash.substring(1));
+      const errorMsg = params.get('error_description') || params.get('error') || 'Unknown auth error';
+      
+      // Clean hash from browser address bar
+      window.history.replaceState(null, null, window.location.pathname);
+      
+      // Delay slightly so that window.alert (which becomes a toast notification) has the provider mounted
+      setTimeout(() => {
+        alert("Google Login Failed: " + decodeURIComponent(errorMsg).replace(/\+/g, ' '));
+      }, 1000);
+    }
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user?.user_metadata?.is_blocked) {
         await supabase.auth.signOut()
