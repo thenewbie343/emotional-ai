@@ -511,17 +511,15 @@ export default function ProfileHub({ session }) {
               <div className="mt-4 p-4 rounded-2xl bg-black/20 border border-white/5">
                 <h4 className="text-xs font-bold tracking-widest text-white/50 uppercase mb-3">Module Unlocks</h4>
                 <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
-                    <span className="material-symbols-outlined text-[14px]">lock_open</span> Inner Diary
-                  </span>
-                  <span className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
-                    <span className="material-symbols-outlined text-[14px]">lock_open</span> Resonance
-                  </span>
-                  <span className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
-                    <span className="material-symbols-outlined text-[14px]">lock_open</span> Wellness Radar
-                  </span>
-                  {/* Sai Modules */}
-                  {['Study Hub', 'Memory Vault', 'Dream Vault', 'Time Capsules', 'Goals'].map((mod, i) => (
+                  {/* Unlocked for everyone */}
+                  {['Shuna Chat', 'Sai Link', 'Goals', 'Memory Vault', 'Resonance'].map((mod, i) => (
+                    <span key={i} className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
+                      <span className="material-symbols-outlined text-[14px]">lock_open</span> {mod}
+                    </span>
+                  ))}
+
+                  {/* Premium features (unlocked if premium, locked if free) */}
+                  {['Study Hub', 'Dream Vault', 'Time Capsules', 'Inner Diary', 'Wellness Radar'].map((mod, i) => (
                     isPremium ? (
                       <span key={i} className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
                         <span className="material-symbols-outlined text-[14px]">lock_open</span> {mod}

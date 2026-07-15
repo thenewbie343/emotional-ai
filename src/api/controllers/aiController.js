@@ -115,7 +115,7 @@ exports.processMessage = async (req, res) => {
     
     let systemPrompt = SYSTEM_PROMPTS[currentMode] || SYSTEM_PROMPTS.romantic;
     if (userName) {
-      systemPrompt += `\n\nThe user's name is ${userName}. Address them by their name occasionally, but not every single time.`;
+      systemPrompt += `\n\nThe user's name is ${userName}. Address them by their name occasionally, but not every single time (maximum once every 5 or 6 messages). Do NOT use it in consecutive messages.`;
     }
 
     if (professionInfo && professionInfo.profession) {
@@ -126,7 +126,7 @@ exports.processMessage = async (req, res) => {
     if (companion === 'sai') {
       systemPrompt = SYSTEM_PROMPTS.sai;
       if (userName) {
-        systemPrompt += `\n\nThe user's name is ${userName}. Address them by their name occasionally.`;
+        systemPrompt += `\n\nThe user's name is ${userName}. Address them by their name occasionally, but not every single time (maximum once every 5 or 6 messages). Do NOT use it in consecutive messages.`;
       }
       const lastUserMsg = messages && messages.length > 0 ? messages[messages.length - 1]?.content : '';
       if (lastUserMsg && (lastUserMsg.includes("I am ready to study") || lastUserMsg.includes("detailed, structured lesson") || lastUserMsg.includes("Please act as my expert teacher"))) {
