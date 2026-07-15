@@ -32,6 +32,36 @@ import './index.css'
 function NotificationEngineRunner({ session }) {
   const { addNotification } = useNotification();
   useEffect(() => {
+    // Globally intercept window.alert and redirect to custom themed notifications
+    window.alert = (message) => {
+      let type = 'info';
+      const lower = message.toLowerCase();
+      if (
+        lower.includes('fail') || 
+        lower.includes('error') || 
+        lower.includes('blocked') || 
+        lower.includes('limit') || 
+        lower.includes('restricted') ||
+        lower.includes('expired')
+      ) {
+        type = 'error';
+      } else if (
+        lower.includes('success') || 
+        lower.includes('completed') || 
+        lower.includes('earned') ||
+        lower.includes('cleared') ||
+        lower.includes('sent')
+      ) {
+        type = 'success';
+      }
+      
+      addNotification({
+        sender: 'System',
+        message: message,
+        type: type
+      });
+    };
+
     if (session?.user) {
       notificationEngine.init(addNotification);
       notificationEngine.evaluateTriggers();

@@ -361,7 +361,13 @@ export default function SaiChat({ session }) {
     if (session?.user?.id && !isPremium) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const { count } = await supabase.from('messages').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('sender', 'user').gte('created_at', today.toISOString());
+      const { count } = await supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('sender', 'user')
+        .eq('source', 'sai')
+        .gte('created_at', today.toISOString());
       
       if (count >= 11) {
         alert("Free limit reached. Upgrade to Premium.");

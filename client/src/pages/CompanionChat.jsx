@@ -203,10 +203,14 @@ export default function CompanionChat({ session }) {
     }
     const lastMsg = messagesRef.current[messagesRef.current.length - 1];
     if (lastMsg && lastMsg.sender === 'ai' && !hasTriggeredInactivityRef.current) {
+      const text = lastMsg.text || lastMsg.content || '';
+      const isEnding = text.includes("chalo thikh ha yrr bye") || text.includes("im tired right now and have lots of works");
+      if (isEnding) return;
+
       inactivityTimerRef.current = setTimeout(() => {
         hasTriggeredInactivityRef.current = true;
         triggerInactivityFollowUp();
-      }, 6000);
+      }, 20000);
     }
   }, [activeMode, session]);
 
@@ -221,10 +225,14 @@ export default function CompanionChat({ session }) {
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       if (isVoiceEnabled) return;
 
+      const text = lastMsg.text || lastMsg.content || '';
+      const isEnding = text.includes("chalo thikh ha yrr bye") || text.includes("im tired right now and have lots of works");
+      if (isEnding) return;
+
       inactivityTimerRef.current = setTimeout(() => {
         hasTriggeredInactivityRef.current = true;
         triggerInactivityFollowUp();
-      }, 6000);
+      }, 20000);
     }
 
     return () => {
@@ -379,6 +387,7 @@ export default function CompanionChat({ session }) {
         .select('id', { count: 'exact', head: true })
         .eq('user_id', session.user.id)
         .eq('sender', 'user')
+        .eq('source', 'aria')
         .gte('created_at', today.toISOString());
 
       if (!error) {
@@ -403,7 +412,10 @@ export default function CompanionChat({ session }) {
     if (isLimitBoundary) {
       setIsTyping(true);
       setTimeout(async () => {
-        const aiMsgText = "Sorry, I'm busy right now and we will talk later. I'm tired right now we will talk later. You can buy me a time to talk to you! 😉";
+        const alternate = Math.random() > 0.5;
+        const aiMsgText = alternate 
+          ? "chalo thikh ha yrr bye , I'm busy right now and we will talk later or You can buy me a time to talk to you! 😉"
+          : "im tired right now and have lots of works we will talk later or you can buy a time for me 😉";
         const newAiMsg = { id: crypto.randomUUID(), text: aiMsgText, sender: 'ai' };
         setMessages(prev => [...prev, newAiMsg]);
         if (session?.user?.id) {
