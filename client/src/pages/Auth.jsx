@@ -128,8 +128,8 @@ export default function Auth() {
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
           
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-extrabold tracking-widest bg-gradient-to-r from-[#00d4ff] via-indigo-400 to-fuchsia-500 bg-clip-text text-transparent mb-2">
-              SAI
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-widest bg-gradient-to-r from-[#00d4ff] via-indigo-400 to-fuchsia-500 bg-clip-text text-transparent mb-2">
+              ANTIGRAVITY ISLAND
             </h1>
             <p className="text-xs uppercase tracking-widest text-white/40">
               {isLogin ? 'Synchronize Mind & Companion' : 'Crystallize New Insight'}
