@@ -53,7 +53,7 @@ export default function ProfileHub({ session }) {
         setIsMuted(user.user_metadata.mute_tts || false);
         setDefaultCompanion(user.user_metadata.default_companion || 'Shuna');
         setShunaMode(user.user_metadata.shuna_mode || 'Direct');
-        setDisplayName(user.user_metadata.display_name || user.email?.split('@')[0] || 'Traveler');
+        setDisplayName(user.user_metadata.display_name || user.user_metadata.full_name || user.email?.split('@')[0] || 'Traveler');
 
         if (user.user_metadata.profession_info) {
           const info = user.user_metadata.profession_info;
@@ -304,7 +304,11 @@ export default function ProfileHub({ session }) {
               <div className="flex items-start gap-6 relative z-10">
                 <div className="relative group cursor-pointer">
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/20 flex items-center justify-center overflow-hidden">
-                    <span className="material-symbols-outlined text-4xl text-white/50">person</span>
+                    {metadata?.avatar_url ? (
+                      <img src={metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="material-symbols-outlined text-4xl text-white/50">person</span>
+                    )}
                   </div>
                   <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <span className="text-[10px] font-semibold tracking-wider">COMING SOON</span>
