@@ -391,14 +391,20 @@ export default function ProfileHub({ session }) {
                       <select 
                         value={profession} 
                         onChange={handleProfessionChange}
-                        className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 transition-colors pointer-events-auto"
+                        className="bg-[#0a0514] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300 pointer-events-auto appearance-none pr-10 shadow-lg shadow-black/40"
+                        style={{
+                          backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
+                          backgroundPosition: 'right 12px center',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: '16px'
+                        }}
                       >
-                        <option value="">Choose Profession...</option>
-                        <option value="student">Student</option>
-                        <option value="pre_grad">Pre-Graduation</option>
-                        <option value="post_grad">Post-Graduation</option>
-                        <option value="employer">Employer</option>
-                        <option value="startup_owner">Startup Owner</option>
+                        <option value="" className="bg-[#0a0514] text-gray-400">Choose Profession...</option>
+                        <option value="student" className="bg-[#0a0514] text-white">Student</option>
+                        <option value="pre_grad" className="bg-[#0a0514] text-white">Pre-Graduation</option>
+                        <option value="post_grad" className="bg-[#0a0514] text-white">Post-Graduation</option>
+                        <option value="employer" className="bg-[#0a0514] text-white">Employer</option>
+                        <option value="startup_owner" className="bg-[#0a0514] text-white">Startup Owner</option>
                       </select>
                     </div>
 
@@ -409,13 +415,19 @@ export default function ProfileHub({ session }) {
                           <select 
                             value={studentClass} 
                             onChange={handleStudentClassChange}
-                            className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 transition-colors flex-1 pointer-events-auto"
+                            className="bg-[#0a0514] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300 flex-1 pointer-events-auto appearance-none pr-10 shadow-lg shadow-black/40"
+                            style={{
+                              backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
+                              backgroundPosition: 'right 12px center',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundSize: '16px'
+                            }}
                           >
-                            <option value="">Choose Class...</option>
+                            <option value="" className="bg-[#0a0514] text-gray-400">Choose Class...</option>
                             {['6', '7', '8', '9', '10', '11', '12'].map(c => (
-                              <option key={c} value={c}>Class {c}</option>
+                              <option key={c} value={c} className="bg-[#0a0514] text-white">Class {c}</option>
                             ))}
-                            <option value="other">Other</option>
+                            <option value="other" className="bg-[#0a0514] text-white">Other</option>
                           </select>
                           {studentClass === 'other' && (
                             <input 
@@ -424,7 +436,7 @@ export default function ProfileHub({ session }) {
                               value={customClass}
                               onChange={handleCustomClassChange}
                               onBlur={saveCustomProfessionDetails}
-                              className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 transition-colors flex-1 pointer-events-auto"
+                              className="bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors flex-1 pointer-events-auto"
                             />
                           )}
                         </div>
@@ -438,13 +450,19 @@ export default function ProfileHub({ session }) {
                           <select 
                             value={branch} 
                             onChange={handleBranchChange}
-                            className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 transition-colors flex-1 pointer-events-auto"
+                            className="bg-[#0a0514] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300 flex-1 pointer-events-auto appearance-none pr-10 shadow-lg shadow-black/40"
+                            style={{
+                              backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
+                              backgroundPosition: 'right 12px center',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundSize: '16px'
+                            }}
                           >
-                            <option value="">Choose Branch...</option>
+                            <option value="" className="bg-[#0a0514] text-gray-400">Choose Branch...</option>
                             {['B.Tech', 'B.Sc', 'B.B.A', 'M.B.B.S', 'M.A', 'M.B.A', 'B.Com', 'M.Tech', 'Ph.D'].map(b => (
-                              <option key={b} value={b}>{b}</option>
+                              <option key={b} value={b} className="bg-[#0a0514] text-white">{b}</option>
                             ))}
-                            <option value="other">Other</option>
+                            <option value="other" className="bg-[#0a0514] text-white">Other</option>
                           </select>
                           {branch === 'other' && (
                             <input 
