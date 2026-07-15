@@ -442,7 +442,8 @@ export default function SaiChat({ session }) {
           strictness: strictness, // Pass strictness to backend
           userEmail: session?.user?.email,
           userId: userId,
-          userName: session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0]
+          userName: session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0],
+          professionInfo: session?.user?.user_metadata?.profession_info
         }),
         signal: AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined
       });

@@ -37,6 +37,12 @@ export default function ProfileHub({ session }) {
   const [wellnessAvg, setWellnessAvg] = useState('0.0');
   const [displayName, setDisplayName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
+
+  const [profession, setProfession] = useState('');
+  const [studentClass, setStudentClass] = useState('');
+  const [customClass, setCustomClass] = useState('');
+  const [branch, setBranch] = useState('');
+  const [customBranch, setCustomBranch] = useState('');
   
   useEffect(() => {
     async function loadProfile() {
@@ -48,6 +54,26 @@ export default function ProfileHub({ session }) {
         setDefaultCompanion(user.user_metadata.default_companion || 'Shuna');
         setShunaMode(user.user_metadata.shuna_mode || 'Direct');
         setDisplayName(user.user_metadata.display_name || user.email?.split('@')[0] || 'Traveler');
+
+        if (user.user_metadata.profession_info) {
+          const info = user.user_metadata.profession_info;
+          setProfession(info.profession || '');
+          if (info.profession === 'student') {
+            if (['6','7','8','9','10','11','12'].includes(info.details)) {
+              setStudentClass(info.details);
+            } else {
+              setStudentClass('other');
+              setCustomClass(info.details || '');
+            }
+          } else if (info.profession === 'pre_grad' || info.profession === 'post_grad') {
+            if (['B.Tech', 'B.Sc', 'B.B.A', 'M.B.B.S', 'M.A', 'M.B.A', 'B.Com', 'M.Tech', 'Ph.D'].includes(info.details)) {
+              setBranch(info.details);
+            } else {
+              setBranch('other');
+              setCustomBranch(info.details || '');
+            }
+          }
+        }
       } else if (user) {
         setDisplayName(user.email?.split('@')[0] || 'Traveler');
       }
@@ -83,6 +109,65 @@ export default function ProfileHub({ session }) {
 
   const saveStrictness = () => {
     updateMetadata({ sai_strictness: strictness });
+  };
+
+  const handleProfessionChange = async (e) => {
+    const val = e.target.value;
+    setProfession(val);
+    setStudentClass('');
+    setCustomClass('');
+    setBranch('');
+    setCustomBranch('');
+    await updateMetadata({
+      profession_info: {
+        profession: val,
+        details: ''
+      }
+    });
+  };
+
+  const handleStudentClassChange = async (e) => {
+    const val = e.target.value;
+    setStudentClass(val);
+    if (val !== 'other') {
+      await updateMetadata({
+        profession_info: {
+          profession: 'student',
+          details: val
+        }
+      });
+    }
+  };
+
+  const handleCustomClassChange = (e) => {
+    setCustomClass(e.target.value);
+  };
+
+  const handleBranchChange = async (e) => {
+    const val = e.target.value;
+    setBranch(val);
+    if (val !== 'other') {
+      await updateMetadata({
+        profession_info: {
+          profession: profession,
+          details: val
+        }
+      });
+    }
+  };
+
+  const handleCustomBranchChange = (e) => {
+    setCustomBranch(e.target.value);
+  };
+
+  const saveCustomProfessionDetails = async () => {
+    const details = profession === 'student' ? customClass : customBranch;
+    await updateMetadata({
+      profession_info: {
+        profession,
+        details
+      }
+    });
   };
 
   const saveShunaMode = (mode) => {
@@ -297,6 +382,83 @@ export default function ProfileHub({ session }) {
                         3D Island
                       </button>
                     </div>
+                  </div>
+
+                  {/* Profession Settings */}
+                  <div className="mt-6 pt-6 border-t border-white/5 space-y-4">
+                    <div className="flex flex-col gap-2">
+                      <span className="text-xs text-white/50 uppercase tracking-widest font-semibold">Profession (Optional):</span>
+                      <select 
+                        value={profession} 
+                        onChange={handleProfessionChange}
+                        className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 transition-colors pointer-events-auto"
+                      >
+                        <option value="">Choose Profession...</option>
+                        <option value="student">Student</option>
+                        <option value="pre_grad">Pre-Graduation</option>
+                        <option value="post_grad">Post-Graduation</option>
+                        <option value="employer">Employer</option>
+                        <option value="startup_owner">Startup Owner</option>
+                      </select>
+                    </div>
+
+                    {profession === 'student' && (
+                      <div className="flex flex-col gap-2">
+                        <span className="text-xs text-white/50 uppercase tracking-widest font-semibold">Class / Grade:</span>
+                        <div className="flex gap-2">
+                          <select 
+                            value={studentClass} 
+                            onChange={handleStudentClassChange}
+                            className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 transition-colors flex-1 pointer-events-auto"
+                          >
+                            <option value="">Choose Class...</option>
+                            {['6', '7', '8', '9', '10', '11', '12'].map(c => (
+                              <option key={c} value={c}>Class {c}</option>
+                            ))}
+                            <option value="other">Other</option>
+                          </select>
+                          {studentClass === 'other' && (
+                            <input 
+                              type="text" 
+                              placeholder="Enter class..."
+                              value={customClass}
+                              onChange={handleCustomClassChange}
+                              onBlur={saveCustomProfessionDetails}
+                              className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 transition-colors flex-1 pointer-events-auto"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {(profession === 'pre_grad' || profession === 'post_grad') && (
+                      <div className="flex flex-col gap-2">
+                        <span className="text-xs text-white/50 uppercase tracking-widest font-semibold">Branch / Course:</span>
+                        <div className="flex gap-2">
+                          <select 
+                            value={branch} 
+                            onChange={handleBranchChange}
+                            className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 transition-colors flex-1 pointer-events-auto"
+                          >
+                            <option value="">Choose Branch...</option>
+                            {['B.Tech', 'B.Sc', 'B.B.A', 'M.B.B.S', 'M.A', 'M.B.A', 'B.Com', 'M.Tech', 'Ph.D'].map(b => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
+                            <option value="other">Other</option>
+                          </select>
+                          {branch === 'other' && (
+                            <input 
+                              type="text" 
+                              placeholder="Enter branch..."
+                              value={customBranch}
+                              onChange={handleCustomBranchChange}
+                              onBlur={saveCustomProfessionDetails}
+                              className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 transition-colors flex-1 pointer-events-auto"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

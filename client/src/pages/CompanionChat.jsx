@@ -167,7 +167,8 @@ export default function CompanionChat({ session }) {
           mode: activeMode,
           userEmail: session?.user?.email,
           userId: session?.user?.id,
-          userName: session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0]
+          userName: session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0],
+          professionInfo: session?.user?.user_metadata?.profession_info
         })
       });
 
@@ -436,7 +437,8 @@ export default function CompanionChat({ session }) {
             mode: activeMode,
             userEmail: session?.user?.email,
             userId: session?.user?.id,
-            userName: session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0]
+            userName: session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0],
+            professionInfo: session?.user?.user_metadata?.profession_info
           })
         });
         if (apiRes.ok) {

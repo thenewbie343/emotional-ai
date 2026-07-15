@@ -104,7 +104,7 @@ If the user tries to vent, talk about deep emotional issues, or casual gossip, r
 
 exports.processMessage = async (req, res) => {
   try {
-    const { messages, emotion, mode, companion, userId, isVoice, userName } = req.body;
+    const { messages, emotion, mode, companion, userId, isVoice, userName, professionInfo } = req.body;
     
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Messages array is required' });
@@ -116,6 +116,11 @@ exports.processMessage = async (req, res) => {
     let systemPrompt = SYSTEM_PROMPTS[currentMode] || SYSTEM_PROMPTS.romantic;
     if (userName) {
       systemPrompt += `\n\nThe user's name is ${userName}. Address them by their name occasionally, but not every single time.`;
+    }
+
+    if (professionInfo && professionInfo.profession) {
+      const detailsStr = professionInfo.details ? ` (${professionInfo.details})` : '';
+      systemPrompt += `\n\nThe user's profession/background is ${professionInfo.profession}${detailsStr}. Reference this naturally in conversation (e.g., tailor your guidance, questions, or remarks to their life stage, student status, or work) where contextually appropriate, but do not mention it constantly.`;
     }
 
     if (companion === 'sai') {
