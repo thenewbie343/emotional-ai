@@ -91,6 +91,11 @@ export default function ProfileHub({ session }) {
   };
 
   const handleDownloadMind = async () => {
+    if (!isPremium) {
+      alert("Data Export is a Premium feature. Please upgrade your subscription to download your data.");
+      return;
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
     
@@ -266,7 +271,7 @@ export default function ProfileHub({ session }) {
                         ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30 shadow-[0_0_10px_rgba(217,70,239,0.2)]'
                         : 'bg-white/5 text-gray-300 border-white/10'
                     }`}>
-                      {isPremium ? 'Premium Beta Tester' : 'Free Void Walker'}
+                      {isPremium ? 'Premium User' : 'Free Void Walker'}
                     </span>
                   </div>
                   
