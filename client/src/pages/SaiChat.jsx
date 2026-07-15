@@ -356,14 +356,19 @@ export default function SaiChat({ session }) {
       return;
     }
 
+    let isLimitBoundary = false;
+
     if (session?.user?.id && !isPremium) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const { count } = await supabase.from('messages').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('sender', 'user').gte('created_at', today.toISOString());
-      if (count >= 10) {
+      
+      if (count >= 11) {
         alert("Free limit reached. Upgrade to Premium.");
         navigate('/billing');
         return;
+      } else if (count === 10) {
+        isLimitBoundary = true;
       }
     }
 
@@ -374,6 +379,18 @@ export default function SaiChat({ session }) {
     setMessages(prev => [...prev, userMsg]);
 
     saveMessageToDB({ id: userMsg.id, user_id: userId, text: userMsg.text, sender: 'user', source: 'sai' }, userMsg.id);
+
+    if (isLimitBoundary) {
+      setIsTyping(true);
+      setTimeout(async () => {
+        const aiMsgText = "I think you forgot to pay the fees. If you want any guidance or topic explanation, you have to buy a premium.";
+        const newAiMsg = { id: crypto.randomUUID(), text: aiMsgText, sender: 'ai' };
+        setMessages(prev => [...prev, newAiMsg]);
+        saveMessageToDB({ id: newAiMsg.id, user_id: userId, text: aiMsgText, sender: 'ai', source: 'sai' }, newAiMsg.id);
+        setIsTyping(false);
+      }, 1500);
+      return;
+    }
 
     // WIDGET INTERCEPTORS — no setIsTyping needed here
     if (!skipInterceptor && (lowerText.includes('roadmap of') || lowerText.match(/make.*roadmap.*for/) || lowerText.match(/roadmap.*for/))) {

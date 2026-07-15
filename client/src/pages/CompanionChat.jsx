@@ -59,7 +59,7 @@ const OrbitalItem = ({ angle, radius, reverseDuration, children }) => {
 // ==========================================
 // CHAT INPUT (Orbital Centerpiece)
 // ==========================================
-const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isGlitching, voiceState, voiceError }) => {
+const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isGlitching, voiceState, voiceError, onInputChange }) => {
   const [inputText, setInputText] = useState('');
 
   const handleSubmit = (e) => {
@@ -109,7 +109,10 @@ const ChatInput = memo(({ onSend, activeMode, isVoiceEnabled, onToggleVoice, isG
         }
         value={inputText}
         disabled={isVoiceEnabled && voiceState === 'connecting'}
-        onChange={(e) => setInputText(e.target.value)}
+        onChange={(e) => {
+          setInputText(e.target.value);
+          if (onInputChange) onInputChange();
+        }}
         className="flex-1 bg-transparent text-white placeholder:text-gray-500 focus:outline-none tracking-wide text-sm"
         style={{ minWidth: 0, width: '100%' }}
       />
@@ -142,6 +145,91 @@ export default function CompanionChat({ session }) {
   const activeVoiceResponseIdRef = useRef(null);
   const prevVoiceStateRef = useRef('idle');
   const messagesRef = useRef([]);
+  const inactivityTimerRef = useRef(null);
+  const hasTriggeredInactivityRef = useRef(false);
+
+  const triggerInactivityFollowUp = async () => {
+    setIsTyping(true);
+    try {
+      const emotionKey = 'neutral';
+      const systemPromptHidden = `[SYSTEM_NOTIFICATION: The user has been silent for a while. Ask them a short, engaging, context-aware question about their day, mental health, wellness radar, or inner diary to follow up.]`;
+      
+      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      const apiRes = await fetch(`${API_BASE}/api/ai/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...messagesRef.current, { role: 'user', content: systemPromptHidden }].map(m => ({ 
+            role: m.sender === 'user' ? 'user' : 'assistant', 
+            content: m.content || m.text 
+          })),
+          emotion: emotionKey,
+          mode: activeMode,
+          userEmail: session?.user?.email,
+          userId: session?.user?.id,
+          userName: session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0]
+        })
+      });
+
+      if (apiRes.ok) {
+        const aiData = await apiRes.json();
+        const generatedText = aiData.text;
+        
+        const newAiMsg = { id: crypto.randomUUID(), text: generatedText, sender: 'ai' };
+        setMessages(prev => [...prev, newAiMsg]);
+        
+        if (session?.user?.id) {
+          saveMessageToDB({ 
+            id: newAiMsg.id, 
+            user_id: session.user.id, 
+            text: generatedText, 
+            sender: 'ai', 
+            source: 'aria' 
+          }, newAiMsg.id);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch inactivity follow-up:", err);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
+    }
+    const lastMsg = messagesRef.current[messagesRef.current.length - 1];
+    if (lastMsg && lastMsg.sender === 'ai' && !hasTriggeredInactivityRef.current) {
+      inactivityTimerRef.current = setTimeout(() => {
+        hasTriggeredInactivityRef.current = true;
+        triggerInactivityFollowUp();
+      }, 6000);
+    }
+  }, [activeMode, session]);
+
+  useEffect(() => {
+    const lastMsg = messages[messages.length - 1];
+    if (!lastMsg) return;
+
+    if (lastMsg.sender === 'user') {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      hasTriggeredInactivityRef.current = false;
+    } else if (lastMsg.sender === 'ai' && !hasTriggeredInactivityRef.current && !isTyping) {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      if (isVoiceEnabled) return;
+
+      inactivityTimerRef.current = setTimeout(() => {
+        hasTriggeredInactivityRef.current = true;
+        triggerInactivityFollowUp();
+      }, 6000);
+    }
+
+    return () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    };
+  }, [messages, isTyping, isVoiceEnabled, activeMode, session]);
 
   const { applyTierBehavior, recordEngagement } = useSIYATierBehavior();
 
@@ -195,7 +283,7 @@ export default function CompanionChat({ session }) {
         body: JSON.stringify({ table: 'messages', match: { user_id: session.user.id, source: 'aria' } })
       });
       if (res.ok) {
-        setMessages([{ id: 'initial', text: "System online. Shuna is operational in the void.", sender: 'ai' }]);
+        setMessages([{ id: 'initial', text: "Heyyy! ✨ I was just thinking about you. Suno, sab theek hai na? Aaj tumhara din kaisa chal raha hai? Batao mujhe!", sender: 'ai' }]);
         setShowClearConfirm(false);
       }
     } catch (e) {
@@ -266,7 +354,7 @@ export default function CompanionChat({ session }) {
     const fetchMessages = async () => {
       const { data } = await supabase.from('messages').select('*').eq('user_id', session.user.id).eq('source', 'aria').order('created_at', { ascending: true });
       if (data && data.length > 0) setMessages(data);
-      else setMessages([{ id: 'initial', text: "System online. Shuna is operational in the void.", sender: 'ai' }]);
+      else setMessages([{ id: 'initial', text: "Heyyy! ✨ I was just thinking about you. Suno, sab theek hai na? Aaj tumhara din kaisa chal raha hai? Batao mujhe!", sender: 'ai' }]);
     };
     fetchMessages();
   }, [session]);
@@ -279,6 +367,8 @@ export default function CompanionChat({ session }) {
       return;
     }
 
+    let isLimitBoundary = false;
+
     if (session?.user?.id && !isPremium) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -290,10 +380,14 @@ export default function CompanionChat({ session }) {
         .eq('sender', 'user')
         .gte('created_at', today.toISOString());
 
-      if (!error && count >= 10) {
-        alert("You have reached your daily limit of 10 messages on the Free tier. Upgrade to Premium for unlimited access.");
-        navigate('/billing');
-        return;
+      if (!error) {
+        if (count >= 11) {
+          alert("You have reached your daily limit of 10 messages on the Free tier. Upgrade to Premium for unlimited access.");
+          navigate('/billing');
+          return;
+        } else if (count === 10) {
+          isLimitBoundary = true;
+        }
       }
     }
 
@@ -302,6 +396,21 @@ export default function CompanionChat({ session }) {
 
     if (session?.user?.id) {
       saveMessageToDB({ id: newUserMsg.id, user_id: session.user.id, text, sender: 'user', source: 'aria' }, newUserMsg.id);
+    }
+
+    // Intercept if they hit the daily limit boundary (10th message)
+    if (isLimitBoundary) {
+      setIsTyping(true);
+      setTimeout(async () => {
+        const aiMsgText = "Sorry, I'm busy right now and we will talk later. I'm tired right now we will talk later. You can buy me a time to talk to you! 😉";
+        const newAiMsg = { id: crypto.randomUUID(), text: aiMsgText, sender: 'ai' };
+        setMessages(prev => [...prev, newAiMsg]);
+        if (session?.user?.id) {
+          saveMessageToDB({ id: newAiMsg.id, user_id: session.user.id, text: aiMsgText, sender: 'ai', source: 'aria' }, newAiMsg.id);
+        }
+        setIsTyping(false);
+      }, 1500);
+      return;
     }
 
     // If Shuna Voice is active, bypass REST and transmit raw text over the WebSocket connection
@@ -527,6 +636,7 @@ export default function CompanionChat({ session }) {
           isGlitching={isGlitching}
           voiceState={voiceState}
           voiceError={voiceError}
+          onInputChange={resetInactivityTimer}
         />
 
         {/* Clear Chat Confirmation Modal */}
