@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useSubscription } from '../hooks/useSubscription';
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Float, MeshTransmissionMaterial, Sparkles, Html, SpotLight, Text } from '@react-three/drei';
+import { OrbitControls, Float, Sparkles, Html, SpotLight, Text } from '@react-three/drei';
 import * as THREE from 'three';
 
 const CATEGORY_META = {
@@ -114,17 +114,16 @@ function MemoryShard({ memory, position, isSelected, onClick }) {
         onPointerOut={() => document.body.style.cursor = 'auto'}
       >
         <octahedronGeometry args={[0.5, 0]} />
-        {/* Glassmorphism Refraction Shader via Drei */}
-        <MeshTransmissionMaterial 
-          backside 
-          samples={4} 
-          thickness={0.8} 
-          chromaticAberration={1.5} 
-          anisotropy={0.3} 
-          distortion={1.0} 
-          distortionScale={0.5} 
-          temporalDistortion={0.2} 
+        <meshPhysicalMaterial 
           color={meta.color}
+          emissive={meta.color}
+          emissiveIntensity={isSelected ? 1.5 : 0.5}
+          roughness={0.1}
+          metalness={0.8}
+          clearcoat={1.0}
+          clearcoatRoughness={0.1}
+          transmission={0.3}
+          thickness={0.5}
           transparent
           opacity={targetOpacity}
         />
