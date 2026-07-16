@@ -23,7 +23,7 @@ const NotificationDropdown = () => {
             initial={{ opacity: 0, scale: 0.95, y: -20, x: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20, x: 20, transition: { duration: 0.15 } }}
-            className="absolute top-16 right-0 z-50 w-[350px] max-h-[80vh] overflow-y-auto rounded-3xl bg-[#0b0f19]/80 backdrop-blur-3xl border border-white/10 shadow-2xl flex flex-col"
+            className="fixed md:absolute top-16 right-4 md:right-0 z-50 w-[calc(100vw-32px)] md:w-[350px] max-h-[80vh] overflow-y-auto rounded-3xl bg-[#0b0f19]/80 backdrop-blur-3xl border border-white/10 shadow-2xl flex flex-col"
           >
             <div className="p-4 border-b border-white/5 flex items-center justify-between sticky top-0 bg-[#0b0f19]/80 backdrop-blur-md z-10">
               <h3 className="text-white font-medium text-lg">Notifications</h3>

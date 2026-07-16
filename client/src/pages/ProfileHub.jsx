@@ -395,7 +395,7 @@ export default function ProfileHub({ session }) {
                       <select 
                         value={profession} 
                         onChange={handleProfessionChange}
-                        className="bg-[#0a0514] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300 pointer-events-auto appearance-none pr-10 shadow-lg shadow-black/40"
+                        className="w-full bg-[#0a0514] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300 pointer-events-auto appearance-none pr-10 shadow-lg shadow-black/40"
                         style={{
                           backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
                           backgroundPosition: 'right 12px center',
@@ -415,11 +415,11 @@ export default function ProfileHub({ session }) {
                     {profession === 'student' && (
                       <div className="flex flex-col gap-2">
                         <span className="text-xs text-white/50 uppercase tracking-widest font-semibold">Class / Grade:</span>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <select 
                             value={studentClass} 
                             onChange={handleStudentClassChange}
-                            className="bg-[#0a0514] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300 flex-1 pointer-events-auto appearance-none pr-10 shadow-lg shadow-black/40"
+                            className="w-full sm:flex-1 bg-[#0a0514] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300 pointer-events-auto appearance-none pr-10 shadow-lg shadow-black/40"
                             style={{
                               backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
                               backgroundPosition: 'right 12px center',
@@ -440,7 +440,7 @@ export default function ProfileHub({ session }) {
                               value={customClass}
                               onChange={handleCustomClassChange}
                               onBlur={saveCustomProfessionDetails}
-                              className="bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors flex-1 pointer-events-auto"
+                              className="w-full sm:flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors pointer-events-auto"
                             />
                           )}
                         </div>
@@ -450,11 +450,11 @@ export default function ProfileHub({ session }) {
                     {(profession === 'pre_grad' || profession === 'post_grad') && (
                       <div className="flex flex-col gap-2">
                         <span className="text-xs text-white/50 uppercase tracking-widest font-semibold">Branch / Course:</span>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <select 
                             value={branch} 
                             onChange={handleBranchChange}
-                            className="bg-[#0a0514] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300 flex-1 pointer-events-auto appearance-none pr-10 shadow-lg shadow-black/40"
+                            className="w-full sm:flex-1 bg-[#0a0514] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300 pointer-events-auto appearance-none pr-10 shadow-lg shadow-black/40"
                             style={{
                               backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
                               backgroundPosition: 'right 12px center',
@@ -475,7 +475,7 @@ export default function ProfileHub({ session }) {
                               value={customBranch}
                               onChange={handleCustomBranchChange}
                               onBlur={saveCustomProfessionDetails}
-                              className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 transition-colors flex-1 pointer-events-auto"
+                              className="w-full sm:flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 transition-colors pointer-events-auto"
                             />
                           )}
                         </div>
