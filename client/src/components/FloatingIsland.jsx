@@ -4,7 +4,7 @@ import { useGLTF, useCursor } from '@react-three/drei'
 import { useEffect } from 'react'
 
 // Pure 3D component — no HTML inside here
-export default function FloatingIsland({ position = [0, -2, 0], scale = [8, 6, 11], rotation = [0, 0, 0] }) {
+export default function FloatingIsland({ position = [0, -2, 0], scale = [8, 6, 11], rotation = [0, 0, 0], isMobile = false }) {
   const groupRef = useRef()
   const floatRef = useRef(0)
   const [hovered, setHovered] = useState(false)
@@ -18,12 +18,12 @@ export default function FloatingIsland({ position = [0, -2, 0], scale = [8, 6, 1
     if (scene) {
       scene.traverse((node) => {
         if (node.isMesh) {
-          node.castShadow = true
-          node.receiveShadow = true
+          node.castShadow = !isMobile
+          node.receiveShadow = !isMobile
         }
       })
     }
-  }, [scene])
+  }, [scene, isMobile])
 
   // Base Y stored once — no array allocation every frame
   const baseY = position[1]

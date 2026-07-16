@@ -103,9 +103,9 @@ export default function HomeScene() {
     <>
       <div style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
         <Canvas 
-          shadows
-          dpr={[1, 1.5]} 
-          performance={{ min: 0.6 }}
+          shadows={!isMobile}
+          dpr={isMobile ? 1 : [1, 1.5]} 
+          performance={{ min: 0.5 }}
           gl={{ 
             antialias: false, 
             powerPreference: "high-performance",
@@ -118,12 +118,13 @@ export default function HomeScene() {
           <Suspense fallback={null}>
             <PerspectiveCamera makeDefault position={[0, 3, cameraZ]} fov={cameraFov} />
             <Sky distance={450000} sunPosition={[5, 1, 8]} inclination={0} azimuth={0.25} />
-            <Environment preset="sunset" />
-            <ambientLight intensity={0.4} />
-            <directionalLight position={[5, 10, 5]} intensity={1.5} castShadow />
-            <pointLight position={[-5, 5, -5]} intensity={0.5} color="#b0c4de" />
+            {!isMobile && <Environment preset="sunset" />}
+            <ambientLight intensity={isMobile ? 1.1 : 0.4} />
+            <directionalLight position={[5, 10, 5]} intensity={isMobile ? 1.2 : 1.5} castShadow={!isMobile} />
+            <pointLight position={[-5, 5, -5]} intensity={isMobile ? 0.8 : 0.5} color="#b0c4de" />
+            {isMobile && <directionalLight position={[-5, -5, -5]} intensity={0.4} color="#ffffff" />}
 
-            <Sparkles count={isMobile ? 15 : 45} scale={30} size={2} speed={0.4} opacity={0.2} color="#aaddff" position={[0, -2, 0]} />
+            <Sparkles count={isMobile ? 5 : 45} scale={30} size={2} speed={0.4} opacity={0.2} color="#aaddff" position={[0, -2, 0]} />
             <ShootingStars />
 
             {!isMobile && (
@@ -136,7 +137,7 @@ export default function HomeScene() {
             )}
 
             <FlockOfBirds count={isMobile ? 6 : 12} isAudioEnabled={hasEntered} radius={12} height={10} heightVariance={5} centerOffset={modelPosition} speed={0.15} />
-            <FloatingIsland position={modelPosition} scale={modelScale} rotation={modelRotation} />
+            <FloatingIsland position={modelPosition} scale={modelScale} rotation={modelRotation} isMobile={isMobile} />
             <IslandAchievements achievements={achievements} showFireworks={showFireworks} onFireworksComplete={() => setShowFireworks(false)} />
             
             {isMobile ? (
