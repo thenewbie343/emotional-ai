@@ -188,7 +188,7 @@ export default function SiyaHub({ session }) {
             {/* Minimal Credits Display */}
             <div 
               onClick={() => navigate('/profile')}
-              className="cursor-pointer flex items-center gap-3 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/10 hover:bg-white/5 transition-colors backdrop-blur-md text-xs select-none"
+              className="cursor-pointer flex items-center gap-2 px-1 py-1 hover:opacity-85 transition-opacity text-xs select-none mr-2"
               title="Command Center Wallet"
             >
               <span className="flex items-center gap-1 font-medium text-rose-300">
