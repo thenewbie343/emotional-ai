@@ -233,6 +233,9 @@ export default function App() {
         }
       }
       setLoading(false)
+    }).catch(err => {
+      console.error('[Supabase Auth Error]:', err);
+      setLoading(false);
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
