@@ -175,7 +175,7 @@ export default function SiyaHub({ session }) {
       >
         
         {/* Header - Ethereal & Calming */}
-        <motion.header variants={itemVariant} className="flex justify-between items-end w-full">
+        <motion.header variants={itemVariant} className="flex flex-col md:flex-row md:justify-between md:items-end w-full gap-4">
           <div>
             <h1 className="text-4xl md:text-5xl font-light tracking-wide text-white mb-2 font-serif">
               {greeting}
@@ -184,7 +184,7 @@ export default function SiyaHub({ session }) {
                <span className="w-2 h-2 bg-fuchsia-400 rounded-full shadow-[0_0_8px_rgba(232,121,249,0.8)] animate-pulse"></span> Zero-Gravity Reflection
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto">
             {/* Minimal Credits Display */}
             <div 
               onClick={() => navigate('/profile')}

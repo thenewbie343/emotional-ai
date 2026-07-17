@@ -91,14 +91,14 @@ export default function SaiHub({ session }) {
 
       <div className="relative z-10 max-w-6xl mx-auto px-6 pt-12 space-y-10">
         
-        <header className="flex justify-between items-end w-full animate-in fade-in slide-in-from-top-4 duration-700">
+        <header className="flex flex-col md:flex-row md:justify-between md:items-end w-full gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
           <div>
             <h1 className="text-4xl font-light tracking-tight text-white mb-2">{getGreeting()}</h1>
             <p className="text-sm text-gray-400 font-medium tracking-wider uppercase flex items-center gap-2">
                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span> Personal Assistant Hub
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto">
             <div 
               onClick={() => navigate('/profile')}
               className="cursor-pointer flex items-center gap-2.5 px-1 py-1 hover:opacity-80 transition-opacity text-xs select-none mr-2 flex items-center"
