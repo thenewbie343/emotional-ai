@@ -188,7 +188,7 @@ exports.processMessage = async (req, res) => {
     // Free users can spend a maximum of 20 Time (from refill) in any chat.
     // If they have spent 20 Time in refill, but have top-up Time, they can use it.
     // If they have no topup Time AND have spent 20 Refill Time, they are blocked.
-    const messageCost = 2;
+    const messageCost = isVoice ? 3 : 2;
     if (!isPremium) {
       if (tokens.chat_session_spent >= 20 && tokens.topup_time < messageCost) {
         return res.status(403).json({

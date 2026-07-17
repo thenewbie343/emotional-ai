@@ -190,6 +190,7 @@ async def voice_chat(req: VoiceChatRequest):
         chat_transcript = ""
         kokoro_script = ""
         error_llm = None
+        should_save = True
         
         try:
             chat_payload = {
@@ -213,10 +214,19 @@ async def voice_chat(req: VoiceChatRequest):
                 )
             
             if not chat_response.is_success:
-                raise Exception(f"Main backend error status {chat_response.status_code}: {chat_response.text}")
-            
-            chat_data = chat_response.json()
-            raw_ai_text = (chat_data.get("text") or "").strip()
+                should_save = False
+                try:
+                    err_json = chat_response.json()
+                    if "message" in err_json:
+                        chat_transcript = err_json["message"]
+                        kokoro_script = err_json["message"]
+                    else:
+                        raise Exception(f"Main backend error status {chat_response.status_code}: {chat_response.text}")
+                except Exception:
+                    raise Exception(f"Main backend error status {chat_response.status_code}: {chat_response.text}")
+            else:
+                chat_data = chat_response.json()
+                raw_ai_text = (chat_data.get("text") or "").strip()
             
             import json
             import re
@@ -239,6 +249,7 @@ async def voice_chat(req: VoiceChatRequest):
             error_llm = str(llm_err)
             chat_transcript = "Arre yaar, server down hai lagta hai."
             kokoro_script = "Arre yaar, server down hai lagta hai."
+            should_save = False
 
         logger.info(f"UI Transcript: '{chat_transcript}'")
         logger.info(f"Kokoro Script: '{kokoro_script}'")
@@ -277,7 +288,7 @@ async def voice_chat(req: VoiceChatRequest):
         gc.collect()
 
         # ── Step 4: Save Records to Supabase ──
-        if supabase and req.user_id:
+        if supabase and req.user_id and should_save:
             try:
                 supabase.table("messages").insert({
                     "user_id": req.user_id,
