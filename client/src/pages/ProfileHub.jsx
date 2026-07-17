@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useSubscription } from '../hooks/useSubscription';
 
+const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:3000" : "https://emotional-ai-18zi.onrender.com");
+
 const springTransition = {
   type: "spring",
   stiffness: 300,
@@ -43,7 +45,40 @@ export default function ProfileHub({ session }) {
   const [customClass, setCustomClass] = useState('');
   const [branch, setBranch] = useState('');
   const [customBranch, setCustomBranch] = useState('');
-  
+
+  // Token Wallet & Unlocks States
+  const [lives, setLives] = useState(0);
+  const [refillTime, setRefillTime] = useState(0);
+  const [topupTime, setTopupTime] = useState(0);
+  const [debtTime, setDebtTime] = useState(0);
+  const [unlockedFeatures, setUnlockedFeatures] = useState([]);
+
+  // Top-Up modal states
+  const [activeTopupPkg, setActiveTopupPkg] = useState(null);
+  const [topupOrderId, setTopupOrderId] = useState('');
+  const [topupUtr, setTopupUtr] = useState('');
+  const [topupIsSubmitting, setTopupIsSubmitting] = useState(false);
+
+  const fetchBalances = async (userId) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/tokens/balances`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      if (res.ok) {
+        const balances = await res.json();
+        setLives(balances.lives);
+        setRefillTime(balances.refill_time);
+        setTopupTime(balances.topup_time);
+        setDebtTime(balances.debt_time);
+        setUnlockedFeatures(balances.unlocked_features.map(f => f.feature_id));
+      }
+    } catch (err) {
+      console.error('Error fetching token balances:', err);
+    }
+  };
+
   useEffect(() => {
     async function loadProfile() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -79,6 +114,9 @@ export default function ProfileHub({ session }) {
       }
       
       if (user) {
+        // Load initial balances
+        fetchBalances(user.id);
+
         const { count } = await supabase.from('sai_memories').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
         setMemoriesCount(count || 0);
 
@@ -100,6 +138,76 @@ export default function ProfileHub({ session }) {
       data: newMetadata
     });
     setMetadata(newMetadata);
+  };
+
+  const handleUnlockFeature = async (featureId) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const res = await fetch(`${API_BASE}/api/tokens/unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, featureId })
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        alert('Module unlocked successfully!');
+        fetchBalances(user.id);
+      } else {
+        alert(result.error || 'Failed to unlock feature.');
+      }
+    } catch (err) {
+      console.error('Error unlocking feature:', err);
+      alert('Network error unlocking feature.');
+    }
+  };
+
+  const handleInitiateTopup = (amount, time) => {
+    setTopupOrderId(`ORD-${Math.floor(100000 + Math.random() * 900000)}`);
+    setTopupUtr('');
+    setActiveTopupPkg({ amount, time });
+  };
+
+  const handleVerifyTopup = async (e) => {
+    e.preventDefault();
+    if (topupUtr.length < 10) {
+      alert('Please enter a valid 12-digit UTR/Transaction ID.');
+      return;
+    }
+
+    setTopupIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const res = await fetch(`${API_BASE}/api/tokens/topup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          amount: activeTopupPkg.amount,
+          utr: topupUtr,
+          email: user.email || 'unknown@user.com',
+          orderId: topupOrderId
+        })
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        alert(`Top-up successful! ${activeTopupPkg.time} Time Tokens have been instantly credited to your wallet.`);
+        setActiveTopupPkg(null);
+        fetchBalances(user.id);
+      } else {
+        alert(result.error || 'Verification failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('Topup error:', err);
+      alert('Failed to submit top-up request. Please check connection.');
+    } finally {
+      setTopupIsSubmitting(false);
+    }
   };
 
   const handleStrictnessChange = (e) => {
@@ -508,28 +616,70 @@ export default function ProfileHub({ session }) {
                 </div>
               </div>
 
-              <div className="mt-4 p-4 rounded-2xl bg-black/20 border border-white/5">
-                <h4 className="text-xs font-bold tracking-widest text-white/50 uppercase mb-3">Module Unlocks</h4>
-                <div className="flex flex-wrap gap-2">
-                  {/* Unlocked for everyone */}
-                  {['Shuna Chat', 'Sai Link', 'Goals', 'Memory Vault', 'Resonance'].map((mod, i) => (
-                    <span key={i} className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
-                      <span className="material-symbols-outlined text-[14px]">lock_open</span> {mod}
-                    </span>
-                  ))}
+              {/* Module Access Manager */}
+              <div className="mt-6 p-4 rounded-2xl bg-black/20 border border-white/5">
+                <h4 className="text-xs font-bold tracking-widest text-white/50 uppercase mb-4">Module Unlocks & Access</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[
+                    { id: 'inner_diary', name: 'Inner Diary', cost: 1, desc: 'Record daily journals and thoughts' },
+                    { id: 'goals', name: 'Goals System', cost: 1, desc: 'Set and track tasks, challenges, and ranks' },
+                    { id: 'memory_vault', name: 'Memory Vault', desc: 'Interact with crystallized memories', cost: 1 },
+                    { id: 'wellness_radar', name: 'Wellness Radar', cost: 1, desc: 'Analyze health averages and metrics' },
+                    { id: 'shuna_chat', name: 'Shuna Chat', cost: 2, desc: 'Deep conversation with Shuna' },
+                    { id: 'sai_chat', name: 'Sai Chat (Link)', cost: 2, desc: 'Productive coaching with strict Sai' },
+                    { id: 'resonance', name: 'Resonance Insights', cost: 2, desc: 'Synthesized insights (Requires Premium)', premiumOnly: true },
+                    { id: 'dream_vault', name: 'Dream Vault', cost: 2, desc: 'Deep sleep analysis and interpretation' },
+                    { id: 'time_capsule', name: 'Time Capsules', cost: 2, desc: 'Save digital memories for the future' },
+                    { id: 'study_hub', name: 'Study Hub (Dashboard)', cost: 3, desc: 'Advanced academic tracking board' }
+                  ].map((feature) => {
+                    const isUnlocked = unlockedFeatures.includes(feature.id);
+                    const canUnlock = lives >= feature.cost && (!feature.premiumOnly || isPremium);
 
-                  {/* Premium features (unlocked if premium, locked if free) */}
-                  {['Study Hub', 'Dream Vault', 'Time Capsules', 'Inner Diary', 'Wellness Radar'].map((mod, i) => (
-                    isPremium ? (
-                      <span key={i} className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs flex items-center gap-1 border border-emerald-500/30">
-                        <span className="material-symbols-outlined text-[14px]">lock_open</span> {mod}
-                      </span>
-                    ) : (
-                      <span key={i} className="px-3 py-1 rounded-md bg-white/5 text-white/30 text-xs flex items-center gap-1 border border-white/10">
-                        <span className="material-symbols-outlined text-[14px]">lock</span> {mod}
-                      </span>
-                    )
-                  ))}
+                    return (
+                      <div
+                        key={feature.id}
+                        className={`p-3 rounded-xl border transition-all ${
+                          isUnlocked
+                            ? 'bg-emerald-500/5 border-emerald-500/20'
+                            : 'bg-white/[0.01] border-white/5 hover:border-white/10'
+                        } flex justify-between items-center gap-3`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-xs text-white truncate">{feature.name}</span>
+                            {feature.premiumOnly && (
+                              <span className="px-1 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-300 text-[7px] font-bold uppercase tracking-wider">Premium</span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-white/40 mt-0.5 line-clamp-1">{feature.desc}</p>
+                          {isUnlocked && (
+                            <span className="text-[8px] text-emerald-400 font-semibold uppercase tracking-wider mt-1 block">
+                              Active / Unlocked
+                            </span>
+                          )}
+                        </div>
+
+                        {!isUnlocked ? (
+                          <button
+                            onClick={() => handleUnlockFeature(feature.id)}
+                            disabled={!canUnlock || debtTime > 0}
+                            className={`px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                              canUnlock && debtTime === 0
+                                ? 'bg-fuchsia-600 hover:bg-fuchsia-500 text-white shadow-lg active:scale-[0.98]'
+                                : 'bg-white/5 text-white/30 cursor-not-allowed'
+                            } flex flex-col items-center min-w-[55px]`}
+                          >
+                            <span>Unlock</span>
+                            <span className="text-[8px] opacity-80 mt-0.5">{feature.cost} {feature.cost === 1 ? 'Life' : 'Lives'}</span>
+                          </button>
+                        ) : (
+                          <span className="w-[55px] text-center material-symbols-outlined text-emerald-400 text-[18px] select-none">
+                            check_circle
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </motion.section>
@@ -608,39 +758,66 @@ export default function ProfileHub({ session }) {
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[50px] rounded-full" />
               
               <h3 className="text-sm font-semibold tracking-widest text-white/50 uppercase mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span> Wallet & Plan
+                <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span> Token Wallet
               </h3>
 
-              <div className="mb-6">
-                <div className="text-[10px] uppercase tracking-widest text-indigo-300/70 font-semibold mb-1">Energy Tokens</div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-light text-white">450</span>
-                  <span className="text-sm text-white/40">⚡</span>
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 flex flex-col">
+                  <span className="text-[10px] uppercase tracking-wider text-white/40">Refill Time</span>
+                  <span className="text-2xl font-light text-[#00d4ff] mt-1">{refillTime}</span>
+                  <span className="text-[9px] text-white/30 mt-0.5">Refills periodic</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 flex flex-col">
+                  <span className="text-[10px] uppercase tracking-wider text-white/40">Top-up Time</span>
+                  <span className="text-2xl font-light text-emerald-400 mt-1">{topupTime}</span>
+                  <span className="text-[9px] text-white/30 mt-0.5">Lifetime</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 flex flex-col">
+                  <span className="text-[10px] uppercase tracking-wider text-white/40">Lives</span>
+                  <span className="text-2xl font-light text-fuchsia-400 mt-1">{lives}</span>
+                  <span className="text-[9px] text-white/30 mt-0.5">For unlocks</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 flex flex-col">
+                  <span className="text-[10px] uppercase tracking-wider text-white/40">Debt Time</span>
+                  <span className={`text-2xl font-light mt-1 ${debtTime > 0 ? 'text-red-500 font-medium' : 'text-gray-400'}`}>{debtTime}</span>
+                  <span className="text-[9px] text-white/30 mt-0.5">Outstanding</span>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 mb-6">
-                <button className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-sm font-semibold hover:opacity-90 transition-opacity shadow-[0_0_20px_rgba(79,70,229,0.3)]">
-                  Refill Wallet (via UPI)
-                </button>
-                <button className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold hover:bg-white/10 transition-colors flex items-center justify-center gap-2">
-                  <span className="material-symbols-outlined text-[18px] text-amber-400">play_circle</span>
-                  Earn Free Tokens
-                </button>
+              {/* Purchase top-up trigger */}
+              <div className="mb-6">
+                <div className="text-[10px] uppercase tracking-widest text-[#00d4ff]/80 font-bold mb-3">Refill / Top-Up Time</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { amount: 10, time: 20 },
+                    { amount: 20, time: 40 },
+                    { amount: 50, time: 100 },
+                    { amount: 100, time: 200 }
+                  ].map((pkg) => (
+                    <button
+                      key={pkg.amount}
+                      onClick={() => handleInitiateTopup(pkg.amount, pkg.time)}
+                      className="py-2.5 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-[#00d4ff]/10 hover:border-[#00d4ff]/30 text-white font-medium text-xs transition-all active:scale-[0.98] flex flex-col items-center justify-center"
+                    >
+                      <span className="font-semibold text-xs text-[#00d4ff]">₹{pkg.amount}</span>
+                      <span className="text-[9px] text-white/50">+{pkg.time} Time</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="p-4 rounded-xl bg-black/40 border border-white/5">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium">Subscription</span>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${isPremium ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                    {isPremium ? 'ACTIVE' : 'INACTIVE'}
+                  <span className="text-xs font-semibold uppercase tracking-wider text-white/60">Subscription Tier</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isPremium ? 'bg-fuchsia-500/20 text-fuchsia-300' : 'bg-gray-500/20 text-gray-400'}`}>
+                    {isPremium ? 'PREMIUM' : 'FREE'}
                   </span>
                 </div>
-                <div className="text-xs text-white/50 mb-3">
-                  {isPremium ? '₹60/month • Renews in 12 days' : 'Free tier limitations apply.'}
+                <div className="text-[11px] text-white/40 mb-3">
+                  {isPremium ? 'Unlimited access & daily resets.' : 'Refills every 2 days (30 Time & 5 Lives).'}
                 </div>
                 <button onClick={() => navigate('/billing')} className="text-xs text-indigo-300 hover:text-indigo-200 transition-colors underline underline-offset-2">
-                  Manage Plan
+                  {isPremium ? 'Manage Subscription' : 'Upgrade to Premium'}
                 </button>
               </div>
             </motion.section>
@@ -709,6 +886,84 @@ export default function ProfileHub({ session }) {
           </div>
         </div>
       </motion.div>
+
+      {/* Top-up UPI Checkout Modal */}
+      <AnimatePresence>
+        {activeTopupPkg && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="max-w-md w-full p-6 rounded-3xl bg-[#0b0f19]/90 border border-white/10 shadow-2xl flex flex-col gap-5 relative"
+            >
+              <button
+                onClick={() => setActiveTopupPkg(null)}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors text-white"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+
+              <div className="text-center">
+                <h3 className="text-lg font-bold text-white uppercase tracking-wider">Top-Up Checkout</h3>
+                <p className="text-xs text-white/50 mt-1">Simulated instant credit system</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex justify-between items-center">
+                <div>
+                  <span className="text-xs text-white/40 block">Time Package</span>
+                  <span className="text-sm font-semibold text-white">+{activeTopupPkg.time} Time Tokens</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-white/40 block">Price</span>
+                  <span className="text-base font-bold text-[#00d4ff]">₹{activeTopupPkg.amount}</span>
+                </div>
+              </div>
+
+              {/* QR Code and Payment details */}
+              <div className="flex flex-col items-center gap-4 py-2">
+                <div className="p-3 bg-white rounded-2xl shadow-lg">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                      `upi://pay?pa=8770146706@ptaxis&pn=Neeta%20Saxena&tr=${topupOrderId}&am=${activeTopupPkg.amount}&cu=INR`
+                    )}`}
+                    alt="UPI QR Code"
+                    className="w-40 h-40"
+                  />
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="text-[11px] text-white/60 font-medium">Scan QR code using Google Pay, PhonePe, or Paytm</p>
+                  <p className="text-[10px] text-white/40">Payee: Neeta Saxena | ID: 8770146706@ptaxis</p>
+                  <p className="text-[10px] text-indigo-400 font-mono tracking-wider">Ref: {topupOrderId}</p>
+                </div>
+              </div>
+
+              {/* UTR Input Form */}
+              <form onSubmit={handleVerifyTopup} className="space-y-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs text-white/60 font-semibold">Enter 12-digit UPI UTR / Transaction ID</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 320491823904"
+                    value={topupUtr}
+                    onChange={(e) => setTopupUtr(e.target.value.replace(/[^0-9]/g, ''))}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-[#00d4ff]"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={topupIsSubmitting}
+                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-sm font-bold text-white transition-all shadow-lg disabled:opacity-50 active:scale-[0.98]"
+                >
+                  {topupIsSubmitting ? 'Verifying...' : 'Verify & Credit Instantly'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

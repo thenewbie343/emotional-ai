@@ -92,4 +92,14 @@ router.post('/study/challenges/complete', studyController.completeDailyChallenge
 router.post('/user/delete-account', userAuth, userController.deleteUserAccount);
 router.get('/user/export', userAuth, userController.downloadExport);
 
+// Token Economy endpoints
+const tokenController = require('./controllers/tokenController');
+router.post('/tokens/balances', tokenController.getBalances);
+router.post('/tokens/unlock', tokenController.unlockFeature);
+router.post('/tokens/topup', tokenController.submitTopup);
+router.post('/tokens/deduct', tokenController.deductTime);
+router.post('/admin/topups', adminAuth, tokenController.getTopups);
+router.post('/admin/topup/approve', adminAuth, tokenController.approveTopup);
+router.post('/admin/topup/decline', adminAuth, tokenController.declineTopup);
+
 module.exports = router;

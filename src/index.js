@@ -5,6 +5,7 @@ const cors = require('cors');
 const apiRoutes = require('./api/routes');
 const parasiteRoutes = require('./api/parasiteRoutes');
 const { startAbsenceWorker } = require('./jobs/absenceWorker');
+const { startTokenRefillWorker } = require('./jobs/tokenRefillWorker');
 const redis = require('./redisClient');
 
 const app = express();
@@ -64,6 +65,7 @@ app.use('/api', apiRoutes);
 app.use('/api/parasite', parasiteRoutes);
 
 startAbsenceWorker();
+startTokenRefillWorker();
 
 app.get('/health', async (req, res) => {
   try {

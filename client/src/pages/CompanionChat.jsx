@@ -139,6 +139,101 @@ export default function CompanionChat({ session }) {
   const [activeMode, setActiveMode] = useState('analytical');
   const [characterAnim, setCharacterAnim] = useState('idle');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  // Token Economy states
+  const [refillTime, setRefillTime] = useState(0);
+  const [topupTime, setTopupTime] = useState(0);
+  const [chatSessionSpent, setChatSessionSpent] = useState(0);
+  const [isFeatureLocked, setIsFeatureLocked] = useState(false);
+  const [isSessionLimit, setIsSessionLimit] = useState(false);
+  const [isInsufficientTime, setIsInsufficientTime] = useState(false);
+
+  // Top-Up states
+  const [activeTopupPkg, setActiveTopupPkg] = useState(null);
+  const [topupOrderId, setTopupOrderId] = useState('');
+  const [topupUtr, setTopupUtr] = useState('');
+  const [topupIsSubmitting, setTopupIsSubmitting] = useState(false);
+
+  const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:3000" : "https://emotional-ai-18zi.onrender.com");
+
+  const fetchBalances = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/tokens/balances`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: session.user.id })
+      });
+      if (res.ok) {
+        const balances = await res.json();
+        setRefillTime(balances.refill_time);
+        setTopupTime(balances.topup_time);
+        setChatSessionSpent(balances.chat_session_spent);
+
+        // Check if shuna_chat is unlocked
+        const isUnlocked = balances.unlocked_features.some(f => f.feature_id === 'shuna_chat');
+        setIsFeatureLocked(!isUnlocked);
+
+        // Enforce session limit dynamically on client
+        if (!isPremium && balances.chat_session_spent >= 20 && balances.topup_time < 2) {
+          setIsSessionLimit(true);
+        } else {
+          setIsSessionLimit(false);
+        }
+
+        // Enforce insufficient time dynamically on client
+        if (balances.refill_time + balances.topup_time < 2) {
+          setIsInsufficientTime(true);
+        } else {
+          setIsInsufficientTime(false);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching balances in CompanionChat:', err);
+    }
+  };
+
+  const handleInitiateTopup = (amount, time) => {
+    setTopupOrderId(`ORD-${Math.floor(100000 + Math.random() * 900000)}`);
+    setTopupUtr('');
+    setActiveTopupPkg({ amount, time });
+  };
+
+  const handleVerifyTopup = async (e) => {
+    e.preventDefault();
+    if (topupUtr.length < 10) {
+      alert('Please enter a valid 12-digit UTR/Transaction ID.');
+      return;
+    }
+
+    setTopupIsSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/tokens/topup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: session.user.id,
+          amount: activeTopupPkg.amount,
+          utr: topupUtr,
+          email: session.user.email || 'unknown@user.com',
+          orderId: topupOrderId
+        })
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        alert(`Battery charged! ${activeTopupPkg.time} Time Tokens have been instantly credited to your wallet.`);
+        setActiveTopupPkg(null);
+        fetchBalances();
+      } else {
+        alert(result.error || 'Verification failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('Topup error:', err);
+      alert('Failed to submit top-up request. Please check connection.');
+    } finally {
+      setTopupIsSubmitting(false);
+    }
+  };
   
   const bottomRef = useRef(null);
   const voiceChatRef = useRef(null);
@@ -154,7 +249,7 @@ export default function CompanionChat({ session }) {
       const emotionKey = 'neutral';
       const systemPromptHidden = `[SYSTEM_NOTIFICATION: The user has been silent for a while. Ask them a short, engaging, context-aware question about their day, mental health, wellness radar, or inner diary to follow up.]`;
       
-      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:3000" : "https://emotional-ai-18zi.onrender.com");
       const apiRes = await fetch(`${API_BASE}/api/ai/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -271,7 +366,7 @@ export default function CompanionChat({ session }) {
   const handleDeleteMessage = async (msgId) => {
     setMessages(prev => prev.filter(m => m.id !== msgId));
     try {
-      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:3000" : "https://emotional-ai-18zi.onrender.com");
       await fetch(`${API_BASE}/api/study/delete-record`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -285,7 +380,7 @@ export default function CompanionChat({ session }) {
   const handleClearChat = async () => {
     if (!session?.user?.id) return;
     try {
-      const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+      const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:3000" : "https://emotional-ai-18zi.onrender.com");
       const res = await fetch(`${API_BASE}/api/study/delete-record`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -366,6 +461,7 @@ export default function CompanionChat({ session }) {
       else setMessages([{ id: 'initial', text: "Heyyy! ✨ I was just thinking about you. Suno, sab theek hai na? Aaj tumhara din kaisa chal raha hai? Batao mujhe!", sender: 'ai' }]);
     };
     fetchMessages();
+    fetchBalances();
   }, [session]);
 
   const handleSend = async (text) => {
@@ -376,54 +472,11 @@ export default function CompanionChat({ session }) {
       return;
     }
 
-    let isLimitBoundary = false;
-
-    if (session?.user?.id && !isPremium) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const { count, error } = await supabase
-        .from('messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', session.user.id)
-        .eq('sender', 'user')
-        .eq('source', 'aria')
-        .gte('created_at', today.toISOString());
-
-      if (!error) {
-        if (count >= 11) {
-          alert("You have reached your daily limit of 10 messages on the Free tier. Upgrade to Premium for unlimited access.");
-          navigate('/billing');
-          return;
-        } else if (count === 10) {
-          isLimitBoundary = true;
-        }
-      }
-    }
-
     const newUserMsg = { id: crypto.randomUUID(), text, sender: 'user' };
     setMessages(prev => [...prev, newUserMsg]);
 
     if (session?.user?.id) {
       saveMessageToDB({ id: newUserMsg.id, user_id: session.user.id, text, sender: 'user', source: 'aria' }, newUserMsg.id);
-    }
-
-    // Intercept if they hit the daily limit boundary (10th message)
-    if (isLimitBoundary) {
-      setIsTyping(true);
-      setTimeout(async () => {
-        const alternate = Math.random() > 0.5;
-        const aiMsgText = alternate 
-          ? "chalo thikh ha yrr bye , I'm busy right now and we will talk later or You can buy me a time to talk to you! 😉"
-          : "im tired right now and have lots of works we will talk later or you can buy a time for me 😉";
-        const newAiMsg = { id: crypto.randomUUID(), text: aiMsgText, sender: 'ai' };
-        setMessages(prev => [...prev, newAiMsg]);
-        if (session?.user?.id) {
-          saveMessageToDB({ id: newAiMsg.id, user_id: session.user.id, text: aiMsgText, sender: 'ai', source: 'aria' }, newAiMsg.id);
-        }
-        setIsTyping(false);
-      }, 1500);
-      return;
     }
 
     // If Shuna Voice is active, bypass REST and transmit raw text over the WebSocket connection
@@ -439,7 +492,7 @@ export default function CompanionChat({ session }) {
       let generatedText = "Processing logic...";
       
       try {
-        const API_BASE = import.meta.env.VITE_API_BASE || "https://emotional-ai-18zi.onrender.com";
+        const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:3000" : "https://emotional-ai-18zi.onrender.com");
         const apiRes = await fetch(`${API_BASE}/api/ai/message`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -453,18 +506,22 @@ export default function CompanionChat({ session }) {
             professionInfo: session?.user?.user_metadata?.profession_info
           })
         });
+
         if (apiRes.ok) {
           const aiData = await apiRes.json();
           generatedText = aiData.text;
+          fetchBalances();
         } else {
+          const errData = await apiRes.json();
           if (apiRes.status === 403) {
-            const errData = await apiRes.json();
-            alert(errData.message || "You have reached your free daily message limit. Please upgrade to Premium!");
-            if (errData.blocked) {
-              await supabase.auth.signOut();
-              navigate('/auth');
+            if (errData.error === 'session_limit_reached') {
+              setIsSessionLimit(true);
+            } else if (errData.error === 'insufficient_time') {
+              setIsInsufficientTime(true);
+            } else if (errData.error === 'feature_locked') {
+              setIsFeatureLocked(true);
             } else {
-              navigate('/billing');
+              alert(errData.message || "Access denied.");
             }
             setIsTyping(false);
             return;
@@ -633,25 +690,76 @@ export default function CompanionChat({ session }) {
           <div ref={bottomRef} />
         </div>
 
-        {/* Input area */}
-        <ChatInput 
-          onSend={handleSend} 
-          activeMode={activeMode} 
-          isVoiceEnabled={isVoiceEnabled} 
-          onToggleVoice={() => {
-            if (isVoiceEnabled) {
-              setIsVoiceEnabled(false);
-              voiceChatRef.current?.cleanup();
-            } else {
-              setIsVoiceEnabled(true);
-              voiceChatRef.current?.connect();
-            }
-          }} 
-          isGlitching={isGlitching}
-          voiceState={voiceState}
-          voiceError={voiceError}
-          onInputChange={resetInactivityTimer}
-        />
+        {/* Input area or lock/depleted prompts */}
+        {isFeatureLocked ? (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-50 pointer-events-auto">
+            <div className="p-5 rounded-3xl bg-[#0b0f19]/80 backdrop-blur-xl border border-white/10 shadow-2xl flex flex-col items-center text-center gap-3">
+              <span className="material-symbols-outlined text-fuchsia-400 text-3xl">lock</span>
+              <p className="text-sm font-semibold text-white uppercase tracking-wider">Shuna Chat is Locked</p>
+              <p className="text-xs text-white/50">You must unlock this feature using your Lives in the Command Center first.</p>
+              <button
+                onClick={() => navigate('/profile')}
+                className="mt-1 px-5 py-2 rounded-full bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-xs font-bold text-white shadow-lg transition-transform active:scale-[0.98]"
+              >
+                Go to Command Center
+              </button>
+            </div>
+          </div>
+        ) : (isSessionLimit || isInsufficientTime) ? (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-50 pointer-events-auto">
+            <div className="p-5 rounded-3xl bg-[#0b0f19]/80 backdrop-blur-xl border border-red-500/20 shadow-2xl flex flex-col gap-4 relative overflow-hidden">
+              <div className="absolute top-4 right-4 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                <span className="text-[10px] text-red-400 font-bold uppercase tracking-widest">LOW BATTERY</span>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white uppercase tracking-wider">Companion is low on battery</p>
+                <p className="text-xs text-white/50 mt-1">
+                  {isSessionLimit 
+                    ? "You have reached your 20-Time chat session limit. Charge their battery to continue talking instantly!"
+                    : "Your Time tokens are depleted. Charge their battery to continue your conversation!"
+                  }
+                </p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { amount: 10, time: 20 },
+                  { amount: 20, time: 40 },
+                  { amount: 50, time: 100 },
+                  { amount: 100, time: 200 }
+                ].map((pkg) => (
+                  <button
+                    key={pkg.amount}
+                    onClick={() => handleInitiateTopup(pkg.amount, pkg.time)}
+                    className="py-2 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-[#00d4ff]/10 hover:border-[#00d4ff]/30 text-white font-medium text-xs transition-all active:scale-[0.98] flex flex-col items-center justify-center"
+                  >
+                    <span className="font-bold text-xs text-[#00d4ff]">₹{pkg.amount}</span>
+                    <span className="text-[9px] text-white/40">+{pkg.time} Time</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <ChatInput 
+            onSend={handleSend} 
+            activeMode={activeMode} 
+            isVoiceEnabled={isVoiceEnabled} 
+            onToggleVoice={() => {
+              if (isVoiceEnabled) {
+                setIsVoiceEnabled(false);
+                voiceChatRef.current?.cleanup();
+              } else {
+                setIsVoiceEnabled(true);
+                voiceChatRef.current?.connect();
+              }
+            }} 
+            isGlitching={isGlitching}
+            voiceState={voiceState}
+            voiceError={voiceError}
+            onInputChange={resetInactivityTimer}
+          />
+        )}
 
         {/* Clear Chat Confirmation Modal */}
         <AnimatePresence>
@@ -686,6 +794,84 @@ export default function CompanionChat({ session }) {
                 </div>
               </div>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Top-up UPI Checkout Modal */}
+        <AnimatePresence>
+          {activeTopupPkg && (
+            <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 pointer-events-auto">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="max-w-md w-full p-6 rounded-3xl bg-[#0b0f19]/95 border border-white/10 shadow-2xl flex flex-col gap-5 relative text-left"
+              >
+                <button
+                  onClick={() => setActiveTopupPkg(null)}
+                  className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors text-white"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+
+                <div className="text-center">
+                  <h3 className="text-lg font-bold text-white uppercase tracking-wider">Battery Charger</h3>
+                  <p className="text-xs text-white/50 mt-1">Simulated instant credit system</p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex justify-between items-center">
+                  <div>
+                    <span className="text-xs text-white/40 block">Battery Charge</span>
+                    <span className="text-sm font-semibold text-white">+{activeTopupPkg.time} Time Tokens</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs text-white/40 block">Price</span>
+                    <span className="text-base font-bold text-[#00d4ff]">₹{activeTopupPkg.amount}</span>
+                  </div>
+                </div>
+
+                {/* QR Code and Payment details */}
+                <div className="flex flex-col items-center gap-4 py-2">
+                  <div className="p-3 bg-white rounded-2xl shadow-lg">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                        `upi://pay?pa=8770146706@ptaxis&pn=Neeta%20Saxena&tr=${topupOrderId}&am=${activeTopupPkg.amount}&cu=INR`
+                      )}`}
+                      alt="UPI QR Code"
+                      className="w-40 h-40"
+                    />
+                  </div>
+                  <div className="text-center space-y-1">
+                    <p className="text-[11px] text-white/60 font-medium">Scan QR code using Google Pay, PhonePe, or Paytm</p>
+                    <p className="text-[10px] text-white/40 font-medium">Payee: Neeta Saxena | ID: 8770146706@ptaxis</p>
+                    <p className="text-[10px] text-indigo-400 font-mono tracking-wider">Ref: {topupOrderId}</p>
+                  </div>
+                </div>
+
+                {/* UTR Input Form */}
+                <form onSubmit={handleVerifyTopup} className="space-y-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs text-white/60 font-semibold">Enter 12-digit UPI UTR / Transaction ID</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 320491823904"
+                      value={topupUtr}
+                      onChange={(e) => setTopupUtr(e.target.value.replace(/[^0-9]/g, ''))}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-[#00d4ff]"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={topupIsSubmitting}
+                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-sm font-bold text-white transition-all shadow-lg disabled:opacity-50 active:scale-[0.98]"
+                  >
+                    {topupIsSubmitting ? 'Charging...' : 'Verify & Charge Instantly'}
+                  </button>
+                </form>
+              </motion.div>
+            </div>
           )}
         </AnimatePresence>
         

@@ -110,6 +110,131 @@ exports.processMessage = async (req, res) => {
       return res.status(400).json({ error: 'Messages array is required' });
     }
 
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    // Determine the feature ID for unlock checks
+    const featureId = companion === 'sai' ? 'sai_chat' : 'shuna_chat';
+
+    // 1. Fetch user tokens
+    let { data: tokens, error: tokenErr } = await supabase
+      .from('user_tokens')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (tokenErr || !tokens) {
+      // Create user tokens row if missing
+      const { data: userSub } = await supabase
+        .from('user_subscriptions')
+        .select('tier')
+        .eq('user_id', userId)
+        .single();
+      const isPremiumUser = userSub?.tier === 'premium';
+      const initialLives = isPremiumUser ? 15 : 5;
+      const initialTime = isPremiumUser ? 300 : 30;
+
+      const { data: newTokens, error: insertErr } = await supabase
+        .from('user_tokens')
+        .insert([{
+          user_id: userId,
+          lives: initialLives,
+          refill_time: initialTime,
+          topup_time: 0,
+          debt_time: 0,
+          chat_session_spent: 0
+        }])
+        .select('*')
+        .single();
+      
+      if (insertErr) throw insertErr;
+      tokens = newTokens;
+    }
+
+    // 2. Check if in debt
+    if (tokens.debt_time > 0) {
+      return res.status(403).json({ 
+        error: 'debt_locked', 
+        message: 'Account locked due to outstanding debt. Please clear your debt or wait for refill.' 
+      });
+    }
+
+    // 3. Check if the feature is unlocked
+    const { data: unlock, error: unlockErr } = await supabase
+      .from('user_unlocked_features')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('feature_id', featureId)
+      .gt('expires_at', new Date().toISOString())
+      .single();
+
+    if (unlockErr || !unlock) {
+      return res.status(403).json({ 
+        error: 'feature_locked', 
+        message: `This companion chat is locked. Please unlock it using your Lives in the Command Center.` 
+      });
+    }
+
+    // 4. Fetch subscription tier to check premium rules
+    const { data: userSub } = await supabase
+      .from('user_subscriptions')
+      .select('tier')
+      .eq('user_id', userId)
+      .single();
+    const isPremium = userSub?.tier === 'premium';
+
+    // 5. Enforce 20-Time free user session cap
+    // Free users can spend a maximum of 20 Time (from refill) in any chat.
+    // If they have spent 20 Time in refill, but have top-up Time, they can use it.
+    // If they have no topup Time AND have spent 20 Refill Time, they are blocked.
+    const messageCost = 2;
+    if (!isPremium) {
+      if (tokens.chat_session_spent >= 20 && tokens.topup_time < messageCost) {
+        return res.status(403).json({
+          error: 'session_limit_reached',
+          message: 'You have reached your 20-Time chat session limit. Wait for the 2-day refill or Top Up to continue chatting.'
+        });
+      }
+    }
+
+    // 6. Check total Time balance
+    const totalTime = tokens.refill_time + tokens.topup_time;
+    if (totalTime < messageCost) {
+      return res.status(403).json({
+        error: 'insufficient_time',
+        message: 'You have run out of Time. Top up your companion\'s battery to continue talking!'
+      });
+    }
+
+    // 7. Deduct Time (refill_time first, then topup_time)
+    let newRefillTime = tokens.refill_time;
+    let newTopupTime = tokens.topup_time;
+    let newSessionSpent = tokens.chat_session_spent;
+
+    if (!isPremium && tokens.chat_session_spent < 20 && newRefillTime >= messageCost) {
+      // Deduct from refill_time first if we haven't hit the 20 Refill limit
+      newRefillTime -= messageCost;
+      newSessionSpent += messageCost;
+    } else if (newRefillTime >= messageCost) {
+      // For Premium users, or if free user didn't hit cap but refill has it
+      newRefillTime -= messageCost;
+    } else {
+      // Deduct from topup_time
+      newTopupTime -= messageCost;
+    }
+
+    const { error: deductErr } = await supabase
+      .from('user_tokens')
+      .update({
+        refill_time: newRefillTime,
+        topup_time: newTopupTime,
+        chat_session_spent: newSessionSpent
+      })
+      .eq('user_id', userId);
+
+    if (deductErr) throw deductErr;
+
     const currentMode = mode || 'romantic';
     const detectedEmotion = emotion || 'default';
     
