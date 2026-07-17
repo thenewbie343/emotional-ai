@@ -327,35 +327,38 @@ export default function SiyaHub({ session }) {
                     >
                       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                       
-                      <div className="relative z-10 flex items-start gap-4">
-                        {/* Distinctive Color Palette Shifts */}
-                        <motion.div 
-                          className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${item.bg} ${item.color} shadow-inner border border-white/10`}
-                          whileHover={{ rotate: [0, -10, 10, -5, 5, 0] }}
-                          transition={{ duration: 0.5 }}
-                        >
-                          <span className="material-symbols-outlined text-[28px]">{item.icon}</span>
-                        </motion.div>
-                        <div className="flex flex-col justify-center h-14">
-                          <h3 className="font-semibold text-gray-100 group-hover:text-white transition-colors text-[16px] font-sans tracking-wide flex items-center gap-1.5 flex-wrap">
-                            <span>{item.title}</span>
-                            {(item.livesCost > 0 || item.timeCost > 0) && (
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-fuchsia-200 flex items-center gap-1.5">
-                                {item.livesCost > 0 && (
-                                  <span className="flex items-center gap-0.5">
-                                    {item.livesCost} <TokenIcon type="life" className="w-3 h-3" />
-                                  </span>
-                                )}
-                                {item.timeCost > 0 && (
-                                  <span className="flex items-center gap-0.5">
-                                    {item.timeCost} <TokenIcon type="time" className="w-3 h-3" />{item.timeSuffix || ''}
-                                  </span>
-                                )}
+                      <div className="relative z-10 flex items-center justify-between w-full gap-4">
+                        <div className="flex items-center gap-4 min-w-0 flex-1">
+                          {/* Distinctive Color Palette Shifts */}
+                          <motion.div 
+                            className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${item.bg} ${item.color} shadow-inner border border-white/10`}
+                            whileHover={{ rotate: [0, -10, 10, -5, 5, 0] }}
+                            transition={{ duration: 0.5 }}
+                          >
+                            <span className="material-symbols-outlined text-[28px]">{item.icon}</span>
+                          </motion.div>
+                          <div className="flex flex-col justify-center min-w-0">
+                            <h3 className="font-semibold text-gray-100 group-hover:text-white transition-colors text-[16px] font-sans tracking-wide">
+                              {item.title}
+                            </h3>
+                            <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors mt-0.5">{item.desc}</p>
+                          </div>
+                        </div>
+
+                        {(item.livesCost > 0 || item.timeCost > 0) && (
+                          <div className="flex flex-col items-end justify-center shrink-0 ml-auto text-right text-xs select-none font-mono">
+                            {item.livesCost > 0 && (
+                              <span className="flex items-center gap-1 text-rose-300">
+                                {item.livesCost} <TokenIcon type="life" className="w-3.5 h-3.5" />
                               </span>
                             )}
-                          </h3>
-                          <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors mt-0.5">{item.desc}</p>
-                        </div>
+                            {item.timeCost > 0 && (
+                              <span className="flex items-center gap-1 text-sky-300 mt-1">
+                                {item.timeCost} <TokenIcon type="time" className="w-3.5 h-3.5" />{item.timeSuffix || ''}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </Link>
                   </motion.div>

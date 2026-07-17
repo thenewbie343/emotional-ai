@@ -199,30 +199,33 @@ export default function SaiHub({ session }) {
                     to={item.to} 
                     className="group relative bg-[#121214] border border-white/5 rounded-[24px] p-5 hover:bg-[#161619] hover:border-white/10 hover:-translate-y-0.5 transition-all duration-300 overflow-hidden shadow-lg"
                   >
-                    <div className="relative z-10 flex items-start gap-4">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${item.bg} ${item.color} group-hover:scale-110 transition-transform duration-300 shadow-inner border border-white/5`}>
-                        <span className="material-symbols-outlined text-[24px]">{item.icon}</span>
+                    <div className="relative z-10 flex items-center justify-between w-full gap-4">
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${item.bg} ${item.color} group-hover:scale-110 transition-transform duration-300 shadow-inner border border-white/5`}>
+                          <span className="material-symbols-outlined text-[24px]">{item.icon}</span>
+                        </div>
+                        <div className="flex flex-col justify-center min-w-0">
+                          <h3 className="font-semibold text-gray-200 group-hover:text-white transition-colors text-[15px]">
+                            {item.title}
+                          </h3>
+                          <p className="text-[12px] text-gray-500 mt-0.5">{item.desc}</p>
+                        </div>
                       </div>
-                      <div className="flex flex-col justify-center h-12">
-                        <h3 className="font-semibold text-gray-200 group-hover:text-white transition-colors text-[15px] flex items-center gap-1.5 flex-wrap">
-                          <span>{item.title}</span>
-                          {(item.livesCost > 0 || item.timeCost > 0) && (
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-blue-300 flex items-center gap-1.5">
-                              {item.livesCost > 0 && (
-                                <span className="flex items-center gap-0.5">
-                                  {item.livesCost} <TokenIcon type="life" className="w-3 h-3" />
-                                </span>
-                              )}
-                              {item.timeCost > 0 && (
-                                <span className="flex items-center gap-0.5">
-                                  {item.timeCost} <TokenIcon type="time" className="w-3 h-3" />{item.timeSuffix || ''}
-                                </span>
-                              )}
+
+                      {(item.livesCost > 0 || item.timeCost > 0) && (
+                        <div className="flex flex-col items-end justify-center shrink-0 ml-auto text-right text-xs select-none font-mono">
+                          {item.livesCost > 0 && (
+                            <span className="flex items-center gap-1 text-rose-300">
+                              {item.livesCost} <TokenIcon type="life" className="w-3.5 h-3.5" />
                             </span>
                           )}
-                        </h3>
-                        <p className="text-[12px] text-gray-500 mt-0.5">{item.desc}</p>
-                      </div>
+                          {item.timeCost > 0 && (
+                            <span className="flex items-center gap-1 text-sky-300 mt-1">
+                              {item.timeCost} <TokenIcon type="time" className="w-3.5 h-3.5" />{item.timeSuffix || ''}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </Link>
                 ))}
