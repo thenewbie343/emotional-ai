@@ -322,21 +322,21 @@ export default function App() {
 
           {/* SHUNA features */}
           <Route path="/siya" element={session ? <SiyaHub key={`siyahub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
-          <Route path="/siya/journal" element={session ? <PremiumRoute session={session}><LifeGate featureId="inner_diary" cost={1}><SaiJournal session={session} /></LifeGate></PremiumRoute> : <Navigate to="/auth" />} />
-          <Route path="/siya/wellness" element={session ? <PremiumRoute session={session}><LifeGate featureId="wellness_radar" cost={1}><SaiWellness session={session} /></LifeGate></PremiumRoute> : <Navigate to="/auth" />} />
-          <Route path="/siya/insights" element={session ? <LifeGate featureId="resonance" cost={2}><SaiInsights session={session} /></LifeGate> : <Navigate to="/auth" />} />
-          <Route path="/siya/diary" element={session ? <PremiumRoute session={session}><LifeGate featureId="inner_diary" cost={1}><SaiDiary session={session} /></LifeGate></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/siya/journal" element={session ? <LifeGate featureId="inner_diary" cost={1}><SaiJournal session={session} /></LifeGate> : <Navigate to="/auth" />} />
+          <Route path="/siya/wellness" element={session ? <LifeGate featureId="wellness_radar" cost={1}><SaiWellness session={session} /></LifeGate> : <Navigate to="/auth" />} />
+          <Route path="/siya/insights" element={session ? <PremiumRoute session={session}><LifeGate featureId="resonance" cost={2}><SaiInsights session={session} /></LifeGate></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/siya/diary" element={session ? <LifeGate featureId="inner_diary" cost={1}><SaiDiary session={session} /></LifeGate> : <Navigate to="/auth" />} />
           <Route path="/siya/memory" element={session ? <PremiumRoute session={session}><LifeGate featureId="memory_vault" cost={1}><SaiConstellation session={session} /></LifeGate></PremiumRoute> : <Navigate to="/auth" />} />
 
           {/* SAI routes */}
           <Route path="/sai" element={session ? <SaiHub key={`saihub-${companionKey}`} session={session} /> : <Navigate to="/auth" />} />
           <Route path="/sai/chat" element={session ? <LifeGate featureId="sai_chat" cost={2}><SaiChat key={`saichat-${companionKey}`} session={session} /></LifeGate> : <Navigate to="/auth" />} />
-          <Route path="/sai/dreams" element={session ? <PremiumRoute session={session}><LifeGate featureId="dream_vault" cost={2}><SaiDreams session={session} /></LifeGate></PremiumRoute> : <Navigate to="/auth" />} />
-          <Route path="/sai/memories" element={session ? <LifeGate featureId="memory_vault" cost={1}><SaiMemories session={session} /></LifeGate> : <Navigate to="/auth" />} />
+          <Route path="/sai/dreams" element={session ? <LifeGate featureId="dream_vault" cost={2}><SaiDreams session={session} /></LifeGate> : <Navigate to="/auth" />} />
+          <Route path="/sai/memories" element={session ? <PremiumRoute session={session}><LifeGate featureId="memory_vault" cost={1}><SaiMemories session={session} /></LifeGate></PremiumRoute> : <Navigate to="/auth" />} />
           <Route path="/sai/goals" element={session ? <LifeGate featureId="goals" cost={1}><SaiGoals session={session} /></LifeGate> : <Navigate to="/auth" />} />
-          <Route path="/sai/capsule" element={session ? <PremiumRoute session={session}><LifeGate featureId="time_capsule" cost={2}><SaiTimeCapsule session={session} /></LifeGate></PremiumRoute> : <Navigate to="/auth" />} />
-          <Route path="/sai/study" element={session ? <PremiumRoute session={session}><LifeGate featureId="study_hub" cost={3}><SaiDashboard session={session} /></LifeGate></PremiumRoute> : <Navigate to="/auth" />} />
-          <Route path="/dashboard" element={session ? <PremiumRoute session={session}><Navigate to="/sai/study" replace /></PremiumRoute> : <Navigate to="/auth" />} />
+          <Route path="/sai/capsule" element={session ? <LifeGate featureId="time_capsule" cost={2}><SaiTimeCapsule session={session} /></LifeGate> : <Navigate to="/auth" />} />
+          <Route path="/sai/study" element={session ? <LifeGate featureId="study_hub" cost={3}><SaiDashboard session={session} /></LifeGate> : <Navigate to="/auth" />} />
+          <Route path="/dashboard" element={session ? <Navigate to="/sai/study" replace /> : <Navigate to="/auth" />} />
           
           {/* Billing & Admin */}
           <Route path="/billing" element={session ? <Billing session={session} /> : <Navigate to="/auth" />} />

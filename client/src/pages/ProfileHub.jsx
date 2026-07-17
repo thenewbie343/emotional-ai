@@ -624,8 +624,8 @@ export default function ProfileHub({ session }) {
               <h3 className="text-sm font-semibold tracking-widest text-white/50 uppercase mb-4 flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px]">verified_user</span> System Status & Access
               </h3>
-              <p className="text-xs text-white/40 mb-4 flex items-center gap-1.5 flex-wrap">
-                Access is unlocked automatically using your Lives <TokenIcon type="life" className="w-3.5 h-3.5" /> when you open a feature.
+              <p className="text-xs text-white/40 mb-4">
+                Below are the features you have currently unlocked.
               </p>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -640,17 +640,11 @@ export default function ProfileHub({ session }) {
                   { id: 'dream_vault', name: 'Dream Vault', livesCost: 2, timeCost: 10, desc: 'Deep sleep analysis', timeSuffix: '/ dream' },
                   { id: 'time_capsule', name: 'Time Capsules', livesCost: 2, timeCost: 10, desc: 'Save digital memories', timeSuffix: '/ capsule' },
                   { id: 'study_hub', name: 'Study Hub (Dashboard)', livesCost: 3, timeCost: 0, desc: 'Academic tracking board' }
-                ].map((feature) => {
-                  const isUnlocked = unlockedFeatures.includes(feature.id);
-
+                ].filter(feature => unlockedFeatures.includes(feature.id)).map((feature) => {
                   return (
                     <div
                       key={feature.id}
-                      className={`p-3 rounded-2xl border transition-all ${
-                        isUnlocked
-                          ? 'bg-emerald-500/[0.02] border-emerald-500/20'
-                          : 'bg-white/[0.01] border-white/5'
-                      } flex justify-between items-center gap-3`}
+                      className="p-3 rounded-2xl border bg-emerald-500/[0.02] border-emerald-500/20 flex justify-between items-center gap-3"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -675,19 +669,18 @@ export default function ProfileHub({ session }) {
                             </span>
                           )}
                         </div>
-                        {isUnlocked ? (
-                          <span className="text-[9px] font-extrabold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Active
-                          </span>
-                        ) : (
-                          <span className="text-[9px] font-extrabold text-white/30 tracking-wider uppercase bg-white/5 px-2 py-0.5 rounded-full">
-                            Locked
-                          </span>
-                        )}
+                        <span className="text-[9px] font-extrabold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Active
+                        </span>
                       </div>
                     </div>
                   );
                 })}
+                {unlockedFeatures.length === 0 && (
+                  <div className="col-span-2 py-8 text-center bg-white/[0.01] border border-white/5 rounded-2xl">
+                    <p className="text-xs text-white/30">No features unlocked yet.</p>
+                  </div>
+                )}
               </div>
             </motion.section>
 
