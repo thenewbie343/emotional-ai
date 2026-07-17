@@ -5,11 +5,6 @@ const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJI
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    lock: {
-      acquireLock: async () => ({
-        id: 'no-op',
-        release: async () => {},
-      }),
-    },
+    lock: async (name, acquireTimeout, fn) => await fn(),
   },
 })
