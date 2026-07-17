@@ -37,6 +37,8 @@ exports.getBalances = async (req, res) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
+    const isPremium = await getIsPremium(userId);
+
     // Get or create tokens row
     let { data: tokens, error: tokenError } = await supabase
       .from('user_tokens')
@@ -45,7 +47,6 @@ exports.getBalances = async (req, res) => {
       .single();
 
     if (tokenError || !tokens) {
-      const isPremium = await getIsPremium(userId);
       const initialLives = isPremium ? 15 : 5;
       const initialTime = isPremium ? 300 : 30;
 
@@ -63,6 +64,29 @@ exports.getBalances = async (req, res) => {
 
       if (insertError) throw insertError;
       tokens = newTokens;
+    } else if (isPremium) {
+      // If user is premium in database, but their user_tokens row is on free defaults (5 lives, 30 time)
+      // or if they haven't received their daily premium refill today, sync it instantly!
+      const todayStr = new Date().toDateString();
+      const lastRefillDateStr = new Date(tokens.last_refill_at).toDateString();
+
+      if ((tokens.refill_time < 300 || tokens.lives < 15) && lastRefillDateStr !== todayStr) {
+        const { data: updatedTokens, error: updateErr } = await supabase
+          .from('user_tokens')
+          .update({
+            lives: Math.max(tokens.lives, 15),
+            refill_time: 300,
+            last_refill_at: new Date().toISOString(),
+            last_lives_refill_at: new Date().toISOString()
+          })
+          .eq('user_id', userId)
+          .select('*')
+          .single();
+
+        if (!updateErr && updatedTokens) {
+          tokens = updatedTokens;
+        }
+      }
     }
 
     // Get active unlocked features

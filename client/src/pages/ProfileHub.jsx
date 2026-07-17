@@ -68,6 +68,7 @@ export default function ProfileHub({ session }) {
       });
       if (res.ok) {
         const balances = await res.json();
+        localStorage.setItem('antigravity_token_balances', JSON.stringify(balances));
         setLives(balances.lives);
         setRefillTime(balances.refill_time);
         setTopupTime(balances.topup_time);
@@ -409,8 +410,8 @@ export default function ProfileHub({ session }) {
             
             {/* 1. Identity */}
             <motion.section variants={itemVariant} className="p-6 rounded-3xl bg-white/[0.02] border border-white/10 backdrop-blur-xl shadow-2xl relative overflow-hidden">
-              <div className="flex items-start gap-6 relative z-10">
-                <div className="relative group cursor-pointer">
+              <div className="flex flex-col md:flex-row items-center md:items-start gap-6 relative z-10 w-full">
+                <div className="relative group cursor-pointer flex-shrink-0">
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/20 flex items-center justify-center overflow-hidden">
                     {metadata?.avatar_url ? (
                       <img src={metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
@@ -423,8 +424,8 @@ export default function ProfileHub({ session }) {
                   </div>
                 </div>
                 
-                <div className="flex-1 pt-2">
-                  <div className="flex items-center gap-2 mb-2">
+                <div className="flex-1 pt-2 w-full flex flex-col items-center md:items-start">
+                  <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
                     {isEditingName ? (
                       <div className="flex items-center gap-2">
                         <input 
@@ -462,7 +463,7 @@ export default function ProfileHub({ session }) {
                       </>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex flex-wrap gap-2 mb-4 justify-center md:justify-start">
                     <span className={`px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full border ${
                       isPremium 
                         ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30 shadow-[0_0_10px_rgba(217,70,239,0.2)]'
@@ -472,9 +473,9 @@ export default function ProfileHub({ session }) {
                     </span>
                   </div>
                   
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs text-white/50 uppercase tracking-widest font-semibold">Default Sync:</span>
-                    <div className="flex bg-black/40 rounded-full p-1 border border-white/5">
+                  <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+                    <span className="text-xs text-white/50 uppercase tracking-widest font-semibold flex-shrink-0">Default Sync:</span>
+                    <div className="flex flex-wrap justify-center bg-black/40 rounded-2xl p-1 border border-white/5">
                       <button 
                         onClick={() => { setDefaultCompanion('Shuna'); updateMetadata({ default_companion: 'Shuna' }); }}
                         className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${defaultCompanion === 'Shuna' ? 'bg-fuchsia-500/20 text-fuchsia-300' : 'text-white/40 hover:text-white/70'}`}
@@ -617,6 +618,67 @@ export default function ProfileHub({ session }) {
               </div>
             </motion.section>
 
+            {/* Feature Access Status */}
+            <motion.section variants={itemVariant} className="p-6 rounded-3xl bg-white/[0.02] border border-white/10 backdrop-blur-xl shadow-2xl">
+              <h3 className="text-sm font-semibold tracking-widest text-white/50 uppercase mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">verified_user</span> System Status & Access
+              </h3>
+              <p className="text-xs text-white/40 mb-4">
+                Access is unlocked automatically using your Lives (☯️) when you open a feature.
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { id: 'inner_diary', name: 'Inner Diary', cost: '1☯️', desc: 'Record daily journals' },
+                  { id: 'goals', name: 'Goals System', cost: '1☯️', desc: 'Set and track tasks' },
+                  { id: 'memory_vault', name: 'Memory Vault', cost: '1☯️', desc: 'Crystallize memories' },
+                  { id: 'wellness_radar', name: 'Wellness Radar', cost: '1☯️', desc: 'Analyze health gyro' },
+                  { id: 'shuna_chat', name: 'Shuna Chat', cost: '2☯️ 2⏳', desc: 'Talk to Shuna' },
+                  { id: 'sai_chat', name: 'Sai Chat (Link)', cost: '2☯️ 2⏳', desc: 'Productive coaching' },
+                  { id: 'resonance', name: 'Resonance Insights', cost: '2☯️', desc: 'Synthesized insights', premiumOnly: true },
+                  { id: 'dream_vault', name: 'Dream Vault', cost: '2☯️', desc: 'Deep sleep analysis' },
+                  { id: 'time_capsule', name: 'Time Capsules', cost: '2☯️', desc: 'Save digital memories' },
+                  { id: 'study_hub', name: 'Study Hub (Dashboard)', cost: '3☯️', desc: 'Academic tracking board' }
+                ].map((feature) => {
+                  const isUnlocked = unlockedFeatures.includes(feature.id);
+
+                  return (
+                    <div
+                      key={feature.id}
+                      className={`p-3 rounded-2xl border transition-all ${
+                        isUnlocked
+                          ? 'bg-emerald-500/[0.02] border-emerald-500/20'
+                          : 'bg-white/[0.01] border-white/5'
+                      } flex justify-between items-center gap-3`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold text-xs text-white truncate">{feature.name}</span>
+                          {feature.premiumOnly && (
+                            <span className="px-1 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-300 text-[7px] font-bold uppercase tracking-wider">Premium</span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-white/40 mt-0.5">{feature.desc}</p>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1 select-none">
+                        <span className="text-[10px] text-white/50 font-medium font-mono">{feature.cost}</span>
+                        {isUnlocked ? (
+                          <span className="text-[9px] font-extrabold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Active
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-extrabold text-white/30 tracking-wider uppercase bg-white/5 px-2 py-0.5 rounded-full">
+                            Locked
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.section>
+
             {/* 4. AI Controls */}
             <motion.section variants={itemVariant} className="p-6 rounded-3xl bg-white/[0.02] border border-white/10 backdrop-blur-xl shadow-2xl">
               <h3 className="text-sm font-semibold tracking-widest text-white/50 uppercase mb-6 flex items-center gap-2">
@@ -694,27 +756,47 @@ export default function ProfileHub({ session }) {
                 <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span> Token Wallet
               </h3>
 
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 flex flex-col">
-                  <span className="text-[10px] uppercase tracking-wider text-white/40">Refill Time</span>
-                  <span className="text-2xl font-light text-[#00d4ff] mt-1">{refillTime}</span>
-                  <span className="text-[9px] text-white/30 mt-0.5">Refills periodic</span>
+              <div className="flex flex-col gap-4 mb-6">
+                {/* Lives */}
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl select-none">☯️</span>
+                    <div>
+                      <span className="text-[10px] uppercase tracking-widest text-white/40 block font-semibold">Available Lives</span>
+                      <span className="text-xl font-light text-fuchsia-300 block mt-0.5">{lives} Lives</span>
+                    </div>
+                  </div>
+                  <span className="text-xs text-white/30 font-light">Feature key tokens</span>
                 </div>
-                <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 flex flex-col">
-                  <span className="text-[10px] uppercase tracking-wider text-white/40">Top-up Time</span>
-                  <span className="text-2xl font-light text-emerald-400 mt-1">{topupTime}</span>
-                  <span className="text-[9px] text-white/30 mt-0.5">Lifetime</span>
+
+                {/* Time */}
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/5 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl select-none">⏳</span>
+                      <div>
+                        <span className="text-[10px] uppercase tracking-widest text-[#00d4ff]/80 block font-bold">Total Time</span>
+                        <span className="text-xl font-light text-[#00d4ff] block mt-0.5">{refillTime + topupTime} Time</span>
+                      </div>
+                    </div>
+                    <span className="text-xs text-white/30 font-light">For chat sessions</span>
+                  </div>
+                  <div className="text-[10px] text-white/40 font-medium font-mono pt-1 border-t border-white/5 flex justify-between">
+                    <span>Refill Time: {refillTime}</span>
+                    <span>Top-up Time: {topupTime}</span>
+                  </div>
                 </div>
-                <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 flex flex-col">
-                  <span className="text-[10px] uppercase tracking-wider text-white/40">Lives</span>
-                  <span className="text-2xl font-light text-fuchsia-400 mt-1">{lives}</span>
-                  <span className="text-[9px] text-white/30 mt-0.5">For unlocks</span>
-                </div>
-                <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 flex flex-col">
-                  <span className="text-[10px] uppercase tracking-wider text-white/40">Debt Time</span>
-                  <span className={`text-2xl font-light mt-1 ${debtTime > 0 ? 'text-red-500 font-medium' : 'text-gray-400'}`}>{debtTime}</span>
-                  <span className="text-[9px] text-white/30 mt-0.5">Outstanding</span>
-                </div>
+
+                {/* Debt (Conditional) */}
+                {debtTime > 0 && (
+                  <div className="p-4 rounded-2xl bg-red-950/20 border border-red-500/20 flex items-center gap-3 animate-pulse">
+                    <span className="text-2xl select-none">🚨</span>
+                    <div>
+                      <span className="text-[10px] uppercase tracking-widest text-red-400 block font-semibold">Declined Debt</span>
+                      <span className="text-base font-bold text-red-500 block mt-0.5">{debtTime} Time</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Purchase top-up trigger */}

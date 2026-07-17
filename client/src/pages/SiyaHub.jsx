@@ -11,10 +11,10 @@ import NotificationDropdown from '../components/NotificationDropdown';
 import '../index.css';
 
 const QUICK_ACCESS = [
-  { to: '/chat',          icon: 'forum',           title: 'Chat with Shuna', desc: 'Connect and reflect',     color: 'text-fuchsia-300', bg: 'bg-fuchsia-500/20' },
-  { to: '/siya/journal',  icon: 'auto_stories',    title: 'Inner Diary',     desc: 'Private reflections',     color: 'text-rose-300',    bg: 'bg-rose-500/20' },
-  { to: '/siya/wellness', icon: 'self_improvement',title: 'Wellness Radar',  desc: 'Emotional balance',       color: 'text-indigo-300',  bg: 'bg-indigo-500/20' },
-  { to: '/siya/insights', icon: 'bubble_chart',    title: 'Resonance',       desc: 'Emotional insights',      color: 'text-violet-300',  bg: 'bg-violet-500/20' },
+  { to: '/chat',          icon: 'forum',           title: 'Chat with Shuna', desc: 'Connect and reflect',     color: 'text-fuchsia-300', bg: 'bg-fuchsia-500/20', tokens: '2☯️ 2⏳' },
+  { to: '/siya/journal',  icon: 'auto_stories',    title: 'Inner Diary',     desc: 'Private reflections',     color: 'text-rose-300',    bg: 'bg-rose-500/20', tokens: '1☯️ 1⏳' },
+  { to: '/siya/wellness', icon: 'self_improvement',title: 'Wellness Radar',  desc: 'Emotional balance',       color: 'text-indigo-300',  bg: 'bg-indigo-500/20', tokens: '1☯️ 1⏳' },
+  { to: '/siya/insights', icon: 'bubble_chart',    title: 'Resonance',       desc: 'Emotional insights',      color: 'text-violet-300',  bg: 'bg-violet-500/20', tokens: '2☯️' },
   { to: '/profile',       icon: 'manage_accounts', title: 'Profile & Settings',desc: 'Command Center',        color: 'text-amber-300',   bg: 'bg-amber-500/20' },
   { to: '/island',        icon: 'public',          title: '3D Island',       desc: 'Return to the world',     color: 'text-sky-300',     bg: 'bg-sky-500/20' },
 ];
@@ -281,7 +281,14 @@ export default function SiyaHub({ session }) {
                           <span className="material-symbols-outlined text-[28px]">{item.icon}</span>
                         </motion.div>
                         <div className="flex flex-col justify-center h-14">
-                          <h3 className="font-semibold text-gray-100 group-hover:text-white transition-colors text-[16px] font-sans tracking-wide">{item.title}</h3>
+                          <h3 className="font-semibold text-gray-100 group-hover:text-white transition-colors text-[16px] font-sans tracking-wide flex items-center gap-1.5 flex-wrap">
+                            <span>{item.title}</span>
+                            {item.tokens && (
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-fuchsia-200">
+                                {item.tokens}
+                              </span>
+                            )}
+                          </h3>
                           <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors mt-0.5">{item.desc}</p>
                         </div>
                       </div>

@@ -165,6 +165,7 @@ export default function CompanionChat({ session }) {
       });
       if (res.ok) {
         const balances = await res.json();
+        localStorage.setItem('antigravity_token_balances', JSON.stringify(balances));
         setRefillTime(balances.refill_time);
         setTopupTime(balances.topup_time);
         setChatSessionSpent(balances.chat_session_spent);
