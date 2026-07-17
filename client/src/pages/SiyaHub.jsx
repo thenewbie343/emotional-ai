@@ -323,7 +323,7 @@ export default function SiyaHub({ session }) {
                   >
                     <Link 
                       to={item.to} 
-                      className="group block bg-white/[0.03] border border-white/10 rounded-[24px] p-6 overflow-hidden shadow-lg backdrop-blur-md h-full"
+                      className="group block bg-white/[0.03] border border-white/10 rounded-[24px] p-5 overflow-hidden shadow-lg backdrop-blur-md h-full"
                     >
                       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                       
@@ -331,17 +331,17 @@ export default function SiyaHub({ session }) {
                         <div className="flex items-center gap-4 min-w-0 flex-1">
                           {/* Distinctive Color Palette Shifts */}
                           <motion.div 
-                            className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${item.bg} ${item.color} shadow-inner border border-white/10`}
+                            className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${item.bg} ${item.color} shadow-inner border border-white/10`}
                             whileHover={{ rotate: [0, -10, 10, -5, 5, 0] }}
                             transition={{ duration: 0.5 }}
                           >
-                            <span className="material-symbols-outlined text-[28px]">{item.icon}</span>
+                            <span className="material-symbols-outlined text-[24px]">{item.icon}</span>
                           </motion.div>
                           <div className="flex flex-col justify-center min-w-0">
-                            <h3 className="font-semibold text-gray-100 group-hover:text-white transition-colors text-[16px] font-sans tracking-wide">
+                            <h3 className="font-semibold text-gray-100 group-hover:text-white transition-colors text-[15px] font-sans tracking-wide whitespace-nowrap">
                               {item.title}
                             </h3>
-                            <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors mt-0.5">{item.desc}</p>
+                            <p className="text-[12px] text-gray-400 group-hover:text-gray-300 transition-colors mt-0.5">{item.desc}</p>
                           </div>
                         </div>
 
