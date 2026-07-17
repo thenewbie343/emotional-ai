@@ -99,16 +99,24 @@ function CompanionToggle({ session, onToggle }) {
     onToggle()           
     if (isSai) {
       navigate('/siya')
-      posthog.capture('persona_switched', {
-        from: 'SAI',
-        to: 'SHUNA'
-      })
+      try {
+        posthog.capture('persona_switched', {
+          from: 'SAI',
+          to: 'SHUNA'
+        })
+      } catch (e) {
+        console.warn('[PostHog] Failed to capture persona switched:', e);
+      }
     } else {
       navigate('/sai')
-      posthog.capture('persona_switched', {
-        from: 'SHUNA',
-        to: 'SAI'
-      })
+      try {
+        posthog.capture('persona_switched', {
+          from: 'SHUNA',
+          to: 'SAI'
+        })
+      } catch (e) {
+        console.warn('[PostHog] Failed to capture persona switched:', e);
+      }
     }
   }
 
