@@ -65,6 +65,19 @@ exports.approveRequest = async (req, res) => {
 
     if (subError) throw subError;
 
+    // 3. Upsert/Update user tokens to premium levels (15 lives, 300 time) immediately!
+    const { error: tokenError } = await supabase.from('user_tokens').upsert({
+      user_id: userId,
+      lives: 15,
+      refill_time: 300,
+      last_refill_at: new Date().toISOString(),
+      last_lives_refill_at: new Date().toISOString()
+    });
+
+    if (tokenError) {
+      console.error('Failed to credit premium tokens on approveRequest:', tokenError);
+    }
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -191,7 +204,7 @@ exports.updateUserTier = async (req, res) => {
       const endsAt = new Date();
       endsAt.setDate(endsAt.getDate() + 14); // 14 days
 
-      const { error } = await supabase.from('user_subscriptions').upsert({
+       const { error } = await supabase.from('user_subscriptions').upsert({
         user_id: userId,
         tier: 'premium',
         status: 'active',
@@ -199,6 +212,18 @@ exports.updateUserTier = async (req, res) => {
         updated_at: new Date().toISOString()
       });
       if (error) throw error;
+
+      // Upsert/Update user tokens to premium levels (15 lives, 300 time) immediately!
+      const { error: tokenError } = await supabase.from('user_tokens').upsert({
+        user_id: userId,
+        lives: 15,
+        refill_time: 300,
+        last_refill_at: new Date().toISOString(),
+        last_lives_refill_at: new Date().toISOString()
+      });
+      if (tokenError) {
+        console.error('Failed to credit premium tokens on updateUserTier:', tokenError);
+      }
     } else {
       const { error } = await supabase.from('user_subscriptions').upsert({
         user_id: userId,

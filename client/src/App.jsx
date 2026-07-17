@@ -302,7 +302,7 @@ export default function App() {
   }
 
   return (
-    <NotificationProvider>
+    <NotificationProvider userId={session?.user?.id}>
       <NotificationEngineRunner session={session} />
       <NotificationToast />
       <OnboardingGate>

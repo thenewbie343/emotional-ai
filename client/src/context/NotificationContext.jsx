@@ -2,15 +2,20 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 const NotificationContext = createContext();
 
-export const NotificationProvider = ({ children }) => {
+export const NotificationProvider = ({ userId, children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [currentToast, setCurrentToast] = useState(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  // Load existing notifications from localStorage on mount (for history)
+  // Load existing notifications from localStorage when userId changes
   useEffect(() => {
-    const saved = localStorage.getItem('notification_history');
+    if (!userId) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+    const saved = localStorage.getItem(`notification_history_${userId}`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -19,14 +24,18 @@ export const NotificationProvider = ({ children }) => {
       } catch (e) {
         console.error("Error loading notifications:", e);
       }
+    } else {
+      setNotifications([]);
+      setUnreadCount(0);
     }
-  }, []);
+  }, [userId]);
 
-  // Save to localStorage whenever notifications change
+  // Save to localStorage whenever notifications change for this user
   useEffect(() => {
-    localStorage.setItem('notification_history', JSON.stringify(notifications));
+    if (!userId) return;
+    localStorage.setItem(`notification_history_${userId}`, JSON.stringify(notifications));
     setUnreadCount(notifications.filter(n => !n.read).length);
-  }, [notifications]);
+  }, [notifications, userId]);
 
   // Handle toast timeout
   useEffect(() => {
@@ -72,51 +81,60 @@ export const NotificationProvider = ({ children }) => {
 
   // Listen for admin approvals on data export requests
   useEffect(() => {
+    if (!userId) return;
+
+    let activeChannel = null;
+
     import('../lib/supabaseClient').then(({ supabase }) => {
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (!user) return;
-        
-        const channel = supabase
-          .channel('schema-db-changes')
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'data_export_requests',
-              filter: `user_id=eq.${user.id}`
-            },
-            (payload) => {
-              if (['approved', 'rejected'].includes(payload.new.status) && payload.new.status !== payload.old.status) {
-                const isApproved = payload.new.status === 'approved';
-                if (payload.new.request_type === 'account_change') {
-                  addNotification({
-                    sender: 'System',
-                    message: isApproved 
-                      ? "Your email/password change request has been approved and handled."
-                      : "Your email/password change request has been rejected.",
-                    type: isApproved ? 'success' : 'error'
-                  });
-                } else {
-                  addNotification({
-                    sender: 'System',
-                    message: isApproved
-                      ? "Your data export is ready! Go to Settings -> Data & Privacy and click 'Download Data Export' to download it."
-                      : "Your data export request has been rejected.",
-                    type: isApproved ? 'success' : 'error'
-                  });
-                }
+      if (!isActive) return; // safety check
+      const channel = supabase
+        .channel(`schema-db-changes-${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'data_export_requests',
+            filter: `user_id=eq.${userId}`
+          },
+          (payload) => {
+            if (['approved', 'rejected'].includes(payload.new.status) && payload.new.status !== payload.old.status) {
+              const isApproved = payload.new.status === 'approved';
+              if (payload.new.request_type === 'account_change') {
+                addNotification({
+                  sender: 'System',
+                  message: isApproved 
+                    ? "Your email/password change request has been approved and handled."
+                    : "Your email/password change request has been rejected.",
+                  type: isApproved ? 'success' : 'error'
+                });
+              } else {
+                addNotification({
+                  sender: 'System',
+                  message: isApproved
+                    ? "Your data export is ready! Go to Settings -> Data & Privacy and click 'Download Data Export' to download it."
+                    : "Your data export request has been rejected.",
+                  type: isApproved ? 'success' : 'error'
+                });
               }
             }
-          )
-          .subscribe();
+          }
+        )
+        .subscribe();
 
-        return () => {
-          supabase.removeChannel(channel);
-        };
-      });
+      activeChannel = channel;
     });
-  }, [addNotification]);
+
+    let isActive = true;
+    return () => {
+      isActive = false;
+      if (activeChannel) {
+        import('../lib/supabaseClient').then(({ supabase }) => {
+          supabase.removeChannel(activeChannel);
+        });
+      }
+    };
+  }, [userId, addNotification]);
 
   const markAsRead = useCallback((id) => {
     setNotifications(prev => 
