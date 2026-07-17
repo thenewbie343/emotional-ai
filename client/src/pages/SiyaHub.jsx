@@ -8,13 +8,14 @@ import { supabase } from '../lib/supabaseClient';
 import { useSubscription } from '../hooks/useSubscription';
 import { useNotification } from '../context/NotificationContext';
 import NotificationDropdown from '../components/NotificationDropdown';
+import TokenIcon from '../components/TokenIcon';
 import '../index.css';
 
 const QUICK_ACCESS = [
-  { to: '/chat',          icon: 'forum',           title: 'Chat with Shuna', desc: 'Connect and reflect',     color: 'text-fuchsia-300', bg: 'bg-fuchsia-500/20', tokens: '2☯️ 2⏳' },
-  { to: '/siya/journal',  icon: 'auto_stories',    title: 'Inner Diary',     desc: 'Private reflections',     color: 'text-rose-300',    bg: 'bg-rose-500/20', tokens: '1☯️ 1⏳' },
-  { to: '/siya/wellness', icon: 'self_improvement',title: 'Wellness Radar',  desc: 'Emotional balance',       color: 'text-indigo-300',  bg: 'bg-indigo-500/20', tokens: '1☯️ 1⏳' },
-  { to: '/siya/insights', icon: 'bubble_chart',    title: 'Resonance',       desc: 'Emotional insights',      color: 'text-violet-300',  bg: 'bg-violet-500/20', tokens: '2☯️' },
+  { to: '/chat',          icon: 'forum',           title: 'Chat with Shuna', desc: 'Connect and reflect',     color: 'text-fuchsia-300', bg: 'bg-fuchsia-500/20', livesCost: 2, timeCost: 2, timeSuffix: '/msg' },
+  { to: '/siya/journal',  icon: 'auto_stories',    title: 'Inner Diary',     desc: 'Private reflections',     color: 'text-rose-300',    bg: 'bg-rose-500/20', livesCost: 1, timeCost: 5, timeSuffix: '/entry' },
+  { to: '/siya/wellness', icon: 'self_improvement',title: 'Wellness Radar',  desc: 'Emotional balance',       color: 'text-indigo-300',  bg: 'bg-indigo-500/20', livesCost: 1, timeCost: 5, timeSuffix: '/scan' },
+  { to: '/siya/insights', icon: 'bubble_chart',    title: 'Resonance',       desc: 'Emotional insights',      color: 'text-violet-300',  bg: 'bg-violet-500/20', livesCost: 2, timeCost: 0 },
   { to: '/profile',       icon: 'manage_accounts', title: 'Profile & Settings',desc: 'Command Center',        color: 'text-amber-300',   bg: 'bg-amber-500/20' },
   { to: '/island',        icon: 'public',          title: '3D Island',       desc: 'Return to the world',     color: 'text-sky-300',     bg: 'bg-sky-500/20' },
 ];
@@ -283,9 +284,18 @@ export default function SiyaHub({ session }) {
                         <div className="flex flex-col justify-center h-14">
                           <h3 className="font-semibold text-gray-100 group-hover:text-white transition-colors text-[16px] font-sans tracking-wide flex items-center gap-1.5 flex-wrap">
                             <span>{item.title}</span>
-                            {item.tokens && (
-                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-fuchsia-200">
-                                {item.tokens}
+                            {(item.livesCost > 0 || item.timeCost > 0) && (
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-fuchsia-200 flex items-center gap-1.5">
+                                {item.livesCost > 0 && (
+                                  <span className="flex items-center gap-0.5">
+                                    {item.livesCost} <TokenIcon type="life" className="w-3 h-3" />
+                                  </span>
+                                )}
+                                {item.timeCost > 0 && (
+                                  <span className="flex items-center gap-0.5">
+                                    {item.timeCost} <TokenIcon type="time" className="w-3 h-3" />{item.timeSuffix || ''}
+                                  </span>
+                                )}
                               </span>
                             )}
                           </h3>

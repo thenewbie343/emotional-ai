@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useSubscription } from '../hooks/useSubscription';
+import TokenIcon from '../components/TokenIcon';
 
 const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:3000" : "https://emotional-ai-18zi.onrender.com");
 
@@ -623,22 +624,22 @@ export default function ProfileHub({ session }) {
               <h3 className="text-sm font-semibold tracking-widest text-white/50 uppercase mb-4 flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px]">verified_user</span> System Status & Access
               </h3>
-              <p className="text-xs text-white/40 mb-4">
-                Access is unlocked automatically using your Lives (☯️) when you open a feature.
+              <p className="text-xs text-white/40 mb-4 flex items-center gap-1.5 flex-wrap">
+                Access is unlocked automatically using your Lives <TokenIcon type="life" className="w-3.5 h-3.5" /> when you open a feature.
               </p>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
-                  { id: 'inner_diary', name: 'Inner Diary', cost: '1☯️', desc: 'Record daily journals' },
-                  { id: 'goals', name: 'Goals System', cost: '1☯️', desc: 'Set and track tasks' },
-                  { id: 'memory_vault', name: 'Memory Vault', cost: '1☯️', desc: 'Crystallize memories' },
-                  { id: 'wellness_radar', name: 'Wellness Radar', cost: '1☯️', desc: 'Analyze health gyro' },
-                  { id: 'shuna_chat', name: 'Shuna Chat', cost: '2☯️ 2⏳', desc: 'Talk to Shuna' },
-                  { id: 'sai_chat', name: 'Sai Chat (Link)', cost: '2☯️ 2⏳', desc: 'Productive coaching' },
-                  { id: 'resonance', name: 'Resonance Insights', cost: '2☯️', desc: 'Synthesized insights', premiumOnly: true },
-                  { id: 'dream_vault', name: 'Dream Vault', cost: '2☯️', desc: 'Deep sleep analysis' },
-                  { id: 'time_capsule', name: 'Time Capsules', cost: '2☯️', desc: 'Save digital memories' },
-                  { id: 'study_hub', name: 'Study Hub (Dashboard)', cost: '3☯️', desc: 'Academic tracking board' }
+                  { id: 'inner_diary', name: 'Inner Diary', livesCost: 1, timeCost: 5, desc: 'Record daily journals', timeSuffix: '/ entry' },
+                  { id: 'goals', name: 'Goals System', livesCost: 1, timeCost: 5, desc: 'Set and track tasks', timeSuffix: '/ challenge' },
+                  { id: 'memory_vault', name: 'Memory Vault', livesCost: 1, timeCost: 0, desc: 'Crystallize memories' },
+                  { id: 'wellness_radar', name: 'Wellness Radar', livesCost: 1, timeCost: 5, desc: 'Analyze health gyro', timeSuffix: '/ scan' },
+                  { id: 'shuna_chat', name: 'Shuna Chat', livesCost: 2, timeCost: 2, desc: 'Talk to Shuna', timeSuffix: '/ msg' },
+                  { id: 'sai_chat', name: 'Sai Chat (Link)', livesCost: 2, timeCost: 2, desc: 'Productive coaching', timeSuffix: '/ msg' },
+                  { id: 'resonance', name: 'Resonance Insights', livesCost: 2, timeCost: 0, desc: 'Synthesized insights', premiumOnly: true },
+                  { id: 'dream_vault', name: 'Dream Vault', livesCost: 2, timeCost: 10, desc: 'Deep sleep analysis', timeSuffix: '/ dream' },
+                  { id: 'time_capsule', name: 'Time Capsules', livesCost: 2, timeCost: 10, desc: 'Save digital memories', timeSuffix: '/ capsule' },
+                  { id: 'study_hub', name: 'Study Hub (Dashboard)', livesCost: 3, timeCost: 0, desc: 'Academic tracking board' }
                 ].map((feature) => {
                   const isUnlocked = unlockedFeatures.includes(feature.id);
 
@@ -661,8 +662,19 @@ export default function ProfileHub({ session }) {
                         <p className="text-[10px] text-white/40 mt-0.5">{feature.desc}</p>
                       </div>
 
-                      <div className="flex flex-col items-end gap-1 select-none">
-                        <span className="text-[10px] text-white/50 font-medium font-mono">{feature.cost}</span>
+                      <div className="flex flex-col items-end gap-1.5 select-none">
+                        <div className="flex items-center gap-2 text-[10px] text-white/60 font-medium">
+                          {feature.livesCost > 0 && (
+                            <span className="flex items-center gap-0.5">
+                              {feature.livesCost} <TokenIcon type="life" className="w-3.5 h-3.5" />
+                            </span>
+                          )}
+                          {feature.timeCost > 0 && (
+                            <span className="flex items-center gap-0.5">
+                              {feature.timeCost} <TokenIcon type="time" className="w-3.5 h-3.5" />{feature.timeSuffix || ''}
+                            </span>
+                          )}
+                        </div>
                         {isUnlocked ? (
                           <span className="text-[9px] font-extrabold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Active
@@ -760,7 +772,7 @@ export default function ProfileHub({ session }) {
                 {/* Lives */}
                 <div className="p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl select-none">☯️</span>
+                    <TokenIcon type="life" className="w-8 h-8" />
                     <div>
                       <span className="text-[10px] uppercase tracking-widest text-white/40 block font-semibold">Available Lives</span>
                       <span className="text-xl font-light text-fuchsia-300 block mt-0.5">{lives} Lives</span>
@@ -773,13 +785,13 @@ export default function ProfileHub({ session }) {
                 <div className="p-4 rounded-2xl bg-black/40 border border-white/5 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-3xl select-none">⏳</span>
+                      <TokenIcon type="time" className="w-8 h-8" />
                       <div>
                         <span className="text-[10px] uppercase tracking-widest text-[#00d4ff]/80 block font-bold">Total Time</span>
                         <span className="text-xl font-light text-[#00d4ff] block mt-0.5">{refillTime + topupTime} Time</span>
                       </div>
                     </div>
-                    <span className="text-xs text-white/30 font-light">For chat sessions</span>
+                    <span className="text-xs text-white/30 font-light">For chat & features</span>
                   </div>
                   <div className="text-[10px] text-white/40 font-medium font-mono pt-1 border-t border-white/5 flex justify-between">
                     <span>Refill Time: {refillTime}</span>
@@ -790,7 +802,7 @@ export default function ProfileHub({ session }) {
                 {/* Debt (Conditional) */}
                 {debtTime > 0 && (
                   <div className="p-4 rounded-2xl bg-red-950/20 border border-red-500/20 flex items-center gap-3 animate-pulse">
-                    <span className="text-2xl select-none">🚨</span>
+                    <TokenIcon type="time" className="w-6 h-6 text-red-400 drop-shadow-[0_0_6px_rgba(239,68,68,0.7)]" />
                     <div>
                       <span className="text-[10px] uppercase tracking-widest text-red-400 block font-semibold">Declined Debt</span>
                       <span className="text-base font-bold text-red-500 block mt-0.5">{debtTime} Time</span>

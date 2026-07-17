@@ -12,6 +12,7 @@ import DailyInsight from '../components/DailyInsight'
 import StreakBadge from '../components/StreakBadge'
 import { useNotification } from '../context/NotificationContext'
 import NotificationDropdown from '../components/NotificationDropdown'
+import TokenIcon from '../components/TokenIcon'
 import './SaiHub.css'
 import '../index.css'
 
@@ -25,12 +26,12 @@ function getGreeting() {
 }
 
 const QUICK_ACCESS = [
-  { to: '/sai/study',    icon: 'dashboard',       title: 'Study Hub',    desc: 'Enter the grid',               color: 'text-[#00d4ff]', bg: 'bg-[#00d4ff]/10', tokens: '3☯️' },
-  { to: '/sai/chat',     icon: 'bolt',            title: 'Sai Link',     desc: 'Direct AI connection',         color: 'text-blue-400', bg: 'bg-blue-500/10', tokens: '2☯️ 2⏳' },
-  { to: '/sai/memories', icon: 'memory',          title: 'Memory Vault', desc: 'Review stored context',        color: 'text-purple-400', bg: 'bg-purple-500/10', tokens: '1☯️' },
-  { to: '/sai/dreams',   icon: 'nights_stay',     title: 'Dream Vault',  desc: 'Visualize your dreams',        color: 'text-indigo-400', bg: 'bg-indigo-500/10', tokens: '2☯️' },
-  { to: '/sai/capsule',  icon: 'hourglass_empty', title: 'Time Capsules',desc: 'Messages to future self',      color: 'text-amber-400', bg: 'bg-amber-500/10', tokens: '2☯️' },
-  { to: '/sai/goals',    icon: 'track_changes',   title: 'Goals',        desc: 'Daily challenges',             color: 'text-emerald-400', bg: 'bg-emerald-500/10', tokens: '1☯️' },
+  { to: '/sai/study',    icon: 'dashboard',       title: 'Study Hub',    desc: 'Enter the grid',               color: 'text-[#00d4ff]', bg: 'bg-[#00d4ff]/10', livesCost: 3, timeCost: 0 },
+  { to: '/sai/chat',     icon: 'bolt',            title: 'Sai Link',     desc: 'Direct AI connection',         color: 'text-blue-400', bg: 'bg-blue-500/10', livesCost: 2, timeCost: 2, timeSuffix: '/msg' },
+  { to: '/sai/memories', icon: 'memory',          title: 'Memory Vault', desc: 'Review stored context',        color: 'text-purple-400', bg: 'bg-purple-500/10', livesCost: 1, timeCost: 0 },
+  { to: '/sai/dreams',   icon: 'nights_stay',     title: 'Dream Vault',  desc: 'Visualize your dreams',        color: 'text-indigo-400', bg: 'bg-indigo-500/10', livesCost: 2, timeCost: 10, timeSuffix: '/dream' },
+  { to: '/sai/capsule',  icon: 'hourglass_empty', title: 'Time Capsules',desc: 'Messages to future self',      color: 'text-amber-400', bg: 'bg-amber-500/10', livesCost: 2, timeCost: 10, timeSuffix: '/capsule' },
+  { to: '/sai/goals',    icon: 'track_changes',   title: 'Goals',        desc: 'Daily challenges',             color: 'text-emerald-400', bg: 'bg-emerald-500/10', livesCost: 1, timeCost: 5, timeSuffix: '/challenge' },
   { to: '/profile',      icon: 'manage_accounts', title: 'Profile Hub',  desc: 'Command Center & Settings',    color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10' },
   { to: '/island',       icon: 'public',          title: '3D Island',    desc: 'Enter the open world',         color: 'text-rose-400', bg: 'bg-rose-500/10' },
 ]
@@ -170,9 +171,18 @@ export default function SaiHub({ session }) {
                       <div className="flex flex-col justify-center h-12">
                         <h3 className="font-semibold text-gray-200 group-hover:text-white transition-colors text-[15px] flex items-center gap-1.5 flex-wrap">
                           <span>{item.title}</span>
-                          {item.tokens && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-blue-300">
-                              {item.tokens}
+                          {(item.livesCost > 0 || item.timeCost > 0) && (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-blue-300 flex items-center gap-1.5">
+                              {item.livesCost > 0 && (
+                                <span className="flex items-center gap-0.5">
+                                  {item.livesCost} <TokenIcon type="life" className="w-3 h-3" />
+                                </span>
+                              )}
+                              {item.timeCost > 0 && (
+                                <span className="flex items-center gap-0.5">
+                                  {item.timeCost} <TokenIcon type="time" className="w-3 h-3" />{item.timeSuffix || ''}
+                                </span>
+                              )}
                             </span>
                           )}
                         </h3>
