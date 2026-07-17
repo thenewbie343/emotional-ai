@@ -41,9 +41,50 @@ export default function SaiHub({ session }) {
   const { isPremium } = useSubscription(session)
   const { unreadCount, togglePanel } = useNotification()
   const [xpData, setXpData] = useState(null)
-  
+
+  // Minimal flat credit states
+  const [lives, setLives] = useState(() => {
+    try {
+      const cached = localStorage.getItem('antigravity_token_balances');
+      if (cached) return JSON.parse(cached).lives || 0;
+    } catch (e) {}
+    return 0;
+  });
+  const [time, setTime] = useState(() => {
+    try {
+      const cached = localStorage.getItem('antigravity_token_balances');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return (parsed.refill_time || 0) + (parsed.topup_time || 0);
+      }
+    } catch (e) {}
+    return 0;
+  });
+
   useEffect(() => {
     if (!session?.user?.id) return
+
+    // Fetch latest balances
+    const fetchBalances = async () => {
+      try {
+        const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:3000" : "https://emotional-ai-18zi.onrender.com");
+        const res = await fetch(`${API_BASE}/api/tokens/balances`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: session.user.id })
+        });
+        if (res.ok) {
+          const balances = await res.json();
+          localStorage.setItem('antigravity_token_balances', JSON.stringify(balances));
+          setLives(balances.lives);
+          setTime((balances.refill_time || 0) + (balances.topup_time || 0));
+        }
+      } catch (err) {
+        console.error('Error fetching balances in hub:', err);
+      }
+    };
+    fetchBalances();
+
     fetchXp(session.user.id).then(data => setXpData(data))
   }, [session])
 
@@ -63,6 +104,21 @@ export default function SaiHub({ session }) {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {/* Minimal Credits Display */}
+            <div 
+              onClick={() => navigate('/profile')}
+              className="cursor-pointer flex items-center gap-3 px-3 py-1.5 rounded-full bg-white/[0.02] border border-white/5 hover:bg-white/10 transition-colors backdrop-blur-md text-xs select-none"
+              title="Command Center Wallet"
+            >
+              <span className="flex items-center gap-1 font-medium text-rose-300">
+                {lives} <TokenIcon type="life" className="w-3.5 h-3.5" />
+              </span>
+              <span className="w-[1px] h-3 bg-white/10" />
+              <span className="flex items-center gap-1 font-medium text-sky-300">
+                {time} <TokenIcon type="time" className="w-3.5 h-3.5" />
+              </span>
+            </div>
+
             {!isPremium && (
               <button onClick={() => navigate('/billing')} className="px-4 py-2 rounded-full bg-gradient-to-r from-fuchsia-600 to-cyan-600 text-xs font-semibold text-white hover:opacity-90 transition-all shadow-[0_0_15px_rgba(217,70,239,0.3)]">
                 Go Premium

@@ -50,6 +50,25 @@ export default function SiyaHub({ session }) {
   const [rhythmData, setRhythmData] = useState([30, 30, 30, 30, 30, 30, 30]);
   const [daysLabels, setDaysLabels] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
 
+  // Minimal flat credit states
+  const [lives, setLives] = useState(() => {
+    try {
+      const cached = localStorage.getItem('antigravity_token_balances');
+      if (cached) return JSON.parse(cached).lives || 0;
+    } catch (e) {}
+    return 0;
+  });
+  const [time, setTime] = useState(() => {
+    try {
+      const cached = localStorage.getItem('antigravity_token_balances');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return (parsed.refill_time || 0) + (parsed.topup_time || 0);
+      }
+    } catch (e) {}
+    return 0;
+  });
+
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 5) setGreeting('The night is quiet.');
@@ -62,6 +81,27 @@ export default function SiyaHub({ session }) {
   useEffect(() => {
     if (!session?.user?.id) return;
     
+    // Fetch latest balances
+    const fetchBalances = async () => {
+      try {
+        const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:3000" : "https://emotional-ai-18zi.onrender.com");
+        const res = await fetch(`${API_BASE}/api/tokens/balances`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: session.user.id })
+        });
+        if (res.ok) {
+          const balances = await res.json();
+          localStorage.setItem('antigravity_token_balances', JSON.stringify(balances));
+          setLives(balances.lives);
+          setTime((balances.refill_time || 0) + (balances.topup_time || 0));
+        }
+      } catch (err) {
+        console.error('Error fetching balances in hub:', err);
+      }
+    };
+    fetchBalances();
+
     const fetchRhythm = async () => {
       try {
         const { data, error } = await supabase
@@ -145,6 +185,21 @@ export default function SiyaHub({ session }) {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {/* Minimal Credits Display */}
+            <div 
+              onClick={() => navigate('/profile')}
+              className="cursor-pointer flex items-center gap-3 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/10 hover:bg-white/5 transition-colors backdrop-blur-md text-xs select-none"
+              title="Command Center Wallet"
+            >
+              <span className="flex items-center gap-1 font-medium text-rose-300">
+                {lives} <TokenIcon type="life" className="w-3.5 h-3.5" />
+              </span>
+              <span className="w-[1px] h-3 bg-white/10" />
+              <span className="flex items-center gap-1 font-medium text-sky-300">
+                {time} <TokenIcon type="time" className="w-3.5 h-3.5" />
+              </span>
+            </div>
+
             {!isPremium && (
               <motion.button 
                 whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(192, 38, 211, 0.4)" }}
