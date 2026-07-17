@@ -802,7 +802,7 @@ export default function ProfileHub({ session }) {
                 {/* Debt (Conditional) */}
                 {debtTime > 0 && (
                   <div className="p-4 rounded-2xl bg-red-950/20 border border-red-500/20 flex items-center gap-3 animate-pulse">
-                    <TokenIcon type="time" className="w-6 h-6 text-red-400 drop-shadow-[0_0_6px_rgba(239,68,68,0.7)]" />
+                    <TokenIcon type="time" className="w-6 h-6 text-red-400" />
                     <div>
                       <span className="text-[10px] uppercase tracking-widest text-red-400 block font-semibold">Declined Debt</span>
                       <span className="text-base font-bold text-red-500 block mt-0.5">{debtTime} Time</span>
