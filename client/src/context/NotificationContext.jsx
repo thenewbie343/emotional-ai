@@ -72,10 +72,25 @@ export const NotificationProvider = ({ userId, children }) => {
 
     // Try native push if not in focus
     if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-      new Notification(notification.sender || 'Antigravity Island', {
-        body: notification.message,
-        icon: notification.sender === 'Sai' ? '/sai-icon.png' : '/shuna-icon.png' // Adjust icons as needed
-      });
+      if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready.then(reg => {
+          reg.showNotification(notification.sender || 'Antigravity Island', {
+            body: notification.message,
+            icon: notification.sender === 'Sai' ? '/sai-icon.png' : '/shuna-icon.png',
+            vibrate: [200, 100, 200]
+          });
+        }).catch(() => {
+          new Notification(notification.sender || 'Antigravity Island', {
+            body: notification.message,
+            icon: notification.sender === 'Sai' ? '/sai-icon.png' : '/shuna-icon.png'
+          });
+        });
+      } else {
+        new Notification(notification.sender || 'Antigravity Island', {
+          body: notification.message,
+          icon: notification.sender === 'Sai' ? '/sai-icon.png' : '/shuna-icon.png'
+        });
+      }
     }
   }, []);
 
