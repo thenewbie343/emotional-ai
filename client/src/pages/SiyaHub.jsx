@@ -8,13 +8,14 @@ import { supabase } from '../lib/supabaseClient';
 import { useSubscription } from '../hooks/useSubscription';
 import { useNotification } from '../context/NotificationContext';
 import NotificationDropdown from '../components/NotificationDropdown';
+import TokenIcon from '../components/TokenIcon';
 import '../index.css';
 
 const QUICK_ACCESS = [
-  { to: '/chat',          icon: 'forum',           title: 'Chat with Shuna', desc: 'Connect and reflect',     color: 'text-fuchsia-300', bg: 'bg-fuchsia-500/20', tokens: '2☯️ 2⏳' },
-  { to: '/siya/journal',  icon: 'auto_stories',    title: 'Inner Diary',     desc: 'Private reflections',     color: 'text-rose-300',    bg: 'bg-rose-500/20', tokens: '1☯️ 1⏳' },
-  { to: '/siya/wellness', icon: 'self_improvement',title: 'Wellness Radar',  desc: 'Emotional balance',       color: 'text-indigo-300',  bg: 'bg-indigo-500/20', tokens: '1☯️ 1⏳' },
-  { to: '/siya/insights', icon: 'bubble_chart',    title: 'Resonance',       desc: 'Emotional insights',      color: 'text-violet-300',  bg: 'bg-violet-500/20', tokens: '2☯️' },
+  { to: '/chat',          icon: 'forum',           title: 'Chat with Shuna', desc: 'Connect and reflect',     color: 'text-fuchsia-300', bg: 'bg-fuchsia-500/20', livesCost: 2, timeCost: 2, timeSuffix: '/msg' },
+  { to: '/siya/journal',  icon: 'auto_stories',    title: 'Inner Diary',     desc: 'Private reflections',     color: 'text-rose-300',    bg: 'bg-rose-500/20', livesCost: 1, timeCost: 5, timeSuffix: '/entry' },
+  { to: '/siya/wellness', icon: 'self_improvement',title: 'Wellness Radar',  desc: 'Emotional balance',       color: 'text-indigo-300',  bg: 'bg-indigo-500/20', livesCost: 1, timeCost: 5, timeSuffix: '/scan' },
+  { to: '/siya/insights', icon: 'bubble_chart',    title: 'Resonance',       desc: 'Emotional insights',      color: 'text-violet-300',  bg: 'bg-violet-500/20', livesCost: 2, timeCost: 0 },
   { to: '/profile',       icon: 'manage_accounts', title: 'Profile & Settings',desc: 'Command Center',        color: 'text-amber-300',   bg: 'bg-amber-500/20' },
   { to: '/island',        icon: 'public',          title: '3D Island',       desc: 'Return to the world',     color: 'text-sky-300',     bg: 'bg-sky-500/20' },
 ];
@@ -49,6 +50,25 @@ export default function SiyaHub({ session }) {
   const [rhythmData, setRhythmData] = useState([30, 30, 30, 30, 30, 30, 30]);
   const [daysLabels, setDaysLabels] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
 
+  // Minimal flat credit states
+  const [lives, setLives] = useState(() => {
+    try {
+      const cached = localStorage.getItem('antigravity_token_balances');
+      if (cached) return JSON.parse(cached).lives || 0;
+    } catch (e) {}
+    return 0;
+  });
+  const [time, setTime] = useState(() => {
+    try {
+      const cached = localStorage.getItem('antigravity_token_balances');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return (parsed.refill_time || 0) + (parsed.topup_time || 0);
+      }
+    } catch (e) {}
+    return 0;
+  });
+
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 5) setGreeting('The night is quiet.');
@@ -61,6 +81,27 @@ export default function SiyaHub({ session }) {
   useEffect(() => {
     if (!session?.user?.id) return;
     
+    // Fetch latest balances
+    const fetchBalances = async () => {
+      try {
+        const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:3000" : "https://emotional-ai-18zi.onrender.com");
+        const res = await fetch(`${API_BASE}/api/tokens/balances`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: session.user.id })
+        });
+        if (res.ok) {
+          const balances = await res.json();
+          localStorage.setItem('antigravity_token_balances', JSON.stringify(balances));
+          setLives(balances.lives);
+          setTime((balances.refill_time || 0) + (balances.topup_time || 0));
+        }
+      } catch (err) {
+        console.error('Error fetching balances in hub:', err);
+      }
+    };
+    fetchBalances();
+
     const fetchRhythm = async () => {
       try {
         const { data, error } = await supabase
@@ -144,6 +185,21 @@ export default function SiyaHub({ session }) {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {/* Minimal Credits Display */}
+            <div 
+              onClick={() => navigate('/profile')}
+              className="cursor-pointer flex items-center gap-2.5 px-1 py-1 hover:opacity-80 transition-opacity text-xs select-none mr-2 flex items-center"
+              title="Command Center Wallet"
+            >
+              <span className="flex items-center gap-1 font-medium text-rose-300">
+                {lives} <TokenIcon type="life" className="w-3.5 h-3.5" />
+              </span>
+              <span className="w-[1px] h-3 bg-white/10 mx-1" />
+              <span className="flex items-center gap-1 font-medium text-sky-300">
+                {time} <TokenIcon type="time" className="w-3.5 h-3.5" />
+              </span>
+            </div>
+
             {!isPremium && (
               <motion.button 
                 whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(192, 38, 211, 0.4)" }}
@@ -238,13 +294,13 @@ export default function SiyaHub({ session }) {
               transition={springTransition}
               className="bg-white/[0.03] border border-white/10 rounded-[24px] p-6 shadow-xl relative overflow-hidden backdrop-blur-md group"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-              <h3 className="text-[11px] font-semibold tracking-widest text-fuchsia-300/70 uppercase mb-3 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[16px]">psychology_alt</span> Daily Reflection
-              </h3>
-              <p className="text-gray-300 font-serif text-lg leading-relaxed italic">
-                "What is one thing you can let go of today to create more space for yourself?"
-              </p>
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-rose-500/20 to-transparent"></div>
+              <div className="relative z-10 flex flex-col gap-3">
+                <span className="text-[10px] font-bold tracking-widest text-rose-400 uppercase">Aria's Whisper</span>
+                <p className="text-sm font-light text-gray-300 leading-relaxed font-sans">
+                  "Every memory in your island was born from a conversation we shared. What shall we crystallize next?"
+                </p>
+              </div>
             </motion.div>
           </motion.section>
 
@@ -283,9 +339,18 @@ export default function SiyaHub({ session }) {
                         <div className="flex flex-col justify-center h-14">
                           <h3 className="font-semibold text-gray-100 group-hover:text-white transition-colors text-[16px] font-sans tracking-wide flex items-center gap-1.5 flex-wrap">
                             <span>{item.title}</span>
-                            {item.tokens && (
-                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-fuchsia-200">
-                                {item.tokens}
+                            {(item.livesCost > 0 || item.timeCost > 0) && (
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-fuchsia-200 flex items-center gap-1.5">
+                                {item.livesCost > 0 && (
+                                  <span className="flex items-center gap-0.5">
+                                    {item.livesCost} <TokenIcon type="life" className="w-3 h-3" />
+                                  </span>
+                                )}
+                                {item.timeCost > 0 && (
+                                  <span className="flex items-center gap-0.5">
+                                    {item.timeCost} <TokenIcon type="time" className="w-3 h-3" />{item.timeSuffix || ''}
+                                  </span>
+                                )}
                               </span>
                             )}
                           </h3>

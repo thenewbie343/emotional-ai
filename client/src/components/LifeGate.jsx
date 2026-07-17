@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import TokenIcon from './TokenIcon';
 
 const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:3000" : "https://emotional-ai-18zi.onrender.com");
 
@@ -174,21 +175,23 @@ export default function LifeGate({ children, featureId, cost }) {
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-fuchsia-500/30 to-transparent" />
         
         <div className="w-16 h-16 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/25 flex items-center justify-center shadow-[0_0_15px_rgba(217,70,239,0.15)]">
-          <span className="text-2xl select-none">☯️</span>
+          <TokenIcon type="life" className="w-8 h-8" />
         </div>
 
         <div className="space-y-2">
           <h2 className="text-lg font-bold tracking-widest text-white uppercase bg-gradient-to-r from-fuchsia-400 to-indigo-300 bg-clip-text text-transparent">
             Feature Locked
           </h2>
-          <p className="text-xs text-white/50 leading-relaxed">
-            Opening this feature requires <span className="text-fuchsia-400 font-semibold">{cost} Lives (☯️)</span>.
+          <p className="text-xs text-white/50 leading-relaxed flex items-center justify-center gap-1.5">
+            Opening this feature requires <span className="text-fuchsia-400 font-semibold">{cost} Lives</span> <TokenIcon type="life" className="w-4 h-4" />.
           </p>
         </div>
 
         <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 w-full text-center">
           <span className="text-[10px] uppercase tracking-wider text-white/40 block">Your Balance</span>
-          <span className="text-xl font-light text-fuchsia-300 block mt-1">{lives} Lives (☯️)</span>
+          <span className="text-xl font-light text-fuchsia-300 flex items-center justify-center gap-2 mt-1">
+            {lives} Lives <TokenIcon type="life" className="w-5 h-5" />
+          </span>
         </div>
 
         <p className="text-xs text-red-400/80 font-medium">
