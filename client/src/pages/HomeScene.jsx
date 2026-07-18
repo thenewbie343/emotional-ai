@@ -18,40 +18,8 @@ const MagicDrip = lazy(() => import('../components/MagicDrip'))
 const MovingCloud = lazy(() => import('../components/MovingCloud'))
 const ParasiteIslandModifier = lazy(() => import('../components/ParasiteLayer').then(module => ({ default: module.ParasiteIslandModifier })))
 
-function FpsMonitor({ isMobile, onLowFps }) {
-  const frameTimes = useRef([]);
-  const lastTime = useRef(performance.now());
-  const triggered = useRef(false);
-
-  useFrame(() => {
-    if (!isMobile || triggered.current) return;
-    const now = performance.now();
-    const delta = (now - lastTime.current) / 1000;
-    lastTime.current = now;
-
-    if (delta > 0 && delta < 2) {
-      frameTimes.current.push(delta);
-      if (frameTimes.current.length > 60) {
-        frameTimes.current.shift();
-      }
-
-      if (frameTimes.current.length >= 30) {
-        const avgDelta = frameTimes.current.reduce((a, b) => a + b, 0) / frameTimes.current.length;
-        const fps = 1 / avgDelta;
-        if (fps <= 10) {
-          triggered.current = true;
-          onLowFps();
-        }
-      }
-    }
-  });
-
-  return null;
-}
-
 export default function HomeScene() {
   const navigate = useNavigate()
-  const [isLowFps, setIsLowFps] = useState(false)
   const [hasEntered, setHasEntered] = useState(false)
   const [volume, setVolume] = useState(() => {
     const saved = localStorage.getItem('islandVolume')
@@ -135,124 +103,59 @@ export default function HomeScene() {
   return (
     <>
       <div style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
-        {!isLowFps ? (
-          <Canvas 
-            shadows={!isMobile}
-            dpr={isMobile ? 1 : [1, 1.5]} 
-            performance={{ min: 0.5 }}
-            gl={{ 
-              antialias: false, 
-              powerPreference: "high-performance",
-              alpha: false,
-              stencil: false,
-              depth: true
-            }}
-          >
-            <FpsMonitor isMobile={isMobile} onLowFps={() => setIsLowFps(true)} />
-            <color attach="background" args={['#0a081d']} />
-            <Suspense fallback={null}>
-              <PerspectiveCamera makeDefault position={[0, 3, cameraZ]} fov={cameraFov} />
-              <Sky distance={450000} sunPosition={[5, 1, 8]} inclination={0} azimuth={0.25} />
-              {!isMobile && <Environment preset="sunset" />}
-              <ambientLight intensity={isMobile ? 1.1 : 0.4} />
-              <directionalLight position={[5, 10, 5]} intensity={isMobile ? 1.2 : 1.5} castShadow={!isMobile} />
-              <pointLight position={[-5, 5, -5]} intensity={isMobile ? 0.8 : 0.5} color="#b0c4de" />
-              {isMobile && <directionalLight position={[-5, -5, -5]} intensity={0.4} color="#ffffff" />}
+        <Canvas 
+          shadows={!isMobile}
+          dpr={isMobile ? 1 : [1, 1.5]} 
+          performance={{ min: 0.5 }}
+          gl={{ 
+            antialias: false, 
+            powerPreference: "high-performance",
+            alpha: false,
+            stencil: false,
+            depth: true
+          }}
+        >
+          <color attach="background" args={['#0a081d']} />
+          <Suspense fallback={null}>
+            <PerspectiveCamera makeDefault position={[0, 3, cameraZ]} fov={cameraFov} />
+            <Sky distance={450000} sunPosition={[5, 1, 8]} inclination={0} azimuth={0.25} />
+            {!isMobile && <Environment preset="sunset" />}
+            <ambientLight intensity={isMobile ? 1.1 : 0.4} />
+            <directionalLight position={[5, 10, 5]} intensity={isMobile ? 1.2 : 1.5} castShadow={!isMobile} />
+            <pointLight position={[-5, 5, -5]} intensity={isMobile ? 0.8 : 0.5} color="#b0c4de" />
+            {isMobile && <directionalLight position={[-5, -5, -5]} intensity={0.4} color="#ffffff" />}
 
-              <Sparkles count={isMobile ? 5 : 45} scale={30} size={2} speed={0.4} opacity={0.2} color="#aaddff" position={[0, -2, 0]} />
-              <ShootingStars />
+            <Sparkles count={isMobile ? 5 : 45} scale={30} size={2} speed={0.4} opacity={0.2} color="#aaddff" position={[0, -2, 0]} />
+            <ShootingStars />
 
-              {!isMobile && (
-                <Clouds material={THREE.MeshBasicMaterial}>
-                  <Cloud segments={4} bounds={[10, 2, 2]} volume={10} color="#eeddff" position={[-20, 10, -30]} speed={0.2} opacity={0.25} />
-                  <Cloud segments={4} bounds={[10, 2, 2]} volume={10} color="#ffeedd" position={[20, 15, -40]} speed={0.2} opacity={0.25} />
-                  <MovingCloud moveSpeed={1.5} xRange={[-35, 35]} segments={6} bounds={[15, 3, 3]} volume={15} color="#ffffff" position={[-35, 5, 12]} speed={0.3} opacity={0.2} />
-                  <MovingCloud moveSpeed={-1.4} xRange={[-30, 30]} segments={5} bounds={[10, 3, 4]} volume={12} color="#e6e6fa" position={[-30, -0.5, 2]} speed={0.35} opacity={0.25} />
-                </Clouds>
-              )}
+            {!isMobile && (
+              <Clouds material={THREE.MeshBasicMaterial}>
+                <Cloud segments={4} bounds={[10, 2, 2]} volume={10} color="#eeddff" position={[-20, 10, -30]} speed={0.2} opacity={0.25} />
+                <Cloud segments={4} bounds={[10, 2, 2]} volume={10} color="#ffeedd" position={[20, 15, -40]} speed={0.2} opacity={0.25} />
+                <MovingCloud moveSpeed={1.5} xRange={[-35, 35]} segments={6} bounds={[15, 3, 3]} volume={15} color="#ffffff" position={[-35, 5, 12]} speed={0.3} opacity={0.2} />
+                <MovingCloud moveSpeed={-1.4} xRange={[-30, 30]} segments={5} bounds={[10, 3, 4]} volume={12} color="#e6e6fa" position={[-30, -0.5, 2]} speed={0.35} opacity={0.25} />
+              </Clouds>
+            )}
 
-              <FlockOfBirds count={isMobile ? 6 : 12} isAudioEnabled={hasEntered} radius={12} height={10} heightVariance={5} centerOffset={modelPosition} speed={0.15} />
-              <FloatingIsland position={modelPosition} scale={modelScale} rotation={modelRotation} isMobile={isMobile} />
-              <IslandAchievements achievements={achievements} showFireworks={showFireworks} onFireworksComplete={() => setShowFireworks(false)} />
-              
-              {isMobile ? (
+            <FlockOfBirds count={isMobile ? 6 : 12} isAudioEnabled={hasEntered} radius={12} height={10} heightVariance={5} centerOffset={modelPosition} speed={0.15} />
+            <FloatingIsland position={modelPosition} scale={modelScale} rotation={modelRotation} isMobile={isMobile} />
+            <IslandAchievements achievements={achievements} showFireworks={showFireworks} onFireworksComplete={() => setShowFireworks(false)} />
+            
+            {isMobile ? (
+              <SmallIsland position={[24, -6, 16]} scale={[2.5, 2.5, 2.5]} rotation={[-0.05, -0.9, 0]} floatOffset={4.7} floatSpeed={0.95} />
+            ) : (
+              <>
+                <SmallIsland position={[-28, 8, -12]} scale={[2.8, 2.8, 2.8]} rotation={[0, 1.1, 0]} floatOffset={0} floatSpeed={0.7} />
+                <SmallIsland position={[30, 2, -18]} scale={[2.2, 2.2, 2.2]} rotation={[0.1, -0.6, 0]} floatOffset={1.8} floatSpeed={1.0} />
                 <SmallIsland position={[24, -6, 16]} scale={[2.5, 2.5, 2.5]} rotation={[-0.05, -0.9, 0]} floatOffset={4.7} floatSpeed={0.95} />
-              ) : (
-                <>
-                  <SmallIsland position={[-28, 8, -12]} scale={[2.8, 2.8, 2.8]} rotation={[0, 1.1, 0]} floatOffset={0} floatSpeed={0.7} />
-                  <SmallIsland position={[30, 2, -18]} scale={[2.2, 2.2, 2.2]} rotation={[0.1, -0.6, 0]} floatOffset={1.8} floatSpeed={1.0} />
-                  <SmallIsland position={[24, -6, 16]} scale={[2.5, 2.5, 2.5]} rotation={[-0.05, -0.9, 0]} floatOffset={4.7} floatSpeed={0.95} />
-                </>
-              )}
+              </>
+            )}
 
-              <ParasiteIslandModifier portalRef={portalRef} />
-            </Suspense>
-            <OrbitControls enableDamping dampingFactor={0.05} minDistance={2} maxDistance={50} maxPolarAngle={Math.PI / 1.5} />
-            <Stats />
-          </Canvas>
-        ) : (
-          <div style={{ 
-            position: 'absolute', 
-            inset: 0, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            background: '#0a081d',
-            color: 'white',
-            fontFamily: 'Inter, sans-serif',
-            zIndex: 9998
-          }}>
-            {/* Cosmic background glows */}
-            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-              <div style={{ position: 'absolute', top: '-10%', left: '-15%', width: '500px', height: '500px', background: 'rgba(134,25,143,0.1)', filter: 'blur(150px)', borderRadius: '50%' }} />
-              <div style={{ position: 'absolute', bottom: '-15%', right: '-10%', width: '600px', height: '600px', background: 'rgba(49,46,129,0.1)', filter: 'blur(150px)', borderRadius: '50%' }} />
-            </div>
-
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="relative z-10 text-center max-w-sm px-6 flex flex-col items-center"
-            >
-              {/* 2D Island representation */}
-              <div className="relative w-64 h-64 mb-8 flex items-center justify-center">
-                {/* Glowing circles representing orbits */}
-                <div style={{ position: 'absolute', inset: 0, border: '1px solid rgba(255,255,255,0.05)', borderRadius: '50%', animation: 'spin 20s linear infinite' }} />
-                <div style={{ position: 'absolute', width: '192px', height: '192px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '50%', animation: 'spin 10s linear infinite' }} />
-                
-                {/* 2D stylized floating island container */}
-                <div style={{ position: 'absolute', width: '160px', height: '160px', borderRadius: '50%', background: 'linear-gradient(to bottom right, rgba(99,102,241,0.15), rgba(168,85,247,0.15))', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                  {/* Blue Building representation */}
-                  <button 
-                    onClick={() => setShowPicker(true)}
-                    style={{
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: '16px',
-                      background: 'linear-gradient(to right, #06b6d4, #2563eb)',
-                      border: '1px solid rgba(103,232,249,0.3)',
-                      boxShadow: '0 0 20px rgba(6,182,212,0.4)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      transition: 'transform 0.2s',
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                    onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                  >
-                    <span className="material-symbols-outlined text-white text-3xl" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>corporate_fare</span>
-                  </button>
-                </div>
-              </div>
-
-              <h2 className="text-xl font-bold tracking-wider text-white mb-2">Performance Mode</h2>
-              <p className="text-xs text-white/50 mb-6 leading-relaxed">
-                The 3D environment was frozen to save battery and memory. You can enter the Companion Hub by clicking the Blue Building above.
-              </p>
-            </motion.div>
-          </div>
-        )}
+            <ParasiteIslandModifier portalRef={portalRef} />
+          </Suspense>
+          <OrbitControls enableDamping dampingFactor={0.05} minDistance={2} maxDistance={50} maxPolarAngle={Math.PI / 1.5} />
+          <Stats />
+        </Canvas>
 
         {/* Animated Logo */}
         <img 
