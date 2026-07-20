@@ -214,3 +214,26 @@
   margin-top: 12px;
   margin-bottom: 0;
 }
+
+@media (max-width: 480px) {
+  .onboarding-gate-logo h2 {
+    font-size: 1.4rem;
+    letter-spacing: 0.25em;
+  }
+  .onboarding-gate-card {
+    padding: 20px;
+    border-radius: 20px;
+  }
+  .subtitle {
+    font-size: 0.75rem;
+    margin-bottom: 15px;
+  }
+  .onboarding-gate-body {
+    max-height: 240px;
+    margin-bottom: 20px;
+  }
+  .agree-btn {
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+}

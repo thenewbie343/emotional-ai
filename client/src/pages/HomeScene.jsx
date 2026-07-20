@@ -64,6 +64,35 @@ export default function HomeScene() {
     }
   }, [])
 
+  // Automatic idle detection: trigger companion picker if inactive for 20 seconds on the island
+  useEffect(() => {
+    if (!hasEntered || showPicker) return;
+
+    let idleTimer;
+    const resetIdleTimer = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        setShowPicker(true);
+      }, 20000); // 20 seconds of no movement
+    };
+
+    // Initialize timer
+    resetIdleTimer();
+
+    // Listen for movement/interaction events on the window
+    const events = ['mousemove', 'mousedown', 'touchstart', 'keydown', 'wheel', 'pointermove'];
+    events.forEach(event => {
+      window.addEventListener(event, resetIdleTimer);
+    });
+
+    return () => {
+      clearTimeout(idleTimer);
+      events.forEach(event => {
+        window.removeEventListener(event, resetIdleTimer);
+      });
+    };
+  }, [hasEntered, showPicker]);
+
   const modelPosition = [-1.1, -1.5, 0.7]
   const modelScale = [8.0, 7.0, 11.0]
   const modelRotation = [-0.13, -1.25, -0.02]
