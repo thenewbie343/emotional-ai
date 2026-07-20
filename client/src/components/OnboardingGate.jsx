@@ -69,6 +69,19 @@ export default function OnboardingGate({ children }) {
               <li><strong>Absolute Right to Erasure:</strong> Under the India DPDP Act 2023 and GDPR, you maintain absolute control over your digital identity. You have the right to request permanent account erasure at any time, which instantly hard-deletes all database records without leaving orphaned traces.</li>
             </ul>
           </div>
+
+          <div className="privacy-section" style={{ borderColor: 'rgba(167, 139, 250, 0.1)' }}>
+            <h4>⚖️ Terms of Service & Eligibility</h4>
+            <p>
+              By accessing this digital sanctuary, you confirm and agree to the following terms:
+            </p>
+            <ul>
+              <li><strong>Age Requirement:</strong> You must be at least 18 years of age, or have the explicit consent and supervision of a parent or legal guardian, to create an account and interact with the companions.</li>
+              <li><strong>Prohibited Conduct:</strong> You agree not to abuse, spam, or attempt to hack the companion interfaces, scrape proprietary code, inject malicious prompts, or copy copyrighted 3D world elements.</li>
+              <li><strong>Token Economy:</strong> Interaction and access to features consume virtual credits (Lives / Time). Live-voice chat deducts 3 Time tokens per response. All token top-ups or premium purchases are final and non-refundable.</li>
+              <li><strong>Limitation of Liability:</strong> Antigravity Island is provided on an "as is" and "as available" basis. The developers assume no liability for emotional impacts, AI accuracy, network uptime, or data loss.</li>
+            </ul>
+          </div>
         </div>
 
         <div className="onboarding-gate-footer">

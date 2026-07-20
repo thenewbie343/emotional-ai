@@ -33,6 +33,11 @@ const STEPS = [
     desc: "Set goals and SAI generates a small daily challenge to keep you moving forward. Growth — one day at a time.",
   },
   {
+    icon: "🪙",
+    title: "Lives & Time Tokens",
+    desc: "Access and messages consume tokens. Standard accounts get 5 Lives & 30 Time daily. Premium unlocks 15 Lives & 300 Time. Live voice replies consume 3 Time tokens each.",
+  },
+  {
     icon: "🚀",
     title: "You're All Set!",
     desc: "Click the glowing blue building on the island to choose your companion and begin. Your sanctuary is waiting.",

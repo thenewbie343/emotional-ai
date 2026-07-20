@@ -37,15 +37,15 @@
 
 .onboarding-gate-card {
   width: 100%;
-  max-width: 620px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-width: 520px;
+  background: rgba(12, 10, 24, 0.75);
+  border: 1px solid rgba(167, 139, 250, 0.15);
   border-radius: 28px;
-  padding: 35px 40px;
+  padding: 30px;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   color: #f3f4f6;
   font-family: system-ui, -apple-system, sans-serif;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(25px);
 }
 
 .animate-gate-in {
@@ -99,6 +99,30 @@
   flex-direction: column;
   gap: 20px;
   margin-bottom: 30px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* Custom premium scrollbar styling to blend in */
+.onboarding-gate-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.onboarding-gate-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 999px;
+}
+
+.onboarding-gate-body::-webkit-scrollbar-thumb {
+  background: rgba(167, 139, 250, 0.25);
+  border-radius: 999px;
+  border: 1px solid rgba(167, 139, 250, 0.1);
+  transition: background 0.3s;
+}
+
+.onboarding-gate-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(167, 139, 250, 0.45);
 }
 
 .disclosure-section, .privacy-section {
