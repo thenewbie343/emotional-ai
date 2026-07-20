@@ -64,32 +64,16 @@ export default function HomeScene() {
     }
   }, [])
 
-  // Automatic idle detection: trigger companion picker if inactive for 20 seconds on the island
+  // Automatic safety timer: trigger companion picker after 20 seconds on the island, whether they move or not
   useEffect(() => {
     if (!hasEntered || showPicker) return;
 
-    let idleTimer;
-    const resetIdleTimer = () => {
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => {
-        setShowPicker(true);
-      }, 20000); // 20 seconds of no movement
-    };
-
-    // Initialize timer
-    resetIdleTimer();
-
-    // Listen for movement/interaction events on the window
-    const events = ['mousemove', 'mousedown', 'touchstart', 'keydown', 'wheel', 'pointermove'];
-    events.forEach(event => {
-      window.addEventListener(event, resetIdleTimer);
-    });
+    const safetyTimer = setTimeout(() => {
+      setShowPicker(true);
+    }, 20000); // 20 seconds absolute limit
 
     return () => {
-      clearTimeout(idleTimer);
-      events.forEach(event => {
-        window.removeEventListener(event, resetIdleTimer);
-      });
+      clearTimeout(safetyTimer);
     };
   }, [hasEntered, showPicker]);
 
