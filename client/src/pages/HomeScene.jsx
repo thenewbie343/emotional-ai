@@ -70,7 +70,7 @@ export default function HomeScene() {
 
     const safetyTimer = setTimeout(() => {
       setShowPicker(true);
-    }, 20000); // 20 seconds absolute limit
+    }, 35000); // 35 seconds absolute limit
 
     return () => {
       clearTimeout(safetyTimer);
