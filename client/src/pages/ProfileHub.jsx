@@ -889,6 +889,15 @@ export default function ProfileHub({ session }) {
                   Request Account Changes (Email/Password)
                 </button>
                 <button 
+                  onClick={() => {
+                    localStorage.removeItem('antigravity_legal_consent');
+                    location.reload();
+                  }}
+                  className="w-full py-3 rounded-xl bg-black/40 border border-white/5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  Reset & Review Legal Terms
+                </button>
+                <button 
                   onClick={handleSignOut}
                   className="w-full py-3 rounded-xl bg-black/40 border border-white/5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors"
                 >
